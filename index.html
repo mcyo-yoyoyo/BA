@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业变革蓝图智能生成系统 (集成专家知识库)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        /* 隐藏滚动条但保留功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 导出时的特殊样式：强制显示所有步骤，并在白色背景上渲染 */
+        .pdf-mode-active { 
+            position: absolute; 
+            top: 0; left: 0; right: 0; 
+            z-index: 9999; 
+            background: white; 
+            padding: 40px;
+            width: 210mm; /* A4 Width */
+            margin: auto;
+        }
+        .pdf-mode-active .step-wrapper { display: block !important; margin-bottom: 40px; page-break-after: always; }
+        .pdf-mode-active .print-hidden { display: none !important; }
+        
+        /* 正常模式下的步骤切换 */
+        .step-wrapper { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .step-wrapper.active { display: block; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="text-slate-800" onload="initApp()">
+
+    <!-- 顶部导航栏 -->
+    <header class="bg-slate-900 text-white p-4 shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-lg"><i class="fas fa-project-diagram"></i></div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">AI Business Architect</h1>
+                    <p class="text-xs text-slate-400">企业变革蓝图智能生成系统 v2.0</p>
+                </div>
+            </div>
+            <div id="toast-msg" class="text-sm font-bold px-4 py-2 rounded-full opacity-0 transition-opacity duration-300 bg-green-500 text-white fixed top-4 right-4 z-[60]"></div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl mx-auto w-full p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 relative">
+        
+        <!-- 左侧菜单 -->
+        <div id="sidebar" class="lg:col-span-3 space-y-4">
+            <nav id="nav-list" class="space-y-1 sticky top-24"></nav>
+            
+            <div class="mt-8 pt-6 border-t border-slate-200 sticky top-[400px]">
+                <div class="bg-gradient-to-br from-blue-700 to-indigo-800 rounded-xl p-5 text-white shadow-lg">
+                    <h4 class="font-bold mb-1"><i class="fas fa-file-export mr-2"></i>导出解决方案</h4>
+                    <p class="text-xs text-blue-100 mb-3 opacity-80">生成包含步骤 1-4 所有分析图表的完整 PDF 报告。</p>
+                    <button onclick="handleExportPDF()" id="btn-export" class="w-full bg-white/20 hover:bg-white/30 text-sm py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors font-semibold border border-white/10">
+                        <i class="fas fa-download"></i> 生成 PDF 蓝图
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧工作区 -->
+        <div id="workspace" class="lg:col-span-9 bg-white p-8 rounded-2xl shadow-sm border border-slate-200 min-h-[80vh]">
+            
+            <!-- Step 1: 商业模式 -->
+            <div id="step-1" class="step-wrapper"></div>
+
+            <!-- Step 2: 价值流 -->
+            <div id="step-2" class="step-wrapper"></div>
+
+            <!-- Step 3: 能力规划 -->
+            <div id="step-3" class="step-wrapper"></div>
+
+            <!-- Step 4: IT 路标 -->
+            <div id="step-4" class="step-wrapper"></div>
+
+            <!-- Step 5: 配置中心 -->
+            <div id="step-5" class="step-wrapper"></div>
+
+            <!-- 底部翻页按钮 -->
+            <div id="footer-nav" class="flex justify-between pt-8 border-t border-slate-100 mt-10 print-hidden">
+                <button onclick="navigate(-1)" id="btn-prev" class="px-5 py-2.5 rounded-lg font-medium transition-colors bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-50">
+                    <i class="fas fa-arrow-left mr-2"></i> 上一步
+                </button>
+                <button onclick="navigate(1)" id="btn-next" class="px-5 py-2.5 rounded-lg font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                    下一步 <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- 隐藏的 PDF 生成容器 (用于克隆节点) -->
+    <div id="pdf-container" class="hidden"></div>
+
+    <script>
+        // ==========================================
+        // 1. 全局数据与配置 (Single Source of Truth)
+        // ==========================================
+        
+        let currentState = {
+            step: 1,
+            bmc: {
+                keyPartners: "供应商网络, 技术外包团队", 
+                keyActivities: "产品研发, 市场推广, 用户运营", 
+                keyResources: "核心算法团队, 客户数据资产",
+                valuePropositions: "为企业提供一站式数字化转型蓝图，缩短规划周期 80%", 
+                customerRelationships: "自动化自助服务, 专属专家顾问", 
+                channels: "SaaS 平台, 咨询合作伙伴, 行业峰会", 
+                customerSegments: "中大型企业 CIO, 数字化转型负责人, 价格敏感型小微企业",
+                costStructure: "研发人力成本(高), 云服务器成本", 
+                revenueStreams: "SaaS 订阅费(低边际成本), 高级咨询费"
+            },
+            bmcReport: null,
+            
+            // 默认模板 (可扩展)
+            templates: {
+                retail: {
+                    name: "新零售标准流程",
+                    steps: [
+                        { id: 1, name: "需求预测", type: "process", defaultTime: 2 },
+                        { id: 2, name: "库存审批", type: "wait", defaultTime: 48 }, 
+                        { id: 3, name: "采购下单", type: "process", defaultTime: 4 },
+                        { id: 4, name: "物流运输", type: "wait", defaultTime: 72 },
+                        { id: 5, name: "入库上架", type: "process", defaultTime: 6 },
+                        { id: 6, name: "全渠道交付", type: "process", defaultTime: 24 }
+                    ]
+                }
+            },
+            selectedTemplateId: 'retail',
+            
+            // 核心业务数据 (由生成按钮触发更新)
+            vsm: [], 
+            vsmMetrics: { lt: 0, vt: 0, pce: 0 },
+            capabilities: [],
+            roadmap: [],
+            
+            // 专家规则库
+            rules: [
+                { id: 1, field: "costStructure", keyword: "高", compareField: "revenueStreams", compareKeyword: "低", message: "⚠️ 致命风险：高成本结构与低利润收入流不匹配。", score: 20 },
+                { id: 2, field: "keyActivities", keyword: "研发", compareField: "customerSegments", compareKeyword: "价格敏感", message: "⚠️ 逻辑冲突：高投入研发难以匹配价格敏感型客户。", score: 15 },
+                { id: 3, field: "keyResources", keyword: "外包", compareField: "none", compareKeyword: "", message: "⚠️ 资源风险：关键资源依赖外包，需建立严格的供应商管理机制。", score: 10 }
+            ]
+        };
+
+        // 临时状态：用于新建模板
+        let newTplSteps = [];
+
+        // 静态配置：字段名映射
+        const FIELD_MAP = {
+            keyPartners: "关键合作伙伴", keyActivities: "关键业务活动", keyResources: "核心资源",
+            valuePropositions: "价值主张", customerRelationships: "客户关系", channels: "渠道通路",
+            customerSegments: "客户细分", costStructure: "成本结构", revenueStreams: "收入来源"
+        };
+
+        // 静态配置：能力知识库 (用于 Step 3 映射)
+        const CAPABILITY_DB = {
+            "全渠道交付": { name: "全渠道订单履约能力", sys: "OMS", tech: "Java/Spring", mat: {o:3, p:4, d:2, i:2}, pri: {v:5, u:4, f:3} },
+            "需求预测": { name: "智能需求预测能力", sys: "AI Platform", tech: "Python", mat: {o:2, p:3, d:1, i:1}, pri: {v:5, u:5, f:2} },
+            "库存审批": { name: "自动化库存优化能力", sys: "ERP", tech: "SAP", mat: {o:5, p:5, d:4, i:4}, pri: {v:3, u:3, f:1} },
+            "采购下单": { name: "数字化采购能力", sys: "SRM", tech: "SaaS", mat: {o:2, p:3, d:3, i:3}, pri: {v:4, u:4, f:4} },
+            "入库上架": { name: "智能仓储管理能力", sys: "WMS", tech: "IoT", mat: {o:3, p:2, d:3, i:2}, pri: {v:2, u:3, f:5} },
+            "设计评审": { name: "协同研发设计能力", sys: "PLM", tech: "Cloud", mat: {o:4, p:3, d:4, i:3}, pri: {v:5, u:4, f:4} },
+            // 默认回退
+            "default": { name: "通用业务处理能力", sys: "BPM", tech: "LowCode", mat: {o:3, p:3, d:3, i:3}, pri: {v:3, u:3, f:5} }
+        };
+
+        const STEPS = [
+            { id: 1, title: "商业模式验证", icon: "fa-cubes" },
+            { id: 2, title: "价值流优化", icon: "fa-chart-area" },
+            { id: 3, title: "业务能力规划", icon: "fa-sitemap" },
+            { id: 4, title: "IT 能力规划", icon: "fa-server" },
+            { id: 5, title: "专家知识库配置", icon: "fa-database" }
+        ];
+
+        // ==========================================
+        // 2. 核心逻辑与数据处理
+        // ==========================================
+
+        function initApp() {
+            renderNav();
+            renderStep();
+            // 首次加载如果不手动生成，Step 2 会空。这里不自动生成，等待用户交互。
+        }
+
+        function navigate(dir) {
+            const next = currentState.step + dir;
+            if (next >= 1 && next <= 5) {
+                currentState.step = next;
+                renderNav();
+                renderStep();
+            }
+        }
+
+        function setStep(id) {
+            currentState.step = id;
+            renderNav();
+            renderStep();
+        }
+
+        function toast(msg, type = 'success') {
+            const el = document.getElementById('toast-msg');
+            el.innerText = msg;
+            el.className = `text-sm font-bold px-4 py-2 rounded-full fixed top-4 right-4 z-[60] transition-opacity duration-300 ${type === 'error' ? 'bg-red-500' : 'bg-green-600'} text-white opacity-100`;
+            setTimeout(() => el.classList.remove('opacity-100'), 3000);
+        }
+
+        // --- Step 1 Logic ---
+        function runBMCAnalysis() {
+            const btn = document.getElementById('btn-analyze');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>分析中...';
+            
+            setTimeout(() => {
+                let score = 100;
+                let risks = [];
+                let suggestions = ["💡 建议：基于当前画布，可考虑引入合作伙伴生态以降低非核心业务成本。"];
+
+                currentState.rules.forEach(r => {
+                    const val = currentState.bmc[r.field] || "";
+                    if (val.includes(r.keyword)) {
+                        let hit = false;
+                        if (r.compareField && r.compareField !== 'none') {
+                            const compVal = currentState.bmc[r.compareField] || "";
+                            if (compVal.includes(r.compareKeyword)) hit = true;
+                        } else {
+                            hit = true;
+                        }
+
+                        if (hit) {
+                            score -= r.score;
+                            risks.push(r.message);
+                        }
+                    }
+                });
+
+                if (risks.length === 0) suggestions.push("✅ 商业模式逻辑自洽，未发现明显结构性风险。");
+                
+                currentState.bmcReport = { score: Math.max(0, score), risks, suggestions };
+                renderStep1(); // Re-render to show report
+                toast("AI 诊断完成");
+            }, 800);
+        }
+
+        // --- Step 2 Logic ---
+        function runVSMGen() {
+            const tpl = currentState.templates[currentState.selectedTemplateId];
+            if (!tpl || !tpl.steps.length) {
+                toast("所选模板无效或为空", "error");
+                return;
+            }
+
+            // Generate Data
+            currentState.vsm = tpl.steps.map(s => ({
+                ...s,
+                actualTime: s.defaultTime, // Default value
+                isNVA: s.type === 'wait'
+            }));
+
+            calcVSMMetrics();
+            renderStep2();
+            toast("价值流已生成");
+        }
+
+        function updateVSMTime(id, val) {
+            const item = currentState.vsm.find(i => i.id == id);
+            if (item) {
+                item.actualTime = parseInt(val) || 0;
+                calcVSMMetrics();
+                // Update specific DOM elements to avoid full re-render flickering
+                document.getElementById(`metric-lt`).innerText = currentState.vsmMetrics.lt + " h";
+                document.getElementById(`metric-vt`).innerText = currentState.vsmMetrics.vt + " h";
+                document.getElementById(`metric-pce`).innerText = currentState.vsmMetrics.pce + "%";
+            }
+        }
+
+        function calcVSMMetrics() {
+            const lt = currentState.vsm.reduce((a, b) => a + b.actualTime, 0);
+            const vt = currentState.vsm.filter(i => i.type === 'process').reduce((a, b) => a + b.actualTime, 0);
+            const pce = lt > 0 ? ((vt / lt) * 100).toFixed(1) : 0;
+            currentState.vsmMetrics = { lt, vt, pce };
+        }
+
+        // --- Step 3 Logic ---
+        function runCapGen() {
+            if (currentState.vsm.length === 0) {
+                toast("请先在步骤 2 生成价值流", "error");
+                return;
+            }
+
+            const uniqueSteps = [...new Set(currentState.vsm.filter(s => s.type === 'process').map(s => s.name))];
+            
+            currentState.capabilities = uniqueSteps.map((name, idx) => {
+                // FIX: 修正 CAPABILITY_MAP 为 CAPABILITY_DB
+                const def = CAPABILITY_DB[name] || { ...CAPABILITY_DB['default'], name: name + "支持能力" };
+                // Calculate Priority Score (ICE model)
+                const score = (def.pri.v * 0.4 + def.pri.u * 0.4 + def.pri.f * 0.2).toFixed(1);
+                
+                return {
+                    id: idx + 1,
+                    name: def.name,
+                    sourceStep: name,
+                    system: def.sys,
+                    tech: def.tech,
+                    mat: def.mat,
+                    matAvg: ((def.mat.o + def.mat.p + def.mat.d + def.mat.i) / 4).toFixed(1),
+                    pri: def.pri,
+                    score: score
+                };
+            }).sort((a, b) => b.score - a.score);
+
+            renderStep3();
+            toast("能力地图已生成");
+        }
+
+        // --- Step 4 Logic ---
+        function runRoadmapGen() {
+            if (currentState.capabilities.length === 0) {
+                toast("请先在步骤 3 生成能力规划", "error");
+                return;
+            }
+
+            // Top 3 priorities
+            const topCaps = currentState.capabilities.slice(0, 3);
+            currentState.roadmap = topCaps.map((cap, idx) => ({
+                id: idx,
+                phase: idx === 0 ? "P0 (短期)" : idx === 1 ? "P1 (中期)" : "P2 (长期)",
+                time: `M${idx * 3 + 1} - M${idx * 3 + 3}`,
+                system: cap.system,
+                capName: cap.name,
+                tech: cap.tech,
+                score: cap.score
+            }));
+
+            renderStep4();
+            toast("IT 路标已生成");
+        }
+
+        // --- Step 5 Logic (Config) ---
+        function addRule() {
+            const f = document.getElementById('rule-field').value;
+            const k = document.getElementById('rule-kw').value;
+            const msg = document.getElementById('rule-msg').value;
+            if (!k || !msg) { toast("请填写完整规则信息", "error"); return; }
+            
+            currentState.rules.push({
+                id: Date.now(),
+                field: f, keyword: k, message: msg, score: 10, compareField: 'none'
+            });
+            renderStep5(); // Refresh list
+            toast("规则已添加");
+        }
+
+        function removeRule(id) {
+            currentState.rules = currentState.rules.filter(r => r.id !== id);
+            renderStep5();
+        }
+
+        function addTmpStep() {
+            const name = document.getElementById('tmp-step-name').value;
+            if (!name) return;
+            const type = document.getElementById('tmp-step-type').value;
+            const time = parseInt(document.getElementById('tmp-step-time').value) || 1;
+            
+            newTplSteps.push({ id: Date.now(), name, type, defaultTime: time });
+            // Refresh temp list UI only
+            renderTempStepsList();
+            document.getElementById('tmp-step-name').value = '';
+        }
+
+        function removeTmpStep(id) {
+            newTplSteps = newTplSteps.filter(s => s.id !== id);
+            renderTempStepsList();
+        }
+
+        function saveTemplate() {
+            const name = document.getElementById('tpl-name').value;
+            if (!name || newTplSteps.length === 0) {
+                toast("请输入名称并添加步骤", "error");
+                return;
+            }
+            const key = "custom_" + Date.now();
+            currentState.templates[key] = { name, steps: [...newTplSteps] };
+            newTplSteps = []; // clear
+            renderStep5(); // refresh list
+            toast("模板已保存，可在步骤 2 使用");
+        }
+
+        // ==========================================
+        // 3. UI 渲染逻辑 (View)
+        // ==========================================
+
+        function renderNav() {
+            const nav = document.getElementById('nav-list');
+            nav.innerHTML = STEPS.map(s => {
+                const isActive = s.id === currentState.step;
+                const activeClass = isActive ? "bg-blue-50 border-blue-500 text-blue-700" : "border-transparent text-slate-600 hover:bg-slate-50";
+                return `
+                <button onclick="setStep(${s.id})" class="w-full flex items-center gap-3 p-3 rounded-lg border-l-4 transition-all ${activeClass}">
+                    <div class="w-8 h-8 rounded bg-white flex items-center justify-center shadow-sm text-blue-600"><i class="fas ${s.icon}"></i></div>
+                    <span class="font-bold">${s.id}. ${s.title}</span>
+                </button>`;
+            }).join('');
+
+            // Footer buttons state
+            document.getElementById('btn-prev').disabled = currentState.step === 1;
+            document.getElementById('btn-next').disabled = currentState.step === 5;
+        }
+
+        function renderStep() {
+            // Hide all steps first
+            document.querySelectorAll('.step-wrapper').forEach(el => el.classList.remove('active'));
+            
+            const containerId = `step-${currentState.step}`;
+            const container = document.getElementById(containerId);
+            container.classList.add('active');
+
+            // Dispatch render logic
+            if (currentState.step === 1) renderStep1();
+            if (currentState.step === 2) renderStep2();
+            if (currentState.step === 3) renderStep3();
+            if (currentState.step === 4) renderStep4();
+            if (currentState.step === 5) renderStep5();
+        }
+
+        // --- Step 1 Render ---
+        function renderStep1() {
+            const fields = Object.entries(FIELD_MAP);
+            let gridHtml = fields.map(([key, label]) => {
+                const isCenter = key === 'valuePropositions';
+                const spanClass = isCenter ? "col-span-3 row-span-2 border-blue-400 bg-blue-50/50" : "col-span-1";
+                const val = currentState.bmc[key];
+                return `
+                <div class="${spanClass} bg-white p-3 rounded border border-slate-200 shadow-sm flex flex-col h-40 group hover:border-blue-300 transition-colors">
+                    <label class="text-xs font-bold uppercase text-slate-400 mb-2 group-hover:text-blue-500">${label}</label>
+                    <textarea class="flex-1 w-full resize-none text-sm bg-transparent outline-none" 
+                        oninput="currentState.bmc['${key}'] = this.value">${val}</textarea>
+                </div>`;
+            }).join('');
+
+            // Grid Layout Adjustment for 9-box logic visually using CSS Grid manually for better 3x3 feel
+            // For simplicity in this HTML version, we use a flex/grid mix.
+            // Let's use a simpler 3-column layout that wraps.
+            
+            let reportHtml = '';
+            if (currentState.bmcReport) {
+                const { score, risks, suggestions } = currentState.bmcReport;
+                reportHtml = `
+                <div class="mt-6 bg-slate-800 text-white p-6 rounded-xl animate-fade-in">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="text-lg font-bold"><i class="fas fa-robot mr-2"></i>AI 诊断报告</h3>
+                        <span class="text-2xl font-bold ${score > 80 ? 'text-green-400' : 'text-yellow-400'}">${score}分</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-6 text-sm">
+                        <div>
+                            <h4 class="text-red-300 font-bold mb-2">⚠️ 风险预警</h4>
+                            <ul class="list-disc pl-4 space-y-1 text-slate-300">${risks.length ? risks.map(r => `<li>${r}</li>`).join('') : '<li>暂无明显风险</li>'}</ul>
+                        </div>
+                        <div>
+                            <h4 class="text-blue-300 font-bold mb-2">💡 优化建议</h4>
+                            <ul class="list-disc pl-4 space-y-1 text-slate-300">${suggestions.map(s => `<li>${s}</li>`).join('')}</ul>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            document.getElementById('step-1').innerHTML = `
+                <div class="flex justify-between items-center mb-6 print-hidden">
+                    <h2 class="text-2xl font-bold text-slate-800">1. 商业模式定义</h2>
+                    <button onclick="runBMCAnalysis()" id="btn-analyze" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        <i class="fas fa-bolt mr-2"></i>AI 诊断
+                    </button>
+                </div>
+                <div class="grid grid-cols-3 gap-4" id="bmc-grid-container">
+                    ${gridHtml}
+                </div>
+                ${reportHtml}
+            `;
+        }
+
+        // --- Step 2 Render ---
+        function renderStep2() {
+            const container = document.getElementById('step-2');
+            
+            // Templates Dropdown
+            const options = Object.entries(currentState.templates).map(([k, t]) => 
+                `<option value="${k}" ${k === currentState.selectedTemplateId ? 'selected' : ''}>${t.name}</option>`
+            ).join('');
+
+            // VSM Viz
+            let contentHtml = '';
+            if (currentState.vsm.length === 0) {
+                contentHtml = `<div class="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 text-slate-400">请点击右上方按钮生成价值流</div>`;
+            } else {
+                const stepsHtml = currentState.vsm.map((s, i) => `
+                    <div class="flex items-center">
+                        <div class="relative w-40 p-3 rounded border-2 ${s.isNVA ? 'border-dashed border-red-300 bg-red-50' : 'border-blue-500 bg-blue-50'} flex flex-col items-center text-center">
+                            <span class="text-[10px] font-bold uppercase text-slate-500 mb-1">${s.isNVA ? '非增值 (NVA)' : '增值 (VA)'}</span>
+                            <div class="font-bold text-slate-800 text-sm mb-2">${s.name}</div>
+                            <div class="flex items-center gap-1 bg-white px-2 py-1 rounded border border-slate-200">
+                                <input type="number" value="${s.actualTime}" onchange="updateVSMTime(${s.id}, this.value)" class="w-12 text-center text-sm outline-none font-mono font-bold text-blue-600">
+                                <span class="text-xs text-slate-400">h</span>
+                            </div>
+                        </div>
+                        ${i < currentState.vsm.length - 1 ? '<div class="w-8 h-0.5 bg-slate-300 mx-1"></div><i class="fas fa-chevron-right text-slate-300"></i><div class="w-8 h-0.5 bg-slate-300 mx-1"></div>' : ''}
+                    </div>
+                `).join('');
+                
+                contentHtml = `
+                    <div class="overflow-x-auto pb-4"><div class="flex min-w-max p-2">${stepsHtml}</div></div>
+                    <div class="grid grid-cols-3 gap-4 mt-6">
+                        <div class="p-4 bg-slate-50 rounded border border-slate-200"><div class="text-xs text-slate-500 uppercase font-bold">总交付周期 (Lead Time)</div><div class="text-2xl font-bold text-slate-800" id="metric-lt">${currentState.vsmMetrics.lt} h</div></div>
+                        <div class="p-4 bg-slate-50 rounded border border-slate-200"><div class="text-xs text-slate-500 uppercase font-bold">增值时间 (VAT)</div><div class="text-2xl font-bold text-blue-600" id="metric-vt">${currentState.vsmMetrics.vt} h</div></div>
+                        <div class="p-4 bg-slate-50 rounded border border-slate-200"><div class="text-xs text-slate-500 uppercase font-bold">流程效率 (PCE)</div><div class="text-2xl font-bold text-green-600" id="metric-pce">${currentState.vsmMetrics.pce}%</div></div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="flex justify-between items-center mb-6 print-hidden">
+                    <h2 class="text-2xl font-bold text-slate-800">2. 价值流分析</h2>
+                    <div class="flex gap-2">
+                        <select class="bg-white border border-slate-300 text-sm rounded-lg px-3 py-2 outline-none" onchange="currentState.selectedTemplateId = this.value">${options}</select>
+                        <button onclick="runVSMGen()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"><i class="fas fa-play mr-2"></i>生成价值流</button>
+                    </div>
+                </div>
+                ${contentHtml}
+            `;
+        }
+
+        // --- Step 3 Render ---
+        function renderStep3() {
+            const container = document.getElementById('step-3');
+            
+            let contentHtml = '';
+            if (currentState.capabilities.length === 0) {
+                contentHtml = `<div class="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 text-slate-400">依赖步骤 2 数据，请先生成价值流</div>`;
+            } else {
+                const rows = currentState.capabilities.map(c => `
+                    <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                        <td class="p-3 font-medium text-slate-700">${c.name}</td>
+                        <td class="p-3 text-center"><span class="px-2 py-1 bg-slate-100 rounded text-xs text-slate-500">${c.sourceStep}</span></td>
+                        <td class="p-3">
+                            <div class="flex gap-1 justify-center">
+                                ${['o','p','d','i'].map((k, i) => `<div class="w-6 h-6 rounded flex items-center justify-center text-xs text-white ${c.mat[k] >= 4 ? 'bg-green-500' : c.mat[k] >= 3 ? 'bg-blue-400' : 'bg-red-400'}" title="${['组织','流程','数据','IT'][i]}">${c.mat[k]}</div>`).join('')}
+                            </div>
+                        </td>
+                        <td class="p-3 text-center font-mono font-bold text-blue-600">${c.score}</td>
+                    </tr>
+                `).join('');
+                
+                contentHtml = `
+                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
+                                <tr><th class="p-3 text-left">业务能力</th><th class="p-3 text-center">来源步骤</th><th class="p-3 text-center">成熟度 (Org/Proc/Data/IT)</th><th class="p-3 text-center">优先级得分</th></tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="flex justify-between items-center mb-6 print-hidden">
+                    <h2 class="text-2xl font-bold text-slate-800">3. 业务能力规划</h2>
+                    <button onclick="runCapGen()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"><i class="fas fa-cogs mr-2"></i>生成能力地图</button>
+                </div>
+                ${contentHtml}
+            `;
+        }
+
+        // --- Step 4 Render ---
+        function renderStep4() {
+            const container = document.getElementById('step-4');
+            
+            let contentHtml = '';
+            if (currentState.roadmap.length === 0) {
+                contentHtml = `<div class="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 text-slate-400">依赖步骤 3 数据，请先生成能力规划</div>`;
+            } else {
+                const cards = currentState.roadmap.map(r => `
+                    <div class="flex gap-4">
+                        <div class="w-24 pt-4 text-right text-sm font-bold text-slate-400">${r.phase}</div>
+                        <div class="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-4 relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1 ${r.phase.includes('P0') ? 'bg-red-500' : r.phase.includes('P1') ? 'bg-blue-500' : 'bg-green-500'}"></div>
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="font-bold text-slate-800 text-lg">${r.system} <span class="text-xs font-normal text-slate-500 ml-2">(${r.tech})</span></div>
+                                    <div class="text-sm text-slate-600 mt-1">支撑能力：${r.capName}</div>
+                                </div>
+                                <div class="text-xs bg-white px-2 py-1 rounded border border-slate-200 text-slate-400">${r.time}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                contentHtml = `<div class="space-y-4 max-w-3xl">${cards}</div>`;
+            }
+
+            container.innerHTML = `
+                <div class="flex justify-between items-center mb-6 print-hidden">
+                    <h2 class="text-2xl font-bold text-slate-800">4. IT 能力规划</h2>
+                    <button onclick="runRoadmapGen()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"><i class="fas fa-road mr-2"></i>生成建设路标</button>
+                </div>
+                ${contentHtml}
+            `;
+        }
+
+        // --- Step 5 Render (Config) ---
+        function renderStep5() {
+            const container = document.getElementById('step-5');
+            
+            // Rules List
+            const rulesHtml = currentState.rules.map(r => `
+                <div class="flex justify-between items-center p-3 bg-white border border-slate-200 rounded text-sm group">
+                    <div><span class="font-bold text-blue-600">IF</span> ${FIELD_MAP[r.field]} 包含 "${r.keyword}" <span class="font-bold text-red-500">THEN</span> 扣 ${r.score}分</div>
+                    <button onclick="removeRule(${r.id})" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('');
+
+            // Templates List
+            const tplsHtml = Object.entries(currentState.templates).map(([key, t]) => `
+                <div class="p-3 bg-white border border-slate-200 rounded text-sm flex justify-between">
+                    <div><span class="font-bold">${t.name}</span> <span class="text-xs text-slate-400 ml-2">${t.steps.length} 步骤</span></div>
+                    <div class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500">${key.startsWith('custom') ? '自定义' : '系统'}</div>
+                </div>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="mb-8">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fas fa-gavel text-blue-500"></i> 诊断规则管理</h3>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4">
+                        <div class="grid grid-cols-4 gap-2 mb-2">
+                            <select id="rule-field" class="border p-2 rounded text-sm">${Object.entries(FIELD_MAP).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
+                            <input id="rule-kw" placeholder="关键词" class="border p-2 rounded text-sm">
+                            <input id="rule-msg" placeholder="警报信息" class="col-span-2 border p-2 rounded text-sm">
+                        </div>
+                        <button onclick="addRule()" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">添加规则</button>
+                    </div>
+                    <div class="space-y-2 max-h-48 overflow-y-auto">${rulesHtml}</div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><i class="fas fa-layer-group text-green-500"></i> 价值流模板管理</h3>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4">
+                        <input id="tpl-name" placeholder="新模板名称 (如: 敏捷开发流程)" class="w-full border p-2 rounded text-sm mb-3">
+                        
+                        <div class="bg-white p-3 rounded border border-slate-200 mb-3">
+                            <div class="flex gap-2 mb-2">
+                                <input id="tmp-step-name" placeholder="步骤名称" class="flex-1 border p-2 rounded text-sm">
+                                <select id="tmp-step-type" class="border p-2 rounded text-sm"><option value="process">增值</option><option value="wait">等待</option></select>
+                                <input id="tmp-step-time" type="number" value="1" class="w-16 border p-2 rounded text-sm">
+                                <button onclick="addTmpStep()" class="text-green-600 hover:bg-green-50 px-2 rounded"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <div id="temp-steps-preview" class="space-y-1 pl-2 border-l-2 border-slate-100"></div>
+                        </div>
+                        <button onclick="saveTemplate()" class="w-full bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">保存模板</button>
+                    </div>
+                    <div class="space-y-2">${tplsHtml}</div>
+                </div>
+            `;
+            
+            // Initial render of temp steps logic is handled by global var, need to re-render if switching back
+            renderTempStepsList();
+        }
+
+        function renderTempStepsList() {
+            const container = document.getElementById('temp-steps-preview');
+            if (!container) return;
+            container.innerHTML = newTplSteps.map(s => `
+                <div class="text-xs flex justify-between items-center text-slate-600">
+                    <span>${s.name} (${s.type}) ${s.defaultTime}h</span>
+                    <button onclick="removeTmpStep(${s.id})" class="text-red-400"><i class="fas fa-times"></i></button>
+                </div>
+            `).join('') || '<div class="text-xs text-slate-300 italic">暂无步骤</div>';
+        }
+
+        // ==========================================
+        // 4. PDF 导出逻辑 (核心修复：全量渲染)
+        // ==========================================
+
+        async function handleExportPDF() {
+            toast("正在生成 PDF，请稍候...", "loading");
+            
+            // 1. 准备 DOM：克隆步骤内容到隐藏容器，强制显示
+            const printContainer = document.createElement('div');
+            printContainer.className = 'pdf-mode-active';
+            
+            // 依次渲染步骤 1-4 到这个容器中 (使用简单的 HTML 字符串拼接或克隆现有DOM)
+            // 为了保证样式一致，我们临时改变主工作区的样式
+            const workspace = document.getElementById('workspace');
+            const originalClass = workspace.className;
+            const originalParent = workspace.parentNode;
+            const sidebar = document.getElementById('sidebar');
+            const header = document.querySelector('header');
+            
+            // 临时隐藏干扰元素
+            sidebar.style.display = 'none';
+            header.style.display = 'none';
+            document.getElementById('footer-nav').style.display = 'none';
+            
+            // 强制显示所有步骤 1-4
+            document.querySelectorAll('.step-wrapper').forEach(el => {
+                if(el.id !== 'step-5') el.classList.add('active');
+            });
+            
+            // 调整宽度适应 A4
+            workspace.classList.remove('lg:col-span-9');
+            workspace.classList.add('w-[210mm]', 'mx-auto', 'shadow-none', 'border-0');
+
+            try {
+                const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+                const pageHeight = 295;
+                const contentIds = ['step-1', 'step-2', 'step-3', 'step-4'];
+                
+                for (let i = 0; i < contentIds.length; i++) {
+                    const el = document.getElementById(contentIds[i]);
+                    if (i > 0) pdf.addPage();
+                    
+                    // Capture
+                    const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+                    const imgData = canvas.toDataURL('image/png');
+                    const imgWidth = 190;
+                    const imgHeight = canvas.height * imgWidth / canvas.width;
+                    
+                    pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+                }
+
+                pdf.save('Transformation_Blueprint.pdf');
+                toast("PDF 导出成功");
+
+            } catch (e) {
+                console.error(e);
+                toast("导出失败，请检查控制台", "error");
+            } finally {
+                // 恢复 UI
+                sidebar.style.display = 'block';
+                header.style.display = 'flex';
+                document.getElementById('footer-nav').style.display = 'flex';
+                
+                workspace.className = originalClass;
+                
+                // 恢复步骤显示状态
+                document.querySelectorAll('.step-wrapper').forEach(el => el.classList.remove('active'));
+                document.getElementById(`step-${currentState.step}`).classList.add('active');
+            }
+        }
+
+    </script>
+</body>
+</html>
