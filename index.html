@@ -51,6 +51,8 @@
         .html-export-print-mode .print-hidden { display: none !important; }
         .step-wrapper { display: none; animation: fadeIn 0.28s ease-out; }
         .step-wrapper.active { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+        /* 数字化资产配置：按内容撑开高度，由 #workspace-scroll 整体滚动，避免规则列表被压在固定视口内 */
+        #step-8.step-wrapper.active { flex: 0 0 auto; min-height: 0; }
         #workspace-scroll {
             flex: 1 1 0;
             min-height: 0;
@@ -490,12 +492,11 @@
             },
             s8: {
                 bullets: [
-                    '画布诊断规则：为各画布字段配置触发关键词、可选第二字段联动与扣分；步骤 1「运行诊断」时累计扣分并输出提示列表。',
-                    '价值流模板库：维护阶段、场景与业务组件；可为模板勾选「适用行业」，与步骤 1 所选行业、步骤 2 模板下拉一致（不勾选任何行业 = 全部行业可见）。',
-                    '「导出 Excel」含规则与模板两表：模板表带「适用行业」列（逗号分隔，与步骤 1 下拉选项一致；留空表示全部）。旧版无该列的导入会保留条目原有行业关联。',
-                    '导入 Excel 按模板键合并写入；详见「使用说明」工作表。'
+                    '诊断规则：指定「画布某一格 + 关键词」，步骤 1「运行诊断」命中就提示（默认扣 10 分，可多条叠加）。',
+                    '价值流模板：维护阶段名称、场景、业务组件；可选「适用行业」——不勾选表示步骤 2 里所有行业都能看到该模板。',
+                    'Excel：导出含「规则」「模板」两张表；模板表有「适用行业」列（逗号分隔）。导入按模板键合并，详见文件内「使用说明」。'
                 ],
-                output: '产出：诊断规则与按行业可见的价值流模板资产；支持 Excel 往返并与步骤 1/2 联动（随工作流快照保存）。'
+                output: '产出：诊断规则 + 可按行业筛选的价值流模板；随快照保存，并与步骤 1 / 2 联动。'
             }
         };
 
@@ -774,10 +775,39 @@
             sidebarCollapsed: false,
             /** 配置页 Tab：rules | templates */
             configTab: 'rules',
+            /** 画布诊断：正在编辑的规则 id；null 表示新建（不入快照） */
+            editingRuleId: null,
             /** 步骤 7 甘特：起始月 YYYY-MM、跨度（月）、举措 id 展开子路标 */
             roadmapStartYm: '',
             roadmapMonths: 24,
-            roadmapExpandedIniIds: {}
+            roadmapExpandedIniIds: {},
+            /**
+             * 《架构演进.md》§3：多项目 / 组织归属预留（写入快照与资产库，便于后续组合管理与权限）。
+             */
+            workspaceMeta: {
+                organizationId: '',
+                organizationName: '',
+                projectId: '',
+                projectName: '',
+                capabilityFrameworkTemplateRef: ''
+            },
+            /** §1 持续运营闭环：实施检查点、成熟度再评估记录等（当前为轻量占位，供后续模块挂载） */
+            continuousOps: {
+                version: 1,
+                initiativeCheckpoints: [],
+                maturityRuns: [],
+                dashboardPrefs: { pinnedMetrics: [] }
+            },
+            /** §3 知识沉淀：匿名案例引用、跨版本资产关联（占位） */
+            knowledgeRefs: {
+                version: 1,
+                anonymizedCaseIds: [],
+                linkedAssetRecordIds: []
+            },
+            /** §2 热力图：空字符串 = 全局四维；非空时为价值流「场景因子」文案，对应能力块 scenarioGapProfiles（界面已移除场景切换，保留字段兼容旧快照） */
+            heatmapScenarioView: '',
+            /** 步骤 4：从热力卡片跳入时要定位高亮的能力行 id（不入快照） */
+            gapHighlightCapabilityId: null
         };
 
         /** 主流程 7 步（左侧序号与右侧步骤编号一致）；数字化资产配置不在此数组 */
@@ -794,10 +824,9 @@
         const STEP_TOTAL = 7;
         const ROADMAP_HORIZON_MONTHS = 24;
 
-        /** 侧栏「配置」面板：画布规则与价值流模板，不计入 7 步 */
+        /** 侧栏「配置」面板：画布规则与价值流模板 */
         const CONFIG_PANEL = {
             title: '数字化资产配置',
-            guide: '顶部 Tab：画布诊断规则、价值流模板库（含适用行业，与步骤 1 顶部行业下拉、步骤 2 模板筛选一致）。可导出/导入 Excel。右下角「AI 规划助手」可做启发式问答。不计入主流程 7 步。',
             icon: 'fa-sliders'
         };
 
@@ -862,12 +891,15 @@
             const tpl = currentState.editingTemplateKey ? currentState.templates[currentState.editingTemplateKey] : null;
             const sel = tpl && Array.isArray(tpl.industries) ? tpl.industries : [];
             const hasRestrict = sel.length > 0;
-            return `<div class="mb-4 rounded-[12px] border border-black/[0.08] bg-canvas/80 px-3 py-3 space-y-2">
-                <p class="text-[12px] font-semibold text-ink">适用行业（与步骤 1 所选行业联动）</p>
-                <p class="text-[11px] text-ink-secondary leading-snug">不勾选任何项 → 步骤 2 中<strong class="text-ink font-medium">全部</strong>行业下拉可见该模板；勾选则<strong class="text-ink font-medium">仅</strong>所选行业可见。</p>
-                <div class="flex flex-wrap gap-x-4 gap-y-2">${WORKFLOW_INDUSTRIES.map((ind, i) => {
+            return `<div class="mb-4 rounded-[12px] border border-black/[0.08] bg-gradient-to-b from-canvas to-canvas/90 px-3 py-3 space-y-2">
+                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                    <p class="text-[12px] font-semibold text-ink">谁在步骤 2 能看到这个模板？</p>
+                    <span class="text-[10px] font-medium text-ink-tertiary tabular-nums">${hasRestrict ? '已限定行业' : '不限（全行业）'}</span>
+                </div>
+                <p class="text-[11px] text-ink-secondary leading-snug"><strong class="text-ink font-medium">一个都不勾</strong>：步骤 2 下拉始终有它。<strong class="text-ink font-medium">勾了几个</strong>：只有步骤 1 选了对应行业时才出现。</p>
+                <div class="flex flex-wrap gap-x-5 gap-y-2 pt-0.5">${WORKFLOW_INDUSTRIES.map((ind, i) => {
                 const checked = hasRestrict && sel.includes(ind);
-                return `<label class="inline-flex items-center gap-2 text-[13px] text-ink cursor-pointer select-none">
+                return `<label class="inline-flex items-center gap-2 text-[13px] text-ink cursor-pointer select-none rounded-[8px] border border-transparent px-2 py-1 hover:bg-white/80 hover:border-black/[0.06] transition-colors">
                     <input type="checkbox" id="tpl-industry-${i}" class="rounded border-black/[0.2] text-accent focus:ring-accent/30" ${checked ? 'checked' : ''} />
                     <span>${ind}</span>
                 </label>`;
@@ -893,9 +925,7 @@
         function configPageHeading(extraClass = '') {
             const blockClass = extraClass ? ` ${extraClass}` : '';
             return `<div class="step-page-head min-w-0 shrink-0${blockClass}">
-                <p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider leading-none">数字化资产配置（不计入 ${STEP_TOTAL} 步主流程）</p>
-                <h2 class="text-[17px] sm:text-[18px] lg:text-[17px] font-semibold text-ink tracking-tight mt-0.5 leading-tight">${CONFIG_PANEL.title}</h2>
-                <p class="text-[12px] text-ink-secondary mt-1 leading-snug line-clamp-2">${CONFIG_PANEL.guide}</p>
+                <h2 class="text-[17px] sm:text-[18px] lg:text-[17px] font-semibold text-ink tracking-tight leading-tight">${CONFIG_PANEL.title}</h2>
             </div>`;
         }
 
@@ -1318,15 +1348,32 @@
                 }));
             }
             if (stepId >= 5 && (currentState.capabilityFramework || []).length) {
+                const fwAi = currentState.capabilityFramework || [];
                 snap.heatSummary = {
-                    red: (currentState.capabilityFramework || []).filter(c => heatCategory(c) === 'red').map(c => c.l3),
-                    yellow: (currentState.capabilityFramework || []).filter(c => heatCategory(c) === 'yellow').map(c => c.l3)
+                    red: fwAi.filter(c => heatCategory(c) === 'red').map(c => c.l3),
+                    yellow: fwAi.filter(c => heatCategory(c) === 'yellow').map(c => c.l3)
                 };
             }
+            snap.workspaceMeta = {
+                organizationName: (currentState.workspaceMeta && currentState.workspaceMeta.organizationName) || '',
+                projectName: (currentState.workspaceMeta && currentState.workspaceMeta.projectName) || ''
+            };
             if (stepId >= 6) {
                 snap.initiatives = (currentState.initiatives || []).slice(0, 12).map(i => ({ title: i.title, phase: i.phase, gaps: i.gaps }));
             }
             if (stepId >= 7) snap.roadmapMonths = currentState.roadmapMonths;
+            if (stepId === 8) {
+                snap.bmc = { ...currentState.bmc };
+                snap.currentDiagnosticRules = (currentState.rules || []).map(r => ({
+                    field: r.field,
+                    keyword: r.keyword,
+                    message: r.message,
+                    score: r.score,
+                    compareField: r.compareField,
+                    compareKeyword: r.compareKeyword
+                }));
+                snap.fieldKeysAllowed = FIELD_ORDER;
+            }
             return snap;
         }
 
@@ -1468,9 +1515,34 @@
                 return lines.join('\n');
             }
             if (actionId === 'config_ai') {
-                lines.push('资产配置（演示）：');
-                lines.push(`· 规则 ${currentState.rules.length} 条；模板 ${Object.keys(currentState.templates || {}).length} 个`);
-                lines.push('· 长期可由 AI 从诊断历史学习新规则、归纳高频模板改动（机会点8）。');
+                lines.push('画布诊断配置（演示）：');
+                lines.push('· 范围：仅针对步骤 1 商业画布蓝图的「画布诊断」规则；写入补丁时只更新规则列表，不含价值流模板等其它模块。');
+                lines.push(`· 当前规则 ${currentState.rules.length} 条。下方为示例 workflowPatch（可点助手区「应用到工作流」试验）。`);
+                lines.push('');
+                lines.push('```json');
+                lines.push(JSON.stringify({
+                    workflowPatch: {
+                        version: 1,
+                        canvasDiagnosticRules: [
+                            { field: 'valuePropositions', keyword: '待定', message: '价值主张应避免「待定/TBD」，请写出可验证的客户收益与差异化。', score: 12, compareField: 'none' },
+                            { field: 'costStructure', keyword: '高', message: '成本高企时建议核对收入结构是否足以覆盖固定成本。', score: 18, compareField: 'revenueStreams', compareKeyword: '低' },
+                            { field: 'keyActivities', keyword: '外包', message: '关键活动大量外包需明确治理与连续性风险。', score: 10, compareField: 'none' }
+                        ]
+                    }
+                }, null, 2));
+                lines.push('```');
+                return lines.join('\n');
+            }
+            if (actionId === 'vs_template_config') {
+                const hint = inferWorkflowIndustryFromUserText(msg) || ctx.workflowIndustry || '汽车';
+                const demoWp = buildDemoValueStreamWorkflowPatchForIndustry(hint);
+                lines.push('价值流模板配置（演示）：');
+                lines.push(`· 已按行业倾向「${demoWp.workflowIndustry}」生成典型端到端阶段与价值流名称；写入后可在步骤 2 继续微调时长与五维。`);
+                lines.push('· 配置 API 后可结合真实 OTIF、库存周转、质量损失等指标细化组件与节拍。');
+                lines.push('');
+                lines.push('```json');
+                lines.push(JSON.stringify({ workflowPatch: demoWp }, null, 2));
+                lines.push('```');
                 return lines.join('\n');
             }
             if (actionId === 'preset_insight_refresh') {
@@ -1541,6 +1613,8 @@
                 `· workflowPatch.capabilityInsights：增量刷新能力表述；数组每项含 l3，可选 linkedVs（区分同名 L3），及 desc、l1、l2；不替换整表。\n` +
                 `· workflowPatch.initiatives：变革举措；非空则整体替换。每项含 title，可选 caps(数组),gaps,window,benefit,cost（难易程度文案）,phase(P0|P1|P2),tech,deps,milestoneBand，streams 为子路标数组（start 为从 0 起的月索引，len 为持续月数）。\n` +
                 `· workflowPatch.roadmap：可选 startYm(YYYY-MM)、months(6-48)。\n` +
+                `· workflowPatch.canvasDiagnosticRules：画布诊断规则数组（替换写入当前规则表）；每项含 field（英文键）、keyword、message、score（0-100 扣分）、compareField（另一格英文键或 none）、compareKeyword（联动关键词；无联动可省略）。\n` +
+                `· workflowPatch.workflowIndustry：可选，仅允许 ${WORKFLOW_INDUSTRIES.join('、')}，用于步骤 2 行业筛选。\n` +
                 `当前用户步骤若与补丁无关，仍可给出补丁以便其切换步骤后已有数据；但不要无故清空未提及的模块。`;
         }
 
@@ -1663,10 +1737,12 @@
                     gapIt,
                     sys: String(raw.sys != null && String(raw.sys).trim() ? raw.sys : def.sys),
                     tech: String(raw.tech != null && String(raw.tech).trim() ? raw.tech : def.tech),
-                    ice
+                    ice,
+                    scenarioGapProfiles: Array.isArray(raw.scenarioGapProfiles) ? raw.scenarioGapProfiles : []
                 };
             });
             currentState.capabilityFramework.sort((a, b) => parseFloat(b.ice) - parseFloat(a.ice));
+            migrateCapabilityFrameworkGapScores();
         }
 
         function mergeCapabilityGapsFromAiPatch(updates) {
@@ -1838,12 +1914,98 @@
             } else if (touched.roadmap) {
                 afterRoadmapTimelineChange();
             }
+            if (touched.cfg) renderStep8();
+        }
+
+        function normalizeDiagnosticRuleScore(raw) {
+            const n = parseInt(raw, 10);
+            if (isNaN(n)) return 10;
+            return Math.max(0, Math.min(100, n));
+        }
+
+        /** @returns {boolean} 是否成功写入至少一条规则 */
+        function applyCanvasDiagnosticRulesFromAiPatch(rows) {
+            if (!Array.isArray(rows) || !rows.length) return false;
+            const baseId = Date.now();
+            const out = [];
+            rows.forEach((raw, idx) => {
+                const field = normalizeBmcFieldKeyFromCell(String(raw.field || '')) || '';
+                const keyword = String(raw.keyword || '').trim();
+                const message = String(raw.message || '').trim();
+                if (!field || !keyword || !message) return;
+                let compareField = String(raw.compareField ?? 'none').trim();
+                if (!compareField || /^none$/i.test(compareField)) compareField = 'none';
+                else compareField = normalizeBmcFieldKeyFromCell(compareField) || 'none';
+                let compareKeyword = String(raw.compareKeyword || '').trim();
+                if (compareField !== 'none' && !compareKeyword) compareField = 'none';
+                if (compareField === 'none') compareKeyword = '';
+                const score = normalizeDiagnosticRuleScore(raw.score);
+                out.push({
+                    id: baseId + idx,
+                    field,
+                    keyword,
+                    message,
+                    score,
+                    compareField,
+                    compareKeyword
+                });
+            });
+            if (!out.length) return false;
+            currentState.rules = out;
+            return true;
+        }
+
+        function inferWorkflowIndustryFromUserText(msg) {
+            const t = String(msg || '');
+            if (/汽车|车企|整车|零部件|主机厂/i.test(t)) return '汽车';
+            if (/家电/i.test(t)) return '家电';
+            if (/3C|消费电子|手机|数码/i.test(t)) return '3C';
+            return '';
+        }
+
+        function buildDemoValueStreamWorkflowPatchForIndustry(indHint) {
+            let industry = WORKFLOW_INDUSTRIES.includes(indHint) ? indHint : inferWorkflowIndustryFromUserText(indHint);
+            if (!industry) industry = '汽车';
+            if (!WORKFLOW_INDUSTRIES.includes(industry)) industry = '汽车';
+            const stagesBank = {
+                '汽车': [
+                    { name: '市场与客户洞察', type: 'process', scenarios: '细分客群、渠道与竞品趋势', components: '市场调研,VoC,竞品对标', actualTime: 160, dEff: 3, dQual: 4, dCost: 3, dRisk: 3, dCx: 4 },
+                    { name: '产品与平台定义', type: 'process', scenarios: '车型/平台规格与法规约束', components: '需求包,配置表,法规清单', actualTime: 200, dEff: 3, dQual: 4, dCost: 3, dRisk: 4, dCx: 4 },
+                    { name: '研发与验证关口', type: 'wait', scenarios: '样车/软件里程碑评审', components: 'DFMEA,试制,试验认证', actualTime: 320, dEff: 2, dQual: 5, dCost: 3, dRisk: 5, dCx: 3 },
+                    { name: '供应链与制造导入', type: 'process', scenarios: '产能、工装与二级件导入', components: 'SOP,PPAP,供应商审核', actualTime: 240, dEff: 4, dQual: 4, dCost: 4, dRisk: 4, dCx: 3 },
+                    { name: '批量生产与质检', type: 'process', scenarios: '节拍、质量门与追溯', components: 'MES,QMS,追溯码', actualTime: 180, dEff: 4, dQual: 5, dCost: 4, dRisk: 3, dCx: 3 },
+                    { name: '交付与售后闭环', type: 'process', scenarios: '物流交付、保修与改进回流', components: 'TMS,客服,索赔分析', actualTime: 120, dEff: 4, dQual: 4, dCost: 3, dRisk: 3, dCx: 5 }
+                ],
+                '家电': [
+                    { name: '需求与产品企划', type: 'process', scenarios: '价位段、卖点与配置组合', components: '企划书,产品线矩阵', actualTime: 96, dEff: 4, dQual: 4, dCost: 3, dRisk: 3, dCx: 4 },
+                    { name: '工业设计冻结', type: 'wait', scenarios: '外观与结构定型评审', components: 'ID,CMF,开模评审', actualTime: 72, dEff: 3, dQual: 4, dCost: 3, dRisk: 4, dCx: 5 },
+                    { name: '研发试制', type: 'process', scenarios: '电气/结构/软件联调', components: 'BOM,固件,安规预检', actualTime: 200, dEff: 3, dQual: 5, dCost: 3, dRisk: 4, dCx: 4 },
+                    { name: '采购与产能准备', type: 'process', scenarios: '关键料长周期与二供', components: '采购策略,产能爬坡', actualTime: 160, dEff: 4, dQual: 4, dCost: 4, dRisk: 4, dCx: 3 },
+                    { name: '量产与质检', type: 'process', scenarios: '直通率、抽检与追溯', components: 'SPC,OQC,追溯', actualTime: 144, dEff: 4, dQual: 5, dCost: 4, dRisk: 3, dCx: 4 },
+                    { name: '渠道履约与售后', type: 'process', scenarios: '仓配、安装与维保数据回流', components: 'WMS,服务工单,VOC', actualTime: 120, dEff: 4, dQual: 4, dCost: 3, dRisk: 3, dCx: 5 }
+                ],
+                '3C': [
+                    { name: '趋势与SKU规划', type: 'process', scenarios: '品类节奏与渠道套装', components: 'Roadmap,定价带', actualTime: 80, dEff: 4, dQual: 3, dCost: 3, dRisk: 3, dCx: 4 },
+                    { name: '硬件研发', type: 'process', scenarios: '堆叠、射频与可靠性', components: 'EVT,DVT,认证', actualTime: 240, dEff: 3, dQual: 5, dCost: 3, dRisk: 4, dCx: 4 },
+                    { name: '软件与生态', type: 'process', scenarios: 'OS/应用与账号体系', components: 'OTA,应用商店,隐私合规', actualTime: 200, dEff: 3, dQual: 4, dCost: 3, dRisk: 4, dCx: 5 },
+                    { name: '供应链与爬坡', type: 'process', scenarios: '关键芯片alloc与二供', components: 'MRP,供应商协同', actualTime: 160, dEff: 4, dQual: 4, dCost: 4, dRisk: 5, dCx: 3 },
+                    { name: '量产与质量门', type: 'wait', scenarios: 'MP前质量准入', components: 'IQC,PQC,可靠性抽检', actualTime: 96, dEff: 4, dQual: 5, dCost: 4, dRisk: 4, dCx: 4 },
+                    { name: '上市与渠道运营', type: 'process', scenarios: '首发、促销与库存健康', components: '电商,门店,逆向物流', actualTime: 120, dEff: 4, dQual: 4, dCost: 3, dRisk: 3, dCx: 5 }
+                ]
+            };
+            const stages = stagesBank[industry] || stagesBank['汽车'];
+            return {
+                version: 1,
+                workflowIndustry: industry,
+                valueStreamName: `${industry}：端到端价值流（演示示例）`,
+                stages
+            };
         }
 
         /** @returns {{ ok: boolean, summary?: string }} */
         function applyWorkflowPatchObject(wp) {
             if (!wp || typeof wp !== 'object') return { ok: false };
-            const touched = { bmc: false, vs: false, cap: false, ini: false, roadmap: false };
+            const touched = { bmc: false, vs: false, cap: false, ini: false, roadmap: false, cfg: false };
             const parts = [];
             if (wp.roadmap && typeof wp.roadmap === 'object') {
                 applyRoadmapFromAiPatch(wp.roadmap);
@@ -1893,7 +2055,18 @@
                 touched.ini = true;
                 parts.push('变革举措');
             }
-            const did = touched.bmc || touched.vs || touched.cap || touched.ini || touched.roadmap;
+            if (wp.workflowIndustry != null && WORKFLOW_INDUSTRIES.includes(String(wp.workflowIndustry).trim())) {
+                currentState.workflowIndustry = String(wp.workflowIndustry).trim();
+                touched.vs = true;
+                parts.push('工作流行业');
+            }
+            if (wp.canvasDiagnosticRules && Array.isArray(wp.canvasDiagnosticRules) && wp.canvasDiagnosticRules.length) {
+                if (applyCanvasDiagnosticRulesFromAiPatch(wp.canvasDiagnosticRules)) {
+                    touched.cfg = true;
+                    parts.push('画布诊断规则');
+                }
+            }
+            const did = touched.bmc || touched.vs || touched.cap || touched.ini || touched.roadmap || touched.cfg;
             if (did) refreshUiAfterWorkflowPatch(touched);
             return { ok: did, summary: parts.join('、') };
         }
@@ -2016,6 +2189,77 @@
                 return;
             }
 
+            if (actionId === 'config_ai') {
+                if (!out) return;
+                const richCtx = buildAiContextSnapshot();
+                richCtx.canvasDiagnosticPurpose = '仅生成/优化商业画布蓝图用的画布诊断规则；workflowPatch 中不要包含 stages、capabilities、templates、bmc 等其它模块。';
+                if (!cfg.endpoint) {
+                    out.textContent = generateDemoAiReply('config_ai', userMsg, richCtx);
+                    toast('演示模式：已给出示例画布诊断规则 JSON，可点「应用到工作流」试验');
+                    return;
+                }
+                out.textContent = '生成中…';
+                try {
+                    const narrowSuffix = '\n\n【画布诊断专用回填】文末必须输出 ```json 代码块。workflowPatch 内【仅】允许 version 与 canvasDiagnosticRules（禁止输出 bmc、stages、capabilities、templates、initiatives 等）。\n' +
+                        'canvasDiagnosticRules：数组，整表替换写入。每项含 field（' + FIELD_ORDER.join('/') + ' 之一）、keyword、message、score（0-100 扣分）、compareField（另一字段英文键或 none）、compareKeyword（无联动可省略）。\n' +
+                        '规则应可直接用于「包含关键词即触发」语义，并可设计跨格联动（两格同时命中才扣分）。';
+                    const systemText = '你是商业画布质量评审顾问，擅长把模糊表述、逻辑冲突写成可执行的诊断规则（简体中文）。' + narrowSuffix;
+                    const userText = `任务：画布诊断规则 — 生成或优化。\n\n① 简述当前画布要点与规则库状况。\n② 给出专业建议。\n③ 文末输出完整可写入的 JSON：{"workflowPatch":{"version":1,"canvasDiagnosticRules":[...]}}（即使微调也需输出全量规则数组）。\n\n上下文 JSON：\n${JSON.stringify(richCtx, null, 2)}\n用户补充：${userMsg || '无'}`;
+                    const text = await callOpenAiCompatibleChat(systemText, userText);
+                    out.textContent = text;
+                    const wp = extractWorkflowPatchFromText(text);
+                    if (wp && wp.canvasDiagnosticRules && wp.canvasDiagnosticRules.length) {
+                        const r = applyWorkflowPatchObject(wp);
+                        if (r.ok) toast('已写入：' + (r.summary || '画布诊断规则'));
+                        else toast('已生成回复：未写入有效规则，可点「应用到工作流」');
+                    } else {
+                        toast('已生成解读：若含 JSON 补丁请点击「应用到工作流」');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    out.textContent = generateDemoAiReply('config_ai', userMsg, richCtx) + '\n\n——\n调用失败：' + (e && e.message ? e.message : e);
+                    toast('云端失败，已回退演示输出');
+                }
+                return;
+            }
+
+            if (actionId === 'vs_template_config') {
+                if (!out) return;
+                const indFromMsg = inferWorkflowIndustryFromUserText(userMsg);
+                const richCtx = buildAiContextSnapshot();
+                richCtx.requestedIndustryHint = userMsg || indFromMsg || currentState.workflowIndustry;
+                richCtx.workflowIndustriesAllowed = WORKFLOW_INDUSTRIES;
+                if (!cfg.endpoint) {
+                    out.textContent = generateDemoAiReply('vs_template_config', userMsg, richCtx);
+                    toast('演示模式：已生成示例价值流 JSON，可点「应用到工作流」写入步骤 2');
+                    return;
+                }
+                out.textContent = '生成中…';
+                try {
+                    const systemText = '你是端到端价值流设计顾问，熟悉制造与消费行业典型链路与可观测 KPI（简体中文）。' + buildAiWorkflowPatchSystemSuffix();
+                    const userText = `任务：价值流模板配置。根据用户输入的行业/场景，生成可直接套用的价值流阶段列表。\n\n硬性要求：\n` +
+                        `· workflowPatch 中【仅】输出 valueStreamName、stages、可选 workflowIndustry（必须为 ${WORKFLOW_INDUSTRIES.join('/')} 之一）。\n` +
+                        '· stages：6～10 项；每项 name、type(process|wait)、scenarios（一句）、components（逗号分隔名词）、actualTime（小时正整数），可选五维 dEff,dQual,dCost,dRisk,dCx（1-5）。\n' +
+                        '· 禁止输出 canvasDiagnosticRules、bmc、capabilities。\n\n上下文：\n' +
+                        JSON.stringify(richCtx, null, 2) + '\n用户输入：\n' + (userMsg || '（请结合上下文行业）');
+                    const text = await callOpenAiCompatibleChat(systemText, userText);
+                    out.textContent = text;
+                    const wp = extractWorkflowPatchFromText(text);
+                    if (wp && wp.stages && wp.stages.length) {
+                        const r = applyWorkflowPatchObject(wp);
+                        if (r.ok) toast('已写入：' + (r.summary || '价值流'));
+                        else toast('已生成：可点「应用到工作流」');
+                    } else {
+                        toast('已生成解读：若含 JSON 请点击「应用到工作流」');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    out.textContent = generateDemoAiReply('vs_template_config', userMsg, richCtx) + '\n\n——\n调用失败：' + (e && e.message ? e.message : e);
+                    toast('云端失败，已回退演示输出');
+                }
+                return;
+            }
+
             if (!out) return;
             out.textContent = '生成中…';
 
@@ -2031,7 +2275,8 @@
                 heat_insight: '热力图解读与行动优先级',
                 ini_deep: '变革举措深化建议',
                 roadmap_ai: '路标甘特排程建议',
-                config_ai: '规则与模板优化思路',
+                config_ai: '画布诊断配置',
+                vs_template_config: '价值流模板配置',
                 preset_insight_refresh: '刷新价值流五维与能力预置洞察'
             }[actionId] || actionId;
 
@@ -2120,7 +2365,10 @@
                 5: [{ id: 'heat_insight', label: '热力解读' }],
                 6: [{ id: 'ini_deep', label: '举措深化' }],
                 7: [{ id: 'roadmap_ai', label: '排程建议' }],
-                8: [{ id: 'config_ai', label: '配置思路' }]
+                8: [
+                    { id: 'config_ai', label: '画布诊断配置' },
+                    { id: 'vs_template_config', label: '价值流模板配置' }
+                ]
             };
             const list = presets[sid] || [];
             qa.innerHTML = list.map(p => `<button type="button" onclick="runAiQuickAction('${p.id}')" class="rounded-[8px] border border-black/[0.10] bg-canvas px-2 py-1 text-[11px] font-semibold text-ink-secondary hover:bg-white hover:text-accent transition-colors">${p.label}</button>`).join('');
@@ -2275,6 +2523,7 @@
             } catch (e) {
                 currentState.sidebarCollapsed = false;
             }
+            ensureArchitectureEvolutionDefaults();
             applySidebarCollapsed();
             renderHeaderMethodFlow();
             renderNav();
@@ -2292,6 +2541,7 @@
                 if (currentState.step === 2) runFrameworkGen({ silent: true });
                 else if (currentState.step === 5) runInitiativesGen({ silent: true });
             }
+            if (next !== 4) currentState.gapHighlightCapabilityId = null;
             currentState.step = next;
             renderNav();
             renderStepProgress();
@@ -2300,6 +2550,7 @@
 
         function setStep(id) {
             if (id < 1 || id > STEP_TOTAL) return;
+            if (id !== 4) currentState.gapHighlightCapabilityId = null;
             currentState.activePanel = 'workflow';
             currentState.step = id;
             renderNav();
@@ -2307,7 +2558,26 @@
             renderStep();
         }
 
+        /** 热力图卡片 → 步骤 4 对应能力行，并滚动定位、蓝色高亮 */
+        function jumpToGapRow(capabilityId) {
+            const id = Number(capabilityId);
+            if (!id || !currentState.capabilityFramework.some(c => c.id === id)) return;
+            currentState.gapHighlightCapabilityId = id;
+            currentState.activePanel = 'workflow';
+            currentState.step = 4;
+            renderNav();
+            renderStepProgress();
+            renderStep();
+            queueMicrotask(() => {
+                requestAnimationFrame(() => {
+                    const row = document.getElementById(`gap-row-${id}`);
+                    if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                });
+            });
+        }
+
         function openConfigPanel() {
+            currentState.gapHighlightCapabilityId = null;
             currentState.activePanel = 'config';
             renderNav();
             renderStepProgress();
@@ -2320,7 +2590,8 @@
 
         const BLUEPRINT_HISTORY_LS = 'archipro-blueprint-history-v1';
         const BLUEPRINT_HISTORY_MAX = 40;
-        const WORKFLOW_SNAPSHOT_KEYS = ['bmc', 'bmcReport', 'rules', 'workflowIndustry', 'valueStreamName', 'vsDimWeights', 'vsSelectedStageId', 'vsStages', 'templates', 'selectedTemplateId', 'capabilityFramework', 'initiatives', 'itFeatures', 'newTplSteps', 'configTab', 'roadmapStartYm', 'roadmapMonths', 'roadmapExpandedIniIds'];
+        /** 与《架构演进.md》对齐的快照字段：末五项为组织/持续运营/知识/场景热力视图 */
+        const WORKFLOW_SNAPSHOT_KEYS = ['bmc', 'bmcReport', 'rules', 'workflowIndustry', 'valueStreamName', 'vsDimWeights', 'vsSelectedStageId', 'vsStages', 'templates', 'selectedTemplateId', 'capabilityFramework', 'initiatives', 'itFeatures', 'newTplSteps', 'configTab', 'roadmapStartYm', 'roadmapMonths', 'roadmapExpandedIniIds', 'workspaceMeta', 'continuousOps', 'knowledgeRefs', 'heatmapScenarioView'];
 
         function loadBlueprintHistoryList() {
             try {
@@ -2356,7 +2627,84 @@
                 c.gapProc = normalizeGapDim(c.gapProc, gapFromMat(def.mat.p));
                 c.gapData = normalizeGapDim(c.gapData, gapFromMat(def.mat.d));
                 c.gapIt = normalizeGapDim(c.gapIt, gapFromMat(def.mat.i));
+                if (!Array.isArray(c.scenarioGapProfiles)) c.scenarioGapProfiles = [];
+                else {
+                    c.scenarioGapProfiles = c.scenarioGapProfiles.filter(p => p && typeof p === 'object').map(p => {
+                        const label = String(p.label != null ? p.label : p.key || '').trim();
+                        const key = String(p.key != null ? p.key : label).trim();
+                        const defL = CAPABILITY_DB[c.l3] || CAPABILITY_DB.default;
+                        const fb = {
+                            o: gapFromMat(defL.mat.o),
+                            p: gapFromMat(defL.mat.p),
+                            d: gapFromMat(defL.mat.d),
+                            i: gapFromMat(defL.mat.i)
+                        };
+                        const row = {
+                            key: key || label,
+                            label: label || key,
+                            gapOrg: normalizeGapDim(p.gapOrg, fb.o),
+                            gapProc: normalizeGapDim(p.gapProc, fb.p),
+                            gapData: normalizeGapDim(p.gapData, fb.d),
+                            gapIt: normalizeGapDim(p.gapIt, fb.i)
+                        };
+                        if (typeof p.weight === 'number' && !isNaN(p.weight)) row.weight = Math.max(0, Math.min(1, p.weight));
+                        return row;
+                    }).filter(p => p.key || p.label);
+                }
             });
+        }
+
+        /** 补齐《架构演进》相关状态默认值（兼容旧快照无这些字段） */
+        function ensureArchitectureEvolutionDefaults() {
+            let wm = currentState.workspaceMeta;
+            if (!wm || typeof wm !== 'object') wm = {};
+            currentState.workspaceMeta = {
+                organizationId: wm.organizationId != null ? String(wm.organizationId) : '',
+                organizationName: wm.organizationName != null ? String(wm.organizationName) : '',
+                projectId: wm.projectId != null ? String(wm.projectId) : '',
+                projectName: wm.projectName != null ? String(wm.projectName) : '',
+                capabilityFrameworkTemplateRef: wm.capabilityFrameworkTemplateRef != null ? String(wm.capabilityFrameworkTemplateRef) : ''
+            };
+            let co = currentState.continuousOps;
+            if (!co || typeof co !== 'object') co = {};
+            currentState.continuousOps = {
+                version: typeof co.version === 'number' ? co.version : 1,
+                initiativeCheckpoints: Array.isArray(co.initiativeCheckpoints) ? co.initiativeCheckpoints : [],
+                maturityRuns: Array.isArray(co.maturityRuns) ? co.maturityRuns : [],
+                dashboardPrefs: co.dashboardPrefs && typeof co.dashboardPrefs === 'object' ? co.dashboardPrefs : { pinnedMetrics: [] }
+            };
+            if (!Array.isArray(currentState.continuousOps.dashboardPrefs.pinnedMetrics)) {
+                currentState.continuousOps.dashboardPrefs.pinnedMetrics = [];
+            }
+            let kr = currentState.knowledgeRefs;
+            if (!kr || typeof kr !== 'object') kr = {};
+            currentState.knowledgeRefs = {
+                version: typeof kr.version === 'number' ? kr.version : 1,
+                anonymizedCaseIds: Array.isArray(kr.anonymizedCaseIds) ? kr.anonymizedCaseIds : [],
+                linkedAssetRecordIds: Array.isArray(kr.linkedAssetRecordIds) ? kr.linkedAssetRecordIds : []
+            };
+            if (typeof currentState.heatmapScenarioView !== 'string') currentState.heatmapScenarioView = '';
+        }
+
+        /** 从价值流阶段「场景」文案解析标签列表（步骤 5 已不再展示场景切换 UI；保留函数供缓存页、旧内联脚本或外部引用，避免 ReferenceError） */
+        function collectValueStreamScenarioLabels() {
+            const seen = new Set();
+            const out = [];
+            (currentState.vsStages || []).forEach(st => {
+                String(st.scenarios || '').split(/[,，]/).map(x => x.trim()).filter(Boolean).forEach(lab => {
+                    if (!seen.has(lab)) {
+                        seen.add(lab);
+                        out.push(lab);
+                    }
+                });
+            });
+            return out;
+        }
+
+        /** 兼容旧版热力场景下拉：仅同步状态，当前界面无场景切换器 */
+        function setHeatmapScenarioView(val) {
+            currentState.heatmapScenarioView = String(val || '');
+            if (currentState.activePanel === 'workflow' && currentState.step === 5) renderStep5();
         }
 
         function applyWorkflowSnapshot(raw) {
@@ -2365,12 +2713,14 @@
                 if (s[k] === undefined) return;
                 currentState[k] = JSON.parse(JSON.stringify(s[k]));
             });
+            ensureArchitectureEvolutionDefaults();
             migrateCapabilityFrameworkGapScores();
             if (!currentState.workflowIndustry || !WORKFLOW_INDUSTRIES.includes(currentState.workflowIndustry)) {
                 currentState.workflowIndustry = '3C';
             }
             ensureSelectedTemplateForIndustry();
             calcVSMetrics();
+            currentState.gapHighlightCapabilityId = null;
         }
 
         function formatHistoryTime(iso) {
@@ -3165,7 +3515,7 @@
             }
             const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
             const wb = XLSX.utils.book_new();
-            const head = ['价值流阶段', '业务能力L3', '描述', '领域L1', '类型L2', '当前成熟度(1-5)', '目标成熟度(1-5)', 'ICE', '组织(0-5)', '流程(0-5)', '数据(0-5)', 'IT(0-5)', '参考系统', '技术栈参考'];
+            const head = ['价值流阶段', '业务能力L3', '描述', '领域L1', '类型L2', '当前成熟度(1-5)', '目标成熟度(1-5)', 'ICE', '组织(0-5)', '流程(0-5)', '数据(0-5)', 'IT(0-5)', '参考系统', '技术栈参考', '场景四维JSON'];
             const dataRows = (currentState.capabilityFramework || []).map(c => [
                 c.linkedVs || '',
                 c.l3 || '',
@@ -3180,10 +3530,11 @@
                 normalizeGapDim(c.gapData, gapFromMat((CAPABILITY_DB[c.l3] || CAPABILITY_DB.default).mat.d)),
                 normalizeGapDim(c.gapIt, gapFromMat((CAPABILITY_DB[c.l3] || CAPABILITY_DB.default).mat.i)),
                 c.sys || '',
-                c.tech || ''
+                c.tech || '',
+                JSON.stringify(Array.isArray(c.scenarioGapProfiles) ? c.scenarioGapProfiles : [])
             ]);
             const ws = XLSX.utils.aoa_to_sheet([head, ...dataRows]);
-            ws['!cols'] = [{ wch: 37 }, { wch: 26 }, { wch: 41 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 20 }];
+            ws['!cols'] = [{ wch: 37 }, { wch: 26 }, { wch: 41 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 20 }, { wch: 36 }];
             XLSX.utils.book_append_sheet(wb, ws, '业务能力架构');
             const readme = [
                 ['业务能力架构 · Excel 说明'],
@@ -3192,7 +3543,8 @@
                 ['2. 「价值流阶段」须填写工作流2流程简图中拆分阶段的名称（与卡片标题一致）；若仍写「价值流名→阶段名」将自动取箭头后一段；列为空且已维护阶段业务组件时会尝试按 L3 匹配阶段。'],
                 ['3. 四维差距列为 0～5 整数（越高越成熟）；亦可填旧版「缺失/弱/中/强」自动换算；留空则按内置组件成熟度推断。'],
                 ['4. 导入时将按表格顺序整体替换当前清单（步骤 4、5、举措引用名称时请自行核对）。'],
-                ['5. 清单为空时导出仅含表头，可作空白模板。']
+                ['5. 清单为空时导出仅含表头，可作空白模板。'],
+                ['6. 「场景四维JSON」可选：JSON 数组，每项含 label（或 key）及 gapOrg/gapProc/gapData/gapIt（0～5），与步骤 2「场景」文案对齐时可写入分场景四维分（高级用法）。例：[{"label":"加急通道","gapOrg":1,"gapProc":2,"gapData":2,"gapIt":2}]']
             ];
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(readme), '使用说明');
             XLSX.writeFile(wb, `业务能力架构_${stamp}.xlsx`);
@@ -3209,6 +3561,16 @@
             const skip = new Set(['使用说明', 'README', '说明']);
             const other = names.find(n => !skip.has(n));
             return other ? wb.Sheets[other] : null;
+        }
+
+        function parseScenarioGapProfilesJsonCell(cell) {
+            if (cell == null || String(cell).trim() === '') return [];
+            try {
+                const j = JSON.parse(String(cell).trim());
+                return Array.isArray(j) ? j : [];
+            } catch (e) {
+                return [];
+            }
         }
 
         function parseCapabilityFrameworkFromMatrix(matrix) {
@@ -3247,6 +3609,7 @@
                 }
                 const sys = row.length >= 13 && String(row[12] ?? '').trim() ? String(row[12]).trim() : def.sys;
                 const tech = row.length >= 14 && String(row[13] ?? '').trim() ? String(row[13]).trim() : def.tech;
+                const scenarioGapProfiles = row.length >= 15 ? parseScenarioGapProfilesJsonCell(row[14]) : [];
                 out.push({
                     linkedVs,
                     l3,
@@ -3261,7 +3624,8 @@
                     gapData,
                     gapIt,
                     sys,
-                    tech
+                    tech,
+                    scenarioGapProfiles
                 });
             }
             out.sort((a, b) => parseFloat(b.ice) - parseFloat(a.ice));
@@ -3297,6 +3661,7 @@
                         id: idx + 1,
                         ...c
                     }));
+                    migrateCapabilityFrameworkGapScores();
                     renderStep3();
                     renderStep4();
                     renderStep5();
@@ -3359,7 +3724,7 @@
                         const comp = currentState.bmc[r.compareField] || '';
                         hit = comp.includes(r.compareKeyword);
                     }
-                    if (hit) { score -= r.score; risks.push(r.message); }
+                    if (hit) { score -= normalizeDiagnosticRuleScore(r.score != null ? r.score : 10); risks.push(r.message); }
                 });
                 if (!risks.length) suggestions.push('未发现规则库中的显著结构性冲突（可结合定性评审）。');
                 currentState.bmcReport = { score: Math.max(0, score), risks, suggestions };
@@ -3558,7 +3923,8 @@
                     gapProc: gapFromMat(def.mat.p),
                     gapData: gapFromMat(def.mat.d),
                     gapIt: gapFromMat(def.mat.i),
-                    sys: def.sys, tech: def.tech, ice
+                    sys: def.sys, tech: def.tech, ice,
+                    scenarioGapProfiles: []
                 });
             });
             currentState.capabilityFramework.sort((a, b) => parseFloat(b.ice) - parseFloat(a.ice));
@@ -3579,39 +3945,82 @@
             return 5;
         }
 
-        function heatCategory(block) {
-            const def = CAPABILITY_DB[block.l3] || CAPABILITY_DB.default;
-            const gaps = [
-                normalizeGapDim(block.gapOrg, gapFromMat(def.mat.o)),
-                normalizeGapDim(block.gapProc, gapFromMat(def.mat.p)),
-                normalizeGapDim(block.gapData, gapFromMat(def.mat.d)),
-                normalizeGapDim(block.gapIt, gapFromMat(def.mat.i))
-            ];
+        /** 由四维差距分推导热力等级（与历史 heatCategory 规则一致） */
+        function heatCategoryFromGapValues(gapOrg, gapProc, gapData, gapIt) {
+            const gaps = [gapOrg, gapProc, gapData, gapIt];
             const le2 = gaps.filter(g => g <= 2).length;
             if (gaps.some(g => g === 0) || le2 >= 2) return 'red';
             if (le2 === 1) return 'yellow';
             return 'green';
         }
 
-        /** 步骤 4 表格：四维算术平均分（展示用，与热力着色同一套归一规则） */
-        function gapFourDimAvgRow(c) {
+        /**
+         * 能力块在指定场景下的四维差距（《架构演进》§2：场景因子 × 能力 × 维度）。
+         * scenarioLabel 为空用全局 gap*；否则匹配 scenarioGapProfiles.label/key，未命中则回退全局。
+         */
+        function getCapabilityGapVector(c, scenarioLabel) {
             const def = CAPABILITY_DB[c.l3] || CAPABILITY_DB.default;
-            const vals = [
-                normalizeGapDim(c.gapOrg, gapFromMat(def.mat.o)),
-                normalizeGapDim(c.gapProc, gapFromMat(def.mat.p)),
-                normalizeGapDim(c.gapData, gapFromMat(def.mat.d)),
-                normalizeGapDim(c.gapIt, gapFromMat(def.mat.i))
-            ];
+            const fb = {
+                gapOrg: gapFromMat(def.mat.o),
+                gapProc: gapFromMat(def.mat.p),
+                gapData: gapFromMat(def.mat.d),
+                gapIt: gapFromMat(def.mat.i)
+            };
+            const want = scenarioLabel != null ? String(scenarioLabel).trim() : '';
+            if (!want) {
+                return {
+                    gapOrg: normalizeGapDim(c.gapOrg, fb.gapOrg),
+                    gapProc: normalizeGapDim(c.gapProc, fb.gapProc),
+                    gapData: normalizeGapDim(c.gapData, fb.gapData),
+                    gapIt: normalizeGapDim(c.gapIt, fb.gapIt)
+                };
+            }
+            const profiles = Array.isArray(c.scenarioGapProfiles) ? c.scenarioGapProfiles : [];
+            const p = profiles.find(x => {
+                const lab = String(x.label || '').trim();
+                const key = String(x.key || '').trim();
+                return lab === want || key === want;
+            });
+            if (!p) {
+                return {
+                    gapOrg: normalizeGapDim(c.gapOrg, fb.gapOrg),
+                    gapProc: normalizeGapDim(c.gapProc, fb.gapProc),
+                    gapData: normalizeGapDim(c.gapData, fb.gapData),
+                    gapIt: normalizeGapDim(c.gapIt, fb.gapIt)
+                };
+            }
+            return {
+                gapOrg: normalizeGapDim(p.gapOrg, fb.gapOrg),
+                gapProc: normalizeGapDim(p.gapProc, fb.gapProc),
+                gapData: normalizeGapDim(p.gapData, fb.gapData),
+                gapIt: normalizeGapDim(p.gapIt, fb.gapIt)
+            };
+        }
+
+        function heatCategoryForScenario(block, scenarioLabel) {
+            const g = getCapabilityGapVector(block, scenarioLabel);
+            return heatCategoryFromGapValues(g.gapOrg, g.gapProc, g.gapData, g.gapIt);
+        }
+
+        function heatCategory(block) {
+            return heatCategoryForScenario(block, '');
+        }
+
+        /** 步骤 4 表格：四维算术平均分（展示用）；scenarioLabel 同热力场景视图 */
+        function gapFourDimAvgRow(c, scenarioLabel = '') {
+            const g = getCapabilityGapVector(c, scenarioLabel);
+            const vals = [g.gapOrg, g.gapProc, g.gapData, g.gapIt];
             return Math.round((vals.reduce((a, b) => a + b, 0) / 4) * 10) / 10;
         }
 
-        /** 统计一组能力块的红/黄/绿数量 */
-        function countHeatStats(blocks) {
+        /** 统计一组能力块的红/黄/绿数量；scenarioLabel 非空时按场景化差距统计 */
+        function countHeatStats(blocks, scenarioLabel = '') {
             let red = 0;
             let yellow = 0;
             let green = 0;
+            const scen = scenarioLabel != null ? String(scenarioLabel).trim() : '';
             blocks.forEach(c => {
-                const k = heatCategory(c);
+                const k = scen ? heatCategoryForScenario(c, scen) : heatCategory(c);
                 if (k === 'red') red++;
                 else if (k === 'yellow') yellow++;
                 else green++;
@@ -3641,21 +4050,22 @@
             return { l1Order, tree };
         }
 
-        /** 全局 + 按 L1 + 按 L2 的热力分布汇总 */
-        function heatmapDistributionSummary(framework) {
+        /** 全局 + 按 L1 + 按 L2 的热力分布汇总（可选场景因子视图） */
+        function heatmapDistributionSummary(framework, scenarioLabel = '') {
+            const scen = scenarioLabel != null ? String(scenarioLabel).trim() : '';
             const { l1Order, tree } = buildHeatmapL1L2Tree(framework);
-            const overall = countHeatStats(framework);
+            const overall = countHeatStats(framework, scen);
             const byL1 = l1Order.map(l1 => {
                 const node = tree[l1];
                 const blocks = node.l2Order.flatMap(l2 => node.byL2[l2]);
-                return { l1, ...countHeatStats(blocks) };
+                return { l1, ...countHeatStats(blocks, scen) };
             });
             const byL2 = [];
             l1Order.forEach(l1 => {
                 const node = tree[l1];
                 node.l2Order.forEach(l2 => {
                     const blocks = node.byL2[l2];
-                    byL2.push({ l1, l2, ...countHeatStats(blocks) });
+                    byL2.push({ l1, l2, ...countHeatStats(blocks, scen) });
                 });
             });
             return { overall, byL1, byL2 };
@@ -3665,15 +4075,11 @@
             const cat = heatCategory(c);
             const cls = cat === 'red' ? 'heat-red' : cat === 'yellow' ? 'heat-yellow' : 'heat-green';
             const badge = cat === 'red' ? '优先处理' : cat === 'yellow' ? '纳入计划' : '相对健康';
-            const def = CAPABILITY_DB[c.l3] || CAPABILITY_DB.default;
-            const go = normalizeGapDim(c.gapOrg, gapFromMat(def.mat.o));
-            const gp = normalizeGapDim(c.gapProc, gapFromMat(def.mat.p));
-            const gd = normalizeGapDim(c.gapData, gapFromMat(def.mat.d));
-            const gi = normalizeGapDim(c.gapIt, gapFromMat(def.mat.i));
-            const avg = gapFourDimAvgRow(c);
-            return `<button type="button" onclick="setStep(4)" class="rounded-[14px] border-2 p-3 lg:p-3 text-left transition hover:shadow-card min-h-[7rem] lg:min-h-0 flex flex-col ${cls} focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+            const g = getCapabilityGapVector(c, '');
+            const avg = gapFourDimAvgRow(c, '');
+            return `<button type="button" onclick="jumpToGapRow(${c.id})" class="rounded-[14px] border-2 p-3 lg:p-3 text-left transition hover:shadow-card min-h-[7rem] lg:min-h-0 flex flex-col ${cls} focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                             <p class="text-[15px] lg:text-[16px] font-semibold text-ink leading-snug">${escapeHtmlText(c.l3)}</p>
-                            <p class="text-[11px] lg:text-[12px] text-ink-secondary mt-2 leading-relaxed flex-1">组织 ${go} · 流程 ${gp} · 数据 ${gd} · IT ${gi} · 均分 ${avg}</p>
+                            <p class="text-[11px] lg:text-[12px] text-ink-secondary mt-2 leading-relaxed flex-1">组织 ${g.gapOrg} · 流程 ${g.gapProc} · 数据 ${g.gapData} · IT ${g.gapIt} · 均分 ${avg}</p>
                             <p class="mt-2 lg:mt-3 inline-flex text-[11px] font-semibold px-2 py-1 rounded-full shrink-0 ${cat === 'red' ? 'bg-[#ff6961]/15 text-[#b91c1c]' : cat === 'yellow' ? 'bg-amber-100/80 text-amber-900' : 'bg-emerald-100/80 text-emerald-900'}">${badge}</p>
                         </button>`;
         }
@@ -4264,7 +4670,8 @@
                 gapIt: gapFromMat(def.mat.i),
                 sys: def.sys,
                 tech: def.tech,
-                ice
+                ice,
+                scenarioGapProfiles: []
             });
             renderStep3();
             renderStep4();
@@ -4286,18 +4693,62 @@
             toast('已删除该能力块');
         }
 
-        function addRule() {
+        function beginEditRule(id) {
+            const r = currentState.rules.find(x => x.id === id);
+            if (!r) return;
+            currentState.editingRuleId = id;
+            renderStep8();
+        }
+
+        function cancelRuleEdit() {
+            currentState.editingRuleId = null;
+            renderStep8();
+        }
+
+        function saveRule() {
             const f = document.getElementById('rule-field').value;
-            const k = document.getElementById('rule-kw').value;
-            const msg = document.getElementById('rule-msg').value;
+            const k = document.getElementById('rule-kw').value.trim();
+            const msg = document.getElementById('rule-msg').value.trim();
+            const scoreEl = document.getElementById('rule-score');
+            const score = scoreEl ? normalizeDiagnosticRuleScore(scoreEl.value) : 10;
+            let compareField = document.getElementById('rule-compare-field') ? document.getElementById('rule-compare-field').value : 'none';
+            let compareKeyword = document.getElementById('rule-compare-kw') ? document.getElementById('rule-compare-kw').value.trim() : '';
+            if (!compareField || compareField === 'none') {
+                compareField = 'none';
+                compareKeyword = '';
+            } else if (!FIELD_ORDER.includes(compareField)) {
+                compareField = 'none';
+                compareKeyword = '';
+            } else if (!compareKeyword) {
+                compareField = 'none';
+                compareKeyword = '';
+            }
             if (!k || !msg) { toast('请填写关键词与提示', 'error'); return; }
-            currentState.rules.push({ id: Date.now(), field: f, keyword: k, message: msg, score: 10, compareField: 'none', compareKeyword: '' });
+            const eid = currentState.editingRuleId;
+            if (eid != null) {
+                const r = currentState.rules.find(x => x.id === eid);
+                if (r) {
+                    r.field = f;
+                    r.keyword = k;
+                    r.message = msg;
+                    r.score = score;
+                    r.compareField = compareField;
+                    r.compareKeyword = compareKeyword;
+                    currentState.editingRuleId = null;
+                    renderStep8();
+                    toast('规则已保存');
+                    return;
+                }
+                currentState.editingRuleId = null;
+            }
+            currentState.rules.push({ id: Date.now(), field: f, keyword: k, message: msg, score, compareField, compareKeyword });
             renderStep8();
             toast('规则已添加');
         }
 
         function removeRule(id) {
             currentState.rules = currentState.rules.filter(r => r.id !== id);
+            if (currentState.editingRuleId === id) currentState.editingRuleId = null;
             renderStep8();
         }
 
@@ -4337,7 +4788,7 @@
                 components: s.components || ''
             }));
             renderStep8();
-            toast('已载入模板，可在上方修改名称与阶段后保存');
+            toast('已载入到上方编辑区，改完点「保存」即可');
         }
 
         function cancelTemplateEdit() {
@@ -4830,16 +5281,19 @@
                         <th class="p-3 text-center font-semibold tabular-nums">均分</th>
                         <th class="p-3 text-center font-semibold">系统</th>
                     </tr></thead><tbody>
-                    ${currentState.capabilityFramework.map(c => `
-                        <tr class="border-t border-black/[0.06] hover:bg-canvas/80 transition-colors">
-                            <td class="p-3 font-semibold text-ink">${c.l3}</td>
+                    ${currentState.capabilityFramework.map(c => {
+                const hl = currentState.gapHighlightCapabilityId === c.id;
+                return `
+                        <tr id="gap-row-${c.id}" class="border-t border-black/[0.06] transition-colors ${hl ? 'bg-[rgba(0,113,227,0.14)] shadow-[inset_0_0_0_1px_rgba(0,113,227,0.35)]' : 'hover:bg-canvas/80'}">
+                            <td class="p-3 font-semibold text-ink">${escapeHtmlText(c.l3)}</td>
                             <td class="p-3 text-center">${gapSelect(c.id, 'gapOrg', c.gapOrg)}</td>
                             <td class="p-3 text-center">${gapSelect(c.id, 'gapProc', c.gapProc)}</td>
                             <td class="p-3 text-center">${gapSelect(c.id, 'gapData', c.gapData)}</td>
                             <td class="p-3 text-center">${gapSelect(c.id, 'gapIt', c.gapIt)}</td>
                             <td class="p-3 text-center font-semibold tabular-nums text-accent">${gapFourDimAvgRow(c)}</td>
-                            <td class="p-3 text-center text-[12px] text-ink-secondary">${c.sys}</td>
-                        </tr>`).join('')}
+                            <td class="p-3 text-center text-[12px] text-ink-secondary">${escapeHtmlText(c.sys)}</td>
+                        </tr>`;
+            }).join('')}
                     </tbody></table></div></div>`;
             }
 
@@ -4963,7 +5417,7 @@
                         <span class="text-[11px] text-ink-tertiary">按 L1 → L2 归类，卡片为能力块（L3）</span>
                     </div>
                     <div class="w-full min-w-0 pr-1 space-y-0 pb-1">${layeredSections}</div>
-                    <p class="shrink-0 text-[12px] lg:text-[13px] text-ink-secondary">点击卡片可跳到差距分析步骤修改评分。</p>
+                    <p class="shrink-0 text-[12px] lg:text-[13px] text-ink-secondary">点击卡片会打开<strong class="text-ink font-medium">步骤 4 · 能力差距分析</strong>，并定位到对应能力行（蓝色高亮）。</p>
                 </div>`;
             }
 
@@ -5082,112 +5536,208 @@
 
         function setConfigTab(tab) {
             if (tab !== 'rules' && tab !== 'templates') return;
+            if (tab !== 'rules') currentState.editingRuleId = null;
             currentState.configTab = tab;
             renderStep8();
         }
 
         function renderStep8() {
+            const er = currentState.editingRuleId != null ? currentState.rules.find(r => r.id === currentState.editingRuleId) : null;
             const rulesHtml = currentState.rules.map(r => {
                 const cmp = r.compareField && r.compareField !== 'none'
-                    ? ` 且 ${FIELD_MAP[r.compareField] || r.compareField} 含「${r.compareKeyword}」`
+                    ? `，且 ${FIELD_MAP[r.compareField] || r.compareField} 含「${escapeHtmlText(r.compareKeyword)}」`
                     : '';
-                return `<div class="flex justify-between items-start gap-3 p-3 lg:p-4 rounded-[14px] border border-black/[0.06] bg-white shadow-nav">
-                    <div class="text-[14px] text-ink leading-relaxed min-w-0"><span class="font-semibold text-accent">若</span> ${FIELD_MAP[r.field] || r.field} 包含「${r.keyword}」${cmp}，<span class="font-semibold text-[#ff6961]">扣 ${r.score} 分</span> — ${r.message}</div>
-                    <button type="button" onclick="removeRule(${r.id})" class="shrink-0 text-ink-tertiary hover:text-[#ff6961] p-1.5 rounded-lg transition-colors" aria-label="删除规则"><i class="fas fa-trash text-[14px]"></i></button>
+                const ruleEditingHere = currentState.editingRuleId === r.id;
+                return `<div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 p-3 rounded-[12px] border ${ruleEditingHere ? 'border-accent ring-2 ring-accent/25 bg-accent-muted/30' : 'border-black/[0.06] bg-white'} shadow-nav">
+                    <div class="min-w-0 flex-1 space-y-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            ${ruleEditingHere ? '<span class="text-[10px] font-bold uppercase tracking-wide text-accent bg-white border border-accent/30 px-2 py-0.5 rounded-md">编辑中</span>' : ''}
+                            <span class="text-[10px] font-bold uppercase tracking-wide text-ink-tertiary bg-canvas px-2 py-0.5 rounded-md">条件</span>
+                            <p class="text-[14px] text-ink leading-snug"><strong class="text-accent">${FIELD_MAP[r.field] || r.field}</strong> 里出现 「${escapeHtmlText(r.keyword)}」${cmp}</p>
+                        </div>
+                        <p class="text-[13px] text-ink-secondary leading-relaxed border-l-0 sm:border-l-2 border-accent/25 sm:pl-3">${escapeHtmlText(r.message)}</p>
+                    </div>
+                    <div class="flex flex-row sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0 border-t border-black/[0.06] sm:border-t-0 pt-2 sm:pt-0">
+                        <span class="text-[12px] font-bold tabular-nums text-[#b91c1c] bg-[#ff6961]/12 px-2.5 py-1 rounded-lg">扣 ${r.score} 分</span>
+                        <div class="flex flex-wrap gap-1.5 justify-end">
+                            <button type="button" onclick="beginEditRule(${r.id})" class="inline-flex items-center gap-1 rounded-[8px] border border-black/[0.10] bg-white px-2.5 py-1 text-[12px] font-semibold text-ink hover:bg-canvas transition-colors" aria-label="编辑此规则"><i class="fas fa-pen text-[10px]" aria-hidden="true"></i> 编辑</button>
+                            <button type="button" onclick="removeRule(${r.id})" class="inline-flex items-center gap-1 rounded-[8px] border border-black/[0.08] px-2.5 py-1 text-[12px] font-semibold text-ink-tertiary hover:text-[#ff6961] hover:border-[#fecaca] transition-colors" aria-label="删除此规则"><i class="fas fa-trash text-[11px]" aria-hidden="true"></i> 删除</button>
+                        </div>
+                    </div>
                 </div>`;
             }).join('');
+
+            const rulesListHtml = rulesHtml || `<div class="rounded-[12px] border border-dashed border-black/[0.12] bg-white/80 px-4 py-12 text-center">
+                    <p class="text-[14px] text-ink font-medium mb-1">还没有任何规则</p>
+                    <p class="text-[12px] text-ink-secondary leading-relaxed max-w-md mx-auto">在上方填写<strong class="text-ink">格子、关键词、扣分、提示</strong>（可选联动）后点<strong class="text-ink">「保存规则」</strong>；已有规则可点<strong class="text-ink">「编辑」</strong>改内容。回到<strong class="text-ink">步骤 1</strong>运行诊断即可验证。</p>
+                </div>`;
 
             const tplsHtml = Object.entries(currentState.templates).map(([key, t]) => {
                 const isBuiltIn = !key.startsWith('custom');
                 const editingHere = currentState.editingTemplateKey === key;
                 const indLbl = templateIndustryBadgeLabel(t);
                 return `
-                <button type="button" onclick="beginEditTemplate('${key.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')" class="w-full text-left flex justify-between items-start gap-3 p-3 lg:p-4 rounded-[14px] border ${editingHere ? 'border-accent ring-2 ring-accent/25 bg-accent-muted/35' : 'border-black/[0.06] bg-white'} text-[13px] lg:text-[14px] shadow-nav hover:bg-canvas/80 transition-colors">
+                <button type="button" onclick="beginEditTemplate('${key.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')" class="group w-full text-left flex justify-between items-start gap-3 p-3 rounded-[12px] border ${editingHere ? 'border-accent ring-2 ring-accent/25 bg-accent-muted/35' : 'border-black/[0.06] bg-white hover:border-accent/30 hover:bg-canvas/60'} text-[13px] shadow-nav transition-colors">
                     <div class="min-w-0 flex-1">
-                        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                            <span class="font-semibold text-ink">${escapeHtmlText(t.name)}</span>
-                            <span class="text-[11px] text-ink-tertiary">${t.stages.length} 个阶段</span>
-                            ${editingHere ? '<span class="text-[11px] font-semibold text-accent">编辑中</span>' : ''}
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="font-semibold text-ink text-[15px] leading-tight">${escapeHtmlText(t.name)}</span>
+                            ${editingHere ? '<span class="text-[10px] font-bold uppercase tracking-wide text-accent bg-white border border-accent/30 px-2 py-0.5 rounded-md">编辑中</span>' : '<span class="text-[11px] text-ink-tertiary opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline">点一下载入上方编辑区 →</span>'}
                         </div>
-                        <p class="text-[11px] text-ink-secondary mt-1 leading-snug">适用行业：<span class="font-medium text-ink">${escapeHtmlText(indLbl)}</span></p>
+                        <p class="text-[12px] text-ink-secondary mt-1.5 leading-snug">${t.stages.length} 个阶段 · 可见范围：<span class="font-medium text-ink">${escapeHtmlText(indLbl)}</span></p>
                     </div>
-                    <span class="shrink-0 text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${isBuiltIn ? 'bg-canvas text-ink-secondary' : 'bg-accent-muted text-accent'}">${isBuiltIn ? '内置' : '自定义'}</span>
+                    <span class="shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full ${isBuiltIn ? 'bg-canvas text-ink-secondary border border-black/[0.06]' : 'bg-accent-muted text-accent border border-accent/20'}">${isBuiltIn ? '内置' : '自定义'}</span>
                 </button>`;
             }).join('');
 
             const tab = currentState.configTab === 'templates' ? 'templates' : 'rules';
             const isRules = tab === 'rules';
             const isTpl = tab === 'templates';
-            const tabBtnOn = 'flex-1 rounded-[10px] bg-white px-3 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-ink shadow-nav ring-1 ring-black/[0.08] transition-colors';
-            const tabBtnOff = 'flex-1 rounded-[10px] px-3 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-medium text-ink-secondary hover:bg-white/70 hover:text-ink transition-colors';
+            const tabBase = 'flex-1 flex flex-col items-center justify-center gap-0.5 rounded-[10px] px-2 py-2.5 sm:py-2 text-center transition-colors min-h-[3.25rem] sm:min-h-0';
+            const tabBtnOn = `${tabBase} bg-white shadow-nav ring-1 ring-black/[0.08] text-ink`;
+            const tabBtnOff = `${tabBase} text-ink-secondary hover:bg-white/80 hover:text-ink`;
 
             document.getElementById('step-8').innerHTML = `
                 ${methodBlock('s8')}
-                <div class="flex items-start gap-2 sm:gap-3 mb-2 print-hidden">
+                <div class="flex items-start gap-2 sm:gap-3 mb-3 print-hidden">
                     ${workspaceSidebarToggleHtml()}
-                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 flex-1 min-w-0">
-                        ${configPageHeading('flex-1')}
-                        <div class="flex flex-wrap items-center gap-2 shrink-0">
-                            <button type="button" onclick="exportConfigExcel()" class="inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-black/[0.12] bg-white px-3 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas hover:text-ink transition-colors" title="导出规则与模板两个工作表，含使用说明">
-                                <i class="fas fa-file-export text-[11px]" aria-hidden="true"></i>
-                                导出 Excel
-                            </button>
-                            <button type="button" onclick="document.getElementById('config-xlsx-input').click()" class="inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-black/[0.12] bg-white px-3 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas hover:text-ink transition-colors" title="按工作表合并刷新规则与模板">
-                                <i class="fas fa-file-import text-[11px]" aria-hidden="true"></i>
-                                导入 Excel
-                            </button>
-                            <input type="file" id="config-xlsx-input" class="hidden" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" aria-hidden="true" onchange="importConfigExcel(event)">
+                    <div class="flex flex-col gap-3 flex-1 min-w-0">
+                        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                            ${configPageHeading('flex-1')}
+                            <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 shrink-0">
+                                <button type="button" onclick="exportConfigExcel()" class="inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-black/[0.12] bg-white px-3 py-2 text-[12px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas hover:text-ink transition-colors" title="导出「规则」+「模板」两个工作表，含使用说明">
+                                    <i class="fas fa-download text-[11px]" aria-hidden="true"></i>
+                                    导出全部
+                                </button>
+                                <button type="button" onclick="document.getElementById('config-xlsx-input').click()" class="inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-black/[0.12] bg-white px-3 py-2 text-[12px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas hover:text-ink transition-colors" title="从 Excel 合并写入当前页（不删未出现的内置键）">
+                                    <i class="fas fa-upload text-[11px]" aria-hidden="true"></i>
+                                    从文件更新
+                                </button>
+                                <input type="file" id="config-xlsx-input" class="hidden" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" aria-hidden="true" onchange="importConfigExcel(event)">
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="print-hidden mb-3 flex rounded-[12px] border border-black/[0.08] bg-canvas p-1 gap-1" role="tablist" aria-label="数字化资产配置">
-                    <button type="button" id="tab-rules" role="tab" aria-controls="config-panel-rules" aria-selected="${isRules ? 'true' : 'false'}" onclick="setConfigTab('rules')" class="${isRules ? tabBtnOn : tabBtnOff}">画布诊断规则</button>
-                    <button type="button" id="tab-templates" role="tab" aria-controls="config-panel-templates" aria-selected="${isTpl ? 'true' : 'false'}" onclick="setConfigTab('templates')" class="${isTpl ? tabBtnOn : tabBtnOff}">价值流模板库</button>
+                <div class="print-hidden mb-3 grid grid-cols-2 gap-1.5 rounded-[14px] border border-black/[0.08] bg-canvas p-1.5" role="tablist" aria-label="资产配置分类">
+                    <button type="button" id="tab-rules" role="tab" aria-controls="config-panel-rules" aria-selected="${isRules ? 'true' : 'false'}" onclick="setConfigTab('rules')" class="${isRules ? tabBtnOn : tabBtnOff}">
+                        <span class="inline-flex items-center gap-2 text-[13px] font-semibold"><i class="fas fa-stethoscope text-[14px] text-accent opacity-90" aria-hidden="true"></i>画布诊断</span>
+                        <span class="text-[10px] font-normal text-ink-tertiary leading-none">步骤 1 · 运行诊断时用</span>
+                    </button>
+                    <button type="button" id="tab-templates" role="tab" aria-controls="config-panel-templates" aria-selected="${isTpl ? 'true' : 'false'}" onclick="setConfigTab('templates')" class="${isTpl ? tabBtnOn : tabBtnOff}">
+                        <span class="inline-flex items-center gap-2 text-[13px] font-semibold"><i class="fas fa-route text-[14px] text-accent opacity-90" aria-hidden="true"></i>价值流模板</span>
+                        <span class="text-[10px] font-normal text-ink-tertiary leading-none">步骤 2 · 套用流程时用</span>
+                    </button>
                 </div>
-                <section id="config-panel-rules" role="tabpanel" aria-labelledby="tab-rules" class="${isRules ? '' : 'hidden'} flex flex-col flex-1 min-h-0">
-                    <div class="rounded-[14px] border border-black/[0.06] bg-canvas/60 p-3 sm:p-4 mb-2 flex flex-col flex-1 min-h-0">
-                        <h3 class="text-[15px] lg:text-[16px] font-semibold text-ink mb-0.5">画布诊断规则</h3>
-                        <p class="text-[12px] lg:text-[13px] text-ink-secondary mb-2 lg:mb-3 leading-snug">配置自动检查条件，帮助团队在填写画布时发现明显不一致。<span class="text-ink-tertiary">（规则不按行业区分；若需按行业筛选价值流模板，请到「价值流模板库」Tab。）</span></p>
-                        <div class="rounded-[12px] border border-black/[0.06] bg-white p-3 sm:p-4 mb-3 shadow-nav shrink-0">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                <select id="rule-field" class="rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">${Object.entries(FIELD_MAP).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
-                                <input id="rule-kw" placeholder="触发关键词" class="rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
-                                <input id="rule-msg" placeholder="提示文案" class="md:col-span-2 rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
-                            </div>
-                            <button type="button" onclick="addRule()" class="inline-flex items-center gap-2 rounded-[10px] bg-ink px-4 py-2 text-[13px] font-semibold text-white hover:bg-black transition-colors">添加规则</button>
+                <section id="config-panel-rules" role="tabpanel" aria-labelledby="tab-rules" class="${isRules ? '' : 'hidden'} flex flex-col">
+                    <div class="rounded-[14px] border border-black/[0.06] bg-canvas/50 p-3 sm:p-4 mb-2 flex flex-col">
+                        <div class="flex flex-wrap gap-2 mb-3 text-[11px] text-ink-secondary">
+                            <span class="rounded-full bg-white border border-black/[0.08] px-2.5 py-1 font-semibold text-ink">① 选画布格子</span>
+                            <span class="rounded-full bg-white border border-black/[0.08] px-2.5 py-1 font-semibold text-ink">② 填触发词</span>
+                            <span class="rounded-full bg-white border border-black/[0.08] px-2.5 py-1 font-semibold text-ink">③ 扣分</span>
+                            <span class="rounded-full bg-white border border-black/[0.08] px-2.5 py-1 font-semibold text-ink">④ 提示与联动</span>
+                            <span class="rounded-full bg-white border border-black/[0.08] px-2.5 py-1 font-semibold text-ink">${er ? '⑤ 保存' : '⑤ 添加'}</span>
                         </div>
-                        <div class="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1 pb-1 no-scrollbar sm:pr-2">${rulesHtml}</div>
+                        <p class="text-[12px] text-ink-secondary mb-3 leading-snug">与行业无关：只要画布对应格里<strong class="text-ink">包含</strong>你填的关键词，诊断就会提示并按<strong class="text-ink">扣分</strong>累计（0～100，默认 10；可多规则叠加）。可选<strong class="text-ink">联动</strong>：另一格也同时包含指定词时才触发。下面列表中的规则可随时<strong class="text-ink">编辑</strong>。</p>
+                        <div class="rounded-[12px] border border-black/[0.06] bg-white p-3 sm:p-4 mb-3 shadow-nav shrink-0 space-y-3">
+                            ${er ? `<div class="flex flex-wrap items-center justify-between gap-2 rounded-[10px] bg-accent-muted/45 border border-accent/25 px-3 py-2 text-[12px] text-ink">
+                                <span>正在修改一条已有规则，保存后生效</span>
+                                <button type="button" onclick="cancelRuleEdit()" class="shrink-0 rounded-[8px] border border-black/[0.10] bg-white px-2.5 py-1 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">取消编辑</button>
+                            </div>` : ''}
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <label class="grid gap-1.5">
+                                    <span class="text-[12px] font-semibold text-ink">检查哪一格画布？</span>
+                                    <select id="rule-field" title="对应步骤 1 九宫格里的区块" class="rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">${Object.entries(FIELD_MAP).map(([k, v]) => `<option value="${k}" ${er && er.field === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+                                </label>
+                                <label class="grid gap-1.5">
+                                    <span class="text-[12px] font-semibold text-ink">出现什么词算「有问题」？</span>
+                                    <input id="rule-kw" value="${er ? escapeHtmlText(er.keyword) : ''}" placeholder="例如：待定、TBD、空白" title="画布文字里包含即触发" class="rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
+                                </label>
+                                <label class="grid gap-1.5">
+                                    <span class="text-[12px] font-semibold text-ink">触发时扣多少分？</span>
+                                    <input id="rule-score" type="number" min="0" max="100" step="1" value="${er ? normalizeDiagnosticRuleScore(er.score != null ? er.score : 10) : 10}" title="诊断总分自 100 起扣，可设 0～100" class="rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
+                                </label>
+                                <label class="grid gap-1.5">
+                                    <span class="text-[12px] font-semibold text-ink">联动：另一格画布（可选）</span>
+                                    <select id="rule-compare-field" title="无联动则仅看主格关键词" class="rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"><option value="none" ${er && (!er.compareField || er.compareField === 'none') ? 'selected' : ''}>无联动（仅主格）</option>${Object.entries(FIELD_MAP).map(([k, v]) => `<option value="${k}" ${er && er.compareField === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+                                </label>
+                                <label class="grid gap-1.5 md:col-span-2">
+                                    <span class="text-[12px] font-semibold text-ink">联动关键词（选了联动格时必填）</span>
+                                    <input id="rule-compare-kw" value="${er && er.compareField && er.compareField !== 'none' ? escapeHtmlText(er.compareKeyword || '') : ''}" placeholder="例如：低、小微、外包（须出现在联动格正文中）" class="rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
+                                </label>
+                                <label class="grid gap-1.5 md:col-span-2">
+                                    <span class="text-[12px] font-semibold text-ink">诊断时要对用户说什么？</span>
+                                    <input id="rule-msg" value="${er ? escapeHtmlText(er.message) : ''}" placeholder="简短说明该怎么改，例如：请补充具体客群画像，避免只写「大众」。" class="rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
+                                </label>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" onclick="saveRule()" class="inline-flex items-center justify-center gap-2 rounded-[10px] bg-ink px-5 py-2.5 text-[13px] font-semibold text-white hover:bg-black transition-colors shadow-nav"><i class="fas fa-${er ? 'check' : 'plus'} text-[11px]" aria-hidden="true"></i>${er ? '保存修改' : '保存规则'}</button>
+                            </div>
+                        </div>
+                        <p class="text-[11px] font-semibold text-ink-tertiary mb-2 shrink-0">已启用规则（${currentState.rules.length}）</p>
+                        <div class="space-y-2 pr-1 pb-1 sm:pr-2">${rulesListHtml}</div>
                     </div>
                 </section>
                 <section id="config-panel-templates" role="tabpanel" aria-labelledby="tab-templates" class="${isTpl ? '' : 'hidden'} flex flex-col flex-1 min-h-0">
-                    <div class="rounded-[14px] border border-black/[0.06] bg-canvas/60 p-3 sm:p-4 mb-2 flex flex-col flex-1 min-h-0">
-                        <h3 class="text-[15px] lg:text-[16px] font-semibold text-ink mb-0.5">价值流模板库</h3>
-                        <p class="text-[12px] lg:text-[13px] text-ink-secondary mb-2 lg:mb-3 leading-snug">保存常用流程，便于在不同项目中快速复用。每条模板可配置<strong class="text-ink font-medium">适用行业</strong>，与步骤 1 顶部行业下拉一致（${WORKFLOW_INDUSTRIES.join('、')}）；步骤 2「领域价值流模板」下拉仅展示当前行业可用的条目（不勾选行业 = 全部行业可见）。点击下方<strong class="text-ink font-medium">模板卡片</strong>载入编辑阶段与行业；套用后在「价值流程诊断」中点击阶段卡片，补充<strong class="text-ink font-medium">五维综合分、KPI 现状/目标与价值描述</strong>。</p>
-                        <div class="rounded-[12px] border border-accent/25 bg-accent-muted/25 px-3 py-2 mb-3 text-[12px] text-ink-secondary leading-snug shrink-0">
-                            <strong class="text-ink">Excel：</strong>导出模板表含「适用行业」列；导入时若文件无该列（旧版），将保留页面上该模板键已有的行业关联，避免误清空。
+                    <div class="rounded-[14px] border border-black/[0.06] bg-canvas/50 p-3 sm:p-4 mb-2 flex flex-col flex-1 min-h-0">
+                        <div class="flex flex-wrap gap-2 mb-3 text-[11px] text-ink-secondary">
+                            <span class="rounded-full bg-white border border-black/[0.08] px-2.5 py-1 font-semibold text-ink">① 起名字</span>
+                            <span class="rounded-full bg-white border border-black/[0.08] px-2.5 py-1 font-semibold text-ink">② 选可见行业</span>
+                            <span class="rounded-full bg-white border border-black/[0.08] px-2.5 py-1 font-semibold text-ink">③ 逐个加阶段</span>
+                            <span class="rounded-full bg-white border border-black/[0.08] px-2.5 py-1 font-semibold text-ink">④ 保存</span>
                         </div>
-                        <div class="rounded-[12px] border border-black/[0.06] bg-white p-3 sm:p-4 mb-2 shadow-nav shrink-0">
-                            ${currentState.editingTemplateKey ? `<div class="flex flex-wrap items-center justify-between gap-2 mb-3 rounded-[10px] bg-accent-muted/50 border border-accent/20 px-3 py-2 text-[12px] text-ink">
-                                <span>正在编辑模板 <span class="font-semibold text-accent">${escapeHtmlText(currentState.templates[currentState.editingTemplateKey]?.name || '')}</span>（保存后覆盖当前条目）</span>
-                                <button type="button" onclick="cancelTemplateEdit()" class="shrink-0 rounded-[8px] border border-black/[0.10] bg-white px-2.5 py-1 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">取消编辑</button>
-                            </div>` : ''}
-                            <input id="tpl-name" placeholder="模板名称（建议「领域：价值流」样式，如 GTM：IPMS）" value="${currentState.editingTemplateKey && currentState.templates[currentState.editingTemplateKey] ? escapeHtmlText(currentState.templates[currentState.editingTemplateKey].name) : ''}" class="w-full rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] mb-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
-                            ${renderTemplateIndustryCheckboxesHtml()}
-                            <div class="rounded-[12px] border border-black/[0.06] bg-canvas p-4 mb-3 space-y-3">
-                                <div class="flex flex-wrap gap-3">
-                                    <input id="tmp-step-name" placeholder="阶段名称" class="flex-1 min-w-[160px] rounded-[10px] border border-black/[0.10] bg-white px-3 py-2.5 text-[14px]">
-                                    <select id="tmp-step-type" class="rounded-[10px] border border-black/[0.10] px-3 py-2.5 text-[14px] bg-white"><option value="process">增值</option><option value="wait">等待</option></select>
-                                    <input id="tmp-step-time" type="number" value="1" class="w-20 rounded-[10px] border border-black/[0.10] px-2 py-2.5 text-[14px] text-center" title="小时">
-                                </div>
-                                <input id="tmp-step-scenarios" placeholder="场景（逗号分隔）" class="w-full rounded-[10px] border border-black/[0.10] bg-white px-3 py-2.5 text-[14px]">
-                                <input id="tmp-step-components" placeholder="业务组件（逗号分隔）" class="w-full rounded-[10px] border border-black/[0.10] bg-white px-3 py-2.5 text-[14px]">
-                                <button type="button" onclick="addTmpStep()" class="inline-flex items-center gap-2 text-[14px] font-semibold text-accent hover:underline"><i class="fas fa-plus text-[11px]"></i>添加阶段到列表</button>
-                                <div id="temp-steps-preview" class="space-y-2 pl-3 border-l-2 border-black/[0.06] text-[12px] text-ink-secondary max-h-[min(66vh,600px)] overflow-y-auto"></div>
+                        <p class="text-[12px] text-ink-secondary mb-3 leading-snug">模板决定步骤 2 里<strong class="text-ink">默认有哪些阶段</strong>；阶段下的五维打分与 KPI 仍在步骤 2 里填。组件列表会喂给<strong class="text-ink">步骤 3</strong>生成能力清单。</p>
+                        <div class="rounded-[10px] border border-black/[0.08] bg-white/90 px-3 py-2 mb-3 text-[11px] text-ink-secondary leading-snug shrink-0">
+                            <i class="fas fa-table text-ink-tertiary mr-1" aria-hidden="true"></i><strong class="text-ink">Excel：</strong>模板表带「适用行业」列；旧文件若缺该列，导入会<strong class="text-ink">保留</strong>页面上已有的行业勾选，避免误清空。
+                        </div>
+                        <div class="rounded-[12px] border border-black/[0.06] bg-white p-3 sm:p-4 mb-3 shadow-nav shrink-0 space-y-3">
+                            <div class="flex items-center gap-2 border-b border-black/[0.06] pb-2 mb-1">
+                                <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-muted text-accent text-[12px] font-bold">A</span>
+                                <h3 class="text-[14px] font-semibold text-ink">编辑区：新建或修改一个模板</h3>
                             </div>
-                            <button type="button" onclick="saveTemplate()" class="w-full rounded-[10px] bg-accent py-2.5 text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors">${currentState.editingTemplateKey ? '保存修改' : '保存模板'}</button>
+                            ${currentState.editingTemplateKey ? `<div class="flex flex-wrap items-center justify-between gap-2 rounded-[10px] bg-accent-muted/45 border border-accent/25 px-3 py-2 text-[12px] text-ink">
+                                <span>正在改：<span class="font-semibold text-accent">${escapeHtmlText(currentState.templates[currentState.editingTemplateKey]?.name || '')}</span> · 保存后覆盖这一条</span>
+                                <button type="button" onclick="cancelTemplateEdit()" class="shrink-0 rounded-[8px] border border-black/[0.10] bg-white px-2.5 py-1 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">取消</button>
+                            </div>` : '<p class="text-[12px] text-ink-secondary">从下方列表<strong class="text-ink">点一条模板</strong>可载入此处；或<strong class="text-ink">直接起名并加阶段</strong>保存成新模板。</p>'}
+                            <label class="grid gap-1.5">
+                                <span class="text-[12px] font-semibold text-ink">模板叫什么？</span>
+                                <input id="tpl-name" placeholder="例：GTM：IPMS / 零售：预测到交付" value="${currentState.editingTemplateKey && currentState.templates[currentState.editingTemplateKey] ? escapeHtmlText(currentState.templates[currentState.editingTemplateKey].name) : ''}" class="w-full rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
+                            </label>
+                            ${renderTemplateIndustryCheckboxesHtml()}
+                            <div class="rounded-[12px] border border-black/[0.06] bg-canvas p-3 sm:p-4 space-y-3">
+                                <p class="text-[12px] font-semibold text-ink flex items-center gap-2"><i class="fas fa-layer-group text-accent text-[13px]" aria-hidden="true"></i>追加阶段（可多次添加）</p>
+                                <label class="grid gap-1.5">
+                                    <span class="text-[11px] font-medium text-ink-secondary">阶段名称（流程图上的小方块标题）</span>
+                                    <input id="tmp-step-name" placeholder="如：需求预测、订单履约" class="w-full rounded-[10px] border border-black/[0.10] bg-white px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
+                                </label>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <label class="grid gap-1.5 sm:col-span-1">
+                                        <span class="text-[11px] font-medium text-ink-secondary">阶段类型</span>
+                                        <select id="tmp-step-type" title="增值：主动加工；等待：排队/审批类停滞" class="rounded-[10px] border border-black/[0.10] px-3 py-2.5 text-[14px] bg-white focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"><option value="process">增值（要做的事）</option><option value="wait">等待（排队/审批）</option></select>
+                                    </label>
+                                    <label class="grid gap-1.5 sm:col-span-1">
+                                        <span class="text-[11px] font-medium text-ink-secondary">默认耗时（小时）</span>
+                                        <input id="tmp-step-time" type="number" value="1" min="1" class="w-full rounded-[10px] border border-black/[0.10] px-3 py-2.5 text-[14px] text-center bg-white focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" title="仅作估算起点，可在步骤 2 再改">
+                                    </label>
+                                    <div class="sm:col-span-1 hidden sm:block"></div>
+                                </div>
+                                <label class="grid gap-1.5">
+                                    <span class="text-[11px] font-medium text-ink-secondary">场景因子（用逗号隔开，可选）</span>
+                                    <input id="tmp-step-scenarios" placeholder="例：常态, 大促高峰, 加急通道" class="w-full rounded-[10px] border border-black/[0.10] bg-white px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
+                                </label>
+                                <label class="grid gap-1.5">
+                                    <span class="text-[11px] font-medium text-ink-secondary">业务组件（逗号分隔，会进步骤 3 能力清单）</span>
+                                    <input id="tmp-step-components" placeholder="例：OMS, 库存审批, 物流调度" class="w-full rounded-[10px] border border-black/[0.10] bg-white px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
+                                </label>
+                                <button type="button" onclick="addTmpStep()" class="inline-flex items-center gap-2 rounded-[10px] border border-accent/35 bg-accent-muted/40 px-4 py-2 text-[13px] font-semibold text-accent hover:bg-accent-muted transition-colors"><i class="fas fa-plus text-[11px]" aria-hidden="true"></i>加入下方列表</button>
+                                <div id="temp-steps-preview" class="rounded-[10px] border border-black/[0.06] bg-white px-3 py-2 space-y-1 text-[12px] text-ink-secondary max-h-[min(50vh,420px)] overflow-y-auto"></div>
+                            </div>
+                            <button type="button" onclick="saveTemplate()" class="w-full rounded-[10px] bg-accent py-3 text-[14px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors">${currentState.editingTemplateKey ? '保存修改到当前模板' : '保存为新模板'}</button>
                         </div>
-                        <p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider mb-1.5 shrink-0">预置与自定义模板（点击编辑）</p>
-                        <div class="space-y-2 flex-1 min-h-[min(66vh,720px)] overflow-y-auto pr-1 pb-1 sm:pr-2">${tplsHtml}</div>
+                        <div class="flex items-center gap-2 mb-2 shrink-0">
+                            <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-canvas border border-black/[0.08] text-[12px] font-bold text-ink-secondary">B</span>
+                            <h3 class="text-[14px] font-semibold text-ink">模板列表</h3>
+                            <span class="text-[11px] text-ink-tertiary">点卡片载入上方 · ${Object.keys(currentState.templates).length} 条</span>
+                        </div>
+                        <div class="space-y-2 flex-1 min-h-[min(40vh,520px)] max-h-[min(66vh,720px)] overflow-y-auto pr-1 pb-1 sm:pr-2">${tplsHtml}</div>
                     </div>
                 </section>`;
             renderTempStepsList();
@@ -5197,11 +5747,16 @@
         function renderTempStepsList() {
             const el = document.getElementById('temp-steps-preview');
             if (!el) return;
-            el.innerHTML = currentState.newTplSteps.map(s => `
-                <div class="flex justify-between items-start gap-2 py-2 border-b border-black/[0.04] last:border-0">
-                    <span class="text-[12px] text-ink-secondary leading-snug">${s.name} · ${s.type === 'wait' ? '等待' : '增值'} · ${s.defaultTime}h<br><span class="text-ink-tertiary">场景 ${s.scenarios || '—'} · 组件 ${s.components || '—'}</span></span>
-                    <button type="button" onclick="removeTmpStep(${s.id})" class="text-ink-tertiary hover:text-[#ff6961] p-1" aria-label="移除"><i class="fas fa-times text-[12px]"></i></button>
-                </div>`).join('') || '<p class="text-[12px] text-ink-tertiary italic py-2">尚未添加阶段</p>';
+            el.innerHTML = currentState.newTplSteps.map((s, i) => `
+                <div class="flex justify-between items-start gap-2 py-2.5 border-b border-black/[0.06] last:border-0">
+                    <div class="min-w-0">
+                        <span class="text-[11px] font-bold text-accent tabular-nums">${i + 1}.</span>
+                        <span class="text-[13px] font-semibold text-ink">${escapeHtmlText(s.name)}</span>
+                        <span class="text-[12px] text-ink-secondary"> · ${s.type === 'wait' ? '等待' : '增值'} · ${s.defaultTime}h</span>
+                        <p class="text-[11px] text-ink-tertiary mt-1 leading-snug">场景：${escapeHtmlText(s.scenarios || '—')} · 组件：${escapeHtmlText(s.components || '—')}</p>
+                    </div>
+                    <button type="button" onclick="removeTmpStep(${s.id})" class="shrink-0 rounded-[8px] border border-black/[0.08] px-2 py-1 text-[11px] font-semibold text-ink-tertiary hover:text-[#ff6961] hover:border-[#fecaca]" aria-label="移除此阶段">移除</button>
+                </div>`).join('') || '<p class="text-[12px] text-ink-secondary text-center py-6">列表为空 — 填好上面一栏后点<strong class="text-ink">「加入下方列表」</strong></p>';
         }
 
         /** 导出前刷新各步 DOM，避免仅当前步骤内容与快照一致 */
