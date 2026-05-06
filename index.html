@@ -102,7 +102,6 @@
             height: auto !important;
             max-height: none !important;
         }
-        body.pdf-exporting { overflow: visible !important; }
         /* 禁止改为 display:block：会破坏 body→main 的 flex 分配，导致 grid 行高 1fr 塌成 0，html2canvas 截图尺寸为 0 */
         body.pdf-exporting.app-shell {
             display: flex !important;
@@ -141,7 +140,7 @@
             bottom: max(84px, env(safe-area-inset-bottom));
             z-index: 209;
             width: min(432px, calc(100vw - 20px));
-            max-height: min(70vh, 540px);
+            max-height: min(91vh, 702px);
             display: flex;
             flex-direction: column;
             border-radius: 16px;
@@ -151,6 +150,15 @@
             overflow: hidden;
         }
         .ai-assistant-drawer.hidden { display: none !important; }
+        .ai-drawer-drag-handle {
+            cursor: grab;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        .ai-drawer-drag-handle.ai-drawer-dragging {
+            cursor: grabbing;
+        }
         #ai-output { font-size: 13px; line-height: 1.55; color: #1d1d1f; }
 
         body.pdf-exporting.app-shell > #main-layout {
@@ -167,7 +175,25 @@
             display: flex !important;
             flex-direction: column !important;
             align-items: stretch !important;
-            min-height: calc(100vh - 140px) !important;
+            /* 由步骤内容撑开总高度，避免固定 min-height 导致截图高度计量误差、重叠或裁切 */
+            min-height: auto !important;
+        }
+        /* 导出时展开纵向滚动区，保证 html2canvas 收到完整 scrollHeight，避免表格/热力/举措显示不全 */
+        body.pdf-exporting .overflow-y-auto {
+            overflow-y: visible !important;
+            max-height: none !important;
+        }
+        body.pdf-exporting .overflow-auto {
+            overflow: visible !important;
+            max-height: none !important;
+        }
+        /* 甘特等横向滚动区域展开，避免右侧轨被裁掉 */
+        body.pdf-exporting .overflow-x-auto {
+            overflow-x: visible !important;
+        }
+        body.pdf-exporting {
+            text-rendering: geometricPrecision;
+            -webkit-font-smoothing: antialiased;
         }
         /* 桌面网格下 workspace 仍有 max-height:100%，导出时必须放开否则长步骤被压扁导致截图错位、裁切 */
         body.pdf-exporting #main-layout > #workspace {
@@ -204,6 +230,7 @@
         }
         body.pdf-exporting .roadmap-gantt-scroll {
             min-height: 480px;
+            max-height: none !important;
             overflow: visible !important;
         }
         /* 桌面端：整体纵向 flex，主区占满顶栏以下剩余高度，避免 calc 与 zoom 导致与顶栏叠层 */
@@ -1853,6 +1880,85 @@
             qa.innerHTML = list.map(p => `<button type="button" onclick="runAiQuickAction('${p.id}')" class="rounded-[8px] border border-black/[0.10] bg-canvas px-2 py-1 text-[11px] font-semibold text-ink-secondary hover:bg-white hover:text-accent transition-colors">${p.label}</button>`).join('');
         }
 
+        /** AI 助手抽屉：按住标题区拖动，避免遮挡工作台（保留右下角默认定位直至首次拖动） */
+        function bindAiDrawerDrag() {
+            const drawer = document.getElementById('ai-assistant-drawer');
+            const handle = document.getElementById('ai-drawer-drag-handle');
+            if (!drawer || !handle || handle.dataset.dragBound === '1') return;
+            handle.dataset.dragBound = '1';
+
+            let dragging = false;
+            let startX = 0;
+            let startY = 0;
+            let startLeft = 0;
+            let startTop = 0;
+
+            function ensureLeftTopFromCurrentRect() {
+                if (drawer.style.left && drawer.style.top) return;
+                const r = drawer.getBoundingClientRect();
+                drawer.style.right = 'auto';
+                drawer.style.bottom = 'auto';
+                drawer.style.left = `${Math.round(r.left)}px`;
+                drawer.style.top = `${Math.round(r.top)}px`;
+            }
+
+            function startDrag(clientX, clientY) {
+                dragging = true;
+                ensureLeftTopFromCurrentRect();
+                const rect = drawer.getBoundingClientRect();
+                startLeft = rect.left;
+                startTop = rect.top;
+                startX = clientX;
+                startY = clientY;
+                handle.classList.add('ai-drawer-dragging');
+            }
+
+            function moveDrag(clientX, clientY) {
+                if (!dragging) return;
+                const dx = clientX - startX;
+                const dy = clientY - startY;
+                let nl = startLeft + dx;
+                let nt = startTop + dy;
+                const w = drawer.offsetWidth;
+                const h = drawer.offsetHeight;
+                const pad = 8;
+                const vw = document.documentElement.clientWidth;
+                const vh = document.documentElement.clientHeight;
+                nl = Math.max(pad, Math.min(nl, vw - w - pad));
+                nt = Math.max(pad, Math.min(nt, vh - h - pad));
+                drawer.style.left = `${Math.round(nl)}px`;
+                drawer.style.top = `${Math.round(nt)}px`;
+            }
+
+            function endDrag() {
+                if (!dragging) return;
+                dragging = false;
+                handle.classList.remove('ai-drawer-dragging');
+            }
+
+            handle.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return;
+                startDrag(e.clientX, e.clientY);
+                e.preventDefault();
+            });
+            window.addEventListener('mousemove', (e) => moveDrag(e.clientX, e.clientY));
+            window.addEventListener('mouseup', endDrag);
+
+            handle.addEventListener('touchstart', (e) => {
+                if (e.touches.length !== 1) return;
+                const t = e.touches[0];
+                startDrag(t.clientX, t.clientY);
+            }, { passive: true });
+            window.addEventListener('touchmove', (e) => {
+                if (!dragging || e.touches.length !== 1) return;
+                e.preventDefault();
+                const t = e.touches[0];
+                moveDrag(t.clientX, t.clientY);
+            }, { passive: false });
+            window.addEventListener('touchend', endDrag);
+            window.addEventListener('touchcancel', endDrag);
+        }
+
         function initAiAssistant() {
             if (document.getElementById('ai-assistant-root')) return;
             const root = document.createElement('div');
@@ -1864,9 +1970,11 @@
                 </button>
                 <div id="ai-assistant-drawer" class="ai-assistant-drawer hidden print-hidden" role="dialog" aria-label="AI 规划助手">
                     <div class="flex items-center justify-between gap-2 px-3 py-2 border-b border-black/[0.06] bg-canvas/90 shrink-0">
-                        <div class="min-w-0">
+                        <div id="ai-drawer-drag-handle" class="ai-drawer-drag-handle flex-1 min-w-0 rounded-[8px] px-1 py-0.5 -ml-1 border border-transparent hover:border-black/[0.06] hover:bg-white/70 transition-colors" title="按住拖动窗口位置">
+                            <div class="min-w-0 pointer-events-none">
                             <p class="text-[13px] font-semibold text-ink leading-tight">AI 规划助手</p>
                             <p id="ai-mode-badge" class="text-[10px] text-ink-tertiary truncate mt-0.5">演示模式</p>
+                            </div>
                         </div>
                         <div class="flex items-center gap-1 shrink-0">
                             <button type="button" onclick="toggleAiSettings()" class="p-2 rounded-[8px] text-ink-secondary hover:bg-white" title="连接设置"><i class="fas fa-cog text-[13px]" aria-hidden="true"></i></button>
@@ -1889,9 +1997,9 @@
                         <div id="ai-quick-actions" class="flex flex-wrap gap-1.5"></div>
                     </div>
                     <div class="px-3 py-2 flex-1 min-h-0 flex flex-col gap-2">
-                        <textarea id="ai-user-input" rows="3" placeholder="描述业务背景，或向 AI 提问…" class="w-full rounded-[10px] border border-black/[0.10] px-2 py-1.5 text-[12px] resize-none focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"></textarea>
+                        <textarea id="ai-user-input" rows="4" placeholder="描述业务背景，或向 AI 提问…" class="w-full rounded-[10px] border border-black/[0.10] px-2 py-1.5 text-[12px] resize-none focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"></textarea>
                         <button type="button" onclick="sendAiFreeMessage()" class="w-full rounded-[10px] bg-accent py-2 text-[12px] font-semibold text-white shadow-nav hover:bg-accent-hover">发送提问</button>
-                        <div id="ai-output" class="flex-1 min-h-[120px] max-h-[220px] overflow-y-auto rounded-[10px] border border-black/[0.06] bg-canvas/50 px-2 py-2 whitespace-pre-wrap"></div>
+                        <div id="ai-output" class="flex-1 min-h-[156px] overflow-y-auto rounded-[10px] border border-black/[0.06] bg-canvas/50 px-2 py-2 whitespace-pre-wrap"></div>
                         <button type="button" onclick="applyAiWorkflowPatchFromOutput()" class="w-full shrink-0 rounded-[10px] border border-accent/35 bg-accent-muted py-2 text-[12px] font-semibold text-accent hover:bg-white transition-colors">应用到工作流</button>
                     </div>
                 </div>`;
@@ -1901,6 +2009,7 @@
                 const btn = document.getElementById('ai-float-toggle');
                 if (btn) btn.setAttribute('aria-expanded', aiDrawerVisible ? 'true' : 'false');
             };
+            bindAiDrawerDrag();
             refreshAiAssistantUi();
         }
 
@@ -4862,18 +4971,18 @@
             return null;
         }
 
-        /** PDF：A4 纵向；压缩体积（JPEG + compress）；过长步骤按页切片，避免单页拉伸重叠 */
+        /** PDF：A4 纵向；分页切片 PNG；允许较大体积（目标约 10～20MB）以还原快照、减轻糊字与裁切 */
         const PDF_PAGE_W_MM = 210;
         const PDF_PAGE_H_MM = 297;
         const PDF_MARGIN_MM = 10;
         const PDF_IMG_W_MM = PDF_PAGE_W_MM - 2 * PDF_MARGIN_MM;
         const PDF_USABLE_H_MM = PDF_PAGE_H_MM - 2 * PDF_MARGIN_MM;
-        /** 清晰度：过低导致中文糊边像「乱码」；过高体积大 */
-        const PDF_CAPTURE_SCALE = Math.min(2.25, Math.max(1.75, typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio * 1.15 : 2));
+        /** 捕获缩放：略提高 dpi，中文笔画更清晰（文件更大可接受） */
+        const PDF_CAPTURE_SCALE = Math.min(3, Math.max(2.75, typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio * 1.65 : 3));
         /** 分页切片用 PNG，避免 JPEG 块效应造成笔画粘连、行间错位感 */
         const PDF_SLICE_FORMAT = 'PNG';
-        /** 仅当单页 canvas 极大时再缩小，减轻锯齿（保留较高上限） */
-        const PDF_CANVAS_MAX_EDGE_PX = 5200;
+        /** 仅当单页 canvas 极大时再缩小；提高上限减少非必要降采样导致的糊边 */
+        const PDF_CANVAS_MAX_EDGE_PX = 10000;
 
         function downscaleCanvasIfNeeded(canvas) {
             const edge = Math.max(canvas.width, canvas.height);
@@ -4893,7 +5002,7 @@
             return out;
         }
 
-        /** 将步骤截图按 A4 可用高度纵向切片为多页写入（PNG 保文字边缘清晰） */
+        /** 将步骤截图按 A4 可用高度纵向切片为多页写入（PNG 保文字边缘清晰；函数名历史遗留含 Jpeg） */
         function appendCanvasToPdfAsPagedJpeg(pdf, canvas, opts) {
             const needLeading = !!(opts && opts.needLeadingPageBreak);
             const margin = PDF_MARGIN_MM;
@@ -4909,6 +5018,7 @@
                 const slicePx = Math.min(maxPxSlice, canvas.height - yPx);
                 let sliceHmm = (slicePx * imgW) / canvas.width;
                 sliceHmm = Math.round(sliceHmm * 1000) / 1000;
+                if (sliceHmm > usableH) sliceHmm = usableH;
 
                 if (!first) {
                     pdf.addPage();
@@ -4977,24 +5087,28 @@
             void workspace.offsetHeight;
             void document.getElementById('main-layout')?.offsetHeight;
             await waitForFontsReady();
-            await waitForLayoutMs(280);
+            await waitForLayoutMs(520);
 
             try {
                 const pdf = new JsPDF({
                     orientation: 'p',
                     unit: 'mm',
                     format: 'a4',
-                    compress: true
+                    compress: false
                 });
                 const contentIds = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5', 'step-6', 'step-7', 'step-8'];
                 for (let i = 0; i < contentIds.length; i++) {
                     const el = document.getElementById(contentIds[i]);
                     if (!el) throw new Error(`缺少节点 ${contentIds[i]}`);
+                    if (i > 0) await waitForLayoutMs(72);
+                    void el.offsetWidth;
+                    void el.scrollHeight;
                     const canvas = await html2canvas(el, {
                         scale: PDF_CAPTURE_SCALE,
                         useCORS: true,
                         allowTaint: true,
                         logging: false,
+                        imageTimeout: 20000,
                         backgroundColor: '#ffffff',
                         letterRendering: false,
                         foreignObjectRendering: false,
@@ -5004,6 +5118,17 @@
                             if (wEl) {
                                 wEl.style.fontFamily = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei UI","Microsoft YaHei",sans-serif';
                             }
+                            clonedDoc.querySelectorAll('.overflow-y-auto').forEach((node) => {
+                                node.style.overflow = 'visible';
+                                node.style.maxHeight = 'none';
+                            });
+                            clonedDoc.querySelectorAll('.overflow-auto').forEach((node) => {
+                                node.style.overflow = 'visible';
+                                node.style.maxHeight = 'none';
+                            });
+                            clonedDoc.querySelectorAll('.overflow-x-auto').forEach((node) => {
+                                node.style.overflowX = 'visible';
+                            });
                         }
                     });
                     if (!canvas.width || !canvas.height) {
