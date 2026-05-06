@@ -1325,23 +1325,90 @@
                 toast('模板无效', 'error');
                 return;
             }
-            currentState.vsStages = tpl.stages.map(s => ({
+            currentState.vsStages = tpl.stages.map((s, idx) => ({
                 ...s,
+                id: idx + 1,
                 actualTime: s.defaultTime,
                 scenarios: s.scenarios || '',
                 components: s.components || ''
             }));
             calcVSMetrics();
             renderStep2();
-            toast('已生成价值流阶段与映射字段');
+            toast('已套用模板初稿，可在下方表格改名称、类型并增删阶段；流程简图会同步变化');
+        }
+
+        function nextVSStageId() {
+            const ids = currentState.vsStages.map(s => s.id);
+            return (ids.length ? Math.max(...ids) : 0) + 1;
+        }
+
+        /** 手工新增价值流阶段（与流程简图联动） */
+        function addVSStage() {
+            currentState.vsStages.push({
+                id: nextVSStageId(),
+                name: `阶段 ${currentState.vsStages.length + 1}`,
+                type: 'process',
+                defaultTime: 1,
+                actualTime: 1,
+                scenarios: '',
+                components: ''
+            });
+            calcVSMetrics();
+            renderStep2();
+            toast('已新增阶段');
+        }
+
+        /** 从零开始：尚无阶段时插入第一条 */
+        function startBlankValueStream() {
+            currentState.vsStages = [{
+                id: 1,
+                name: '阶段 1',
+                type: 'process',
+                defaultTime: 1,
+                actualTime: 1,
+                scenarios: '',
+                components: ''
+            }];
+            calcVSMetrics();
+            renderStep2();
+            toast('已创建空白阶段，可继续新增或套用模板覆盖');
+        }
+
+        function removeVSStage(id) {
+            if (currentState.vsStages.length <= 1) {
+                toast('至少保留一个价值流阶段', 'error');
+                return;
+            }
+            if (!window.confirm('确定删除该阶段？流程简图将同步更新。')) return;
+            currentState.vsStages = currentState.vsStages.filter(s => s.id !== id);
+            calcVSMetrics();
+            renderStep2();
+        }
+
+        function moveVSStage(id, delta) {
+            const arr = currentState.vsStages;
+            const i = arr.findIndex(s => s.id === id);
+            if (i < 0) return;
+            const j = i + delta;
+            if (j < 0 || j >= arr.length) return;
+            const t = arr[i];
+            arr[i] = arr[j];
+            arr[j] = t;
+            renderStep2();
         }
 
         function updateVSStage(id, field, value) {
             const s = currentState.vsStages.find(x => x.id === id);
             if (!s) return;
             if (field === 'actualTime') s.actualTime = parseInt(value, 10) || 0;
+            else if (field === 'type') s.type = value === 'wait' ? 'wait' : 'process';
+            else if (field === 'name') s.name = value;
             else s[field] = value;
             calcVSMetrics();
+            if (field === 'name' || field === 'type') {
+                renderStep2();
+                return;
+            }
             const ltEl = document.getElementById('metric-lt');
             const vtEl = document.getElementById('metric-vt');
             const pceEl = document.getElementById('metric-pce');
@@ -2099,38 +2166,73 @@
             let matrix = '';
             let flow = '';
             if (!currentState.vsStages.length) {
-                flow = `<div class="flex flex-1 min-h-0 flex-col justify-center rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-10 text-center">
-                    <p class="text-[15px] font-semibold text-ink">尚未生成价值流</p>
-                    <p class="text-[14px] text-ink-secondary mt-2 max-w-md mx-auto leading-relaxed">请选择下方模板，点击「生成价值流」，表格与流程图会自动出现。</p>
+                flow = `<div class="flex flex-1 min-h-0 flex-col justify-center rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-10 text-center gap-3">
+                    <p class="text-[15px] font-semibold text-ink">尚未配置价值流阶段</p>
+                    <p class="text-[14px] text-ink-secondary mt-1 max-w-lg mx-auto leading-relaxed">可选：<strong class="text-ink font-medium">套用行业模板</strong>快速生成初稿；或<strong class="text-ink font-medium">空白开始</strong>再自行增删改。模板可随时再套用（会覆盖当前阶段）。</p>
+                    <div class="flex flex-wrap justify-center gap-2 mt-2 print-hidden">
+                        <button type="button" onclick="runVSGen()" class="inline-flex items-center gap-2 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors">
+                            <i class="fas fa-layer-group text-[11px]" aria-hidden="true"></i>
+                            套用所选模板
+                        </button>
+                        <button type="button" onclick="startBlankValueStream()" class="inline-flex items-center gap-2 rounded-[10px] border border-black/[0.12] bg-white px-4 py-2 text-[13px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas transition-colors">
+                            <i class="fas fa-plus text-[11px]" aria-hidden="true"></i>
+                            空白开始
+                        </button>
+                    </div>
                 </div>`;
             } else {
                 matrix = `<div class="flex flex-col flex-1 min-h-0 ui-table-wrap shadow-nav">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-black/[0.06] bg-canvas/60 px-3 py-2 print-hidden">
+                        <p class="text-[12px] text-ink-secondary">阶段顺序与下栏流程简图一致；改名称、类型或排序后简图立即同步。</p>
+                        <button type="button" onclick="addVSStage()" class="inline-flex items-center gap-1.5 rounded-[10px] bg-white border border-black/[0.10] px-3 py-1.5 text-[12px] font-semibold text-accent shadow-sm hover:bg-canvas transition-colors">
+                            <i class="fas fa-plus text-[10px]" aria-hidden="true"></i>
+                            新增阶段
+                        </button>
+                    </div>
                     <div class="flex-1 min-h-0 overflow-auto">
                     <table class="w-full text-[13px]">
                     <thead><tr>
-                        <th class="p-3 text-left font-semibold">阶段</th>
+                        <th class="p-3 text-left font-semibold min-w-[140px]">阶段名称</th>
                         <th class="p-3 text-left font-semibold">场景因子</th>
                         <th class="p-3 text-left font-semibold">业务组件</th>
-                        <th class="p-3 text-center font-semibold w-24">类型</th>
+                        <th class="p-3 text-center font-semibold w-[7rem]">类型</th>
+                        <th class="p-3 text-center font-semibold w-[8.5rem] print-hidden">排序</th>
+                        <th class="p-3 text-center font-semibold w-[4rem] print-hidden">操作</th>
                     </tr></thead><tbody>
-                    ${currentState.vsStages.map(s => `
+                    ${currentState.vsStages.map((s, rowIdx) => `
                         <tr class="border-t border-black/[0.06] hover:bg-canvas/80 transition-colors">
-                            <td class="p-3 font-medium text-ink align-top">${s.name}</td>
-                            <td class="p-3 align-top"><textarea class="w-full min-h-[52px] rounded-[10px] border border-black/[0.08] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" rows="2" onchange="updateVSStage(${s.id},'scenarios',this.value)">${s.scenarios || ''}</textarea></td>
-                            <td class="p-3 align-top"><textarea class="w-full min-h-[52px] rounded-[10px] border border-black/[0.08] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" rows="2" onchange="updateVSStage(${s.id},'components',this.value)">${s.components || ''}</textarea></td>
-                            <td class="p-3 text-center align-middle">${s.type === 'wait' ? '<span class="inline-block rounded-full bg-[#ff6961]/12 text-[#c41e1e] text-[11px] font-semibold px-2 py-1">等待</span>' : '<span class="inline-block rounded-full bg-accent-muted text-accent text-[11px] font-semibold px-2 py-1">增值</span>'}</td>
+                            <td class="p-3 align-top">
+                                <input type="text" class="w-full min-w-[8rem] rounded-[10px] border border-black/[0.10] bg-white px-2 py-2 text-[13px] font-medium text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" value="${escapeHtmlText(s.name)}" onchange="updateVSStage(${s.id},'name',this.value)" placeholder="阶段名称" />
+                            </td>
+                            <td class="p-3 align-top"><textarea class="w-full min-h-[52px] rounded-[10px] border border-black/[0.08] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" rows="2" onchange="updateVSStage(${s.id},'scenarios',this.value)">${escapeHtmlText(s.scenarios || '')}</textarea></td>
+                            <td class="p-3 align-top"><textarea class="w-full min-h-[52px] rounded-[10px] border border-black/[0.08] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" rows="2" onchange="updateVSStage(${s.id},'components',this.value)">${escapeHtmlText(s.components || '')}</textarea></td>
+                            <td class="p-3 text-center align-middle">
+                                <select class="rounded-[10px] border border-black/[0.10] bg-white py-1.5 px-2 text-[12px] font-medium text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" onchange="updateVSStage(${s.id},'type',this.value)">
+                                    <option value="process" ${s.type === 'wait' ? '' : 'selected'}>增值</option>
+                                    <option value="wait" ${s.type === 'wait' ? 'selected' : ''}>等待</option>
+                                </select>
+                            </td>
+                            <td class="p-3 text-center align-middle print-hidden">
+                                <div class="inline-flex rounded-[10px] border border-black/[0.08] bg-white overflow-hidden">
+                                    <button type="button" onclick="moveVSStage(${s.id},-1)" ${rowIdx === 0 ? 'disabled' : ''} class="px-2 py-1.5 text-[11px] font-semibold text-ink-secondary hover:bg-canvas disabled:opacity-30 disabled:pointer-events-none" title="上移">↑</button>
+                                    <button type="button" onclick="moveVSStage(${s.id},1)" ${rowIdx >= currentState.vsStages.length - 1 ? 'disabled' : ''} class="px-2 py-1.5 text-[11px] font-semibold text-ink-secondary hover:bg-canvas border-l border-black/[0.06] disabled:opacity-30 disabled:pointer-events-none" title="下移">↓</button>
+                                </div>
+                            </td>
+                            <td class="p-3 text-center align-middle print-hidden">
+                                <button type="button" onclick="removeVSStage(${s.id})" class="rounded-[8px] px-2 py-1 text-[11px] font-semibold text-ink-tertiary hover:bg-[#ff6961]/12 hover:text-[#c41e1e]" title="删除阶段">删除</button>
+                            </td>
                         </tr>`).join('')}
                     </tbody></table></div></div>`;
 
-                flow = `<div class="shrink-0 flex flex-col gap-2"><p class="text-[12px] lg:text-[13px] font-semibold text-ink">流程简图 <span class="font-normal text-ink-tertiary">（可调整各阶段耗时小时数）</span></p>
+                flow = `<div class="shrink-0 flex flex-col gap-2"><p class="text-[12px] lg:text-[13px] font-semibold text-ink">流程简图 <span class="font-normal text-ink-tertiary">（与上表顺序一致；可改耗时）</span></p>
                 <div class="overflow-x-auto pb-1"><div class="flex min-w-max gap-2 items-stretch py-1">
                     ${currentState.vsStages.map((s, i) => `
                         <div class="flex items-center gap-2">
                             <div class="w-[158px] rounded-[14px] border ${s.type === 'wait' ? 'border-dashed border-black/[0.15] bg-canvas' : 'border-black/[0.08] bg-white shadow-nav'} p-4 flex flex-col text-center">
                                 <span class="text-[10px] font-semibold uppercase tracking-wider text-ink-tertiary">${s.type === 'wait' ? '等待' : '增值'}</span>
-                                <div class="font-semibold text-[14px] text-ink mt-2 leading-snug">${s.name}</div>
+                                <div class="font-semibold text-[14px] text-ink mt-2 leading-snug">${escapeHtmlText(s.name)}</div>
                                 <div class="mt-3 flex items-center justify-center gap-1 rounded-[10px] border border-black/[0.08] bg-canvas px-2 py-1.5">
-                                    <input type="number" class="w-11 text-center text-[14px] font-semibold text-accent bg-transparent outline-none" value="${s.actualTime}" onchange="updateVSStage(${s.id},'actualTime',this.value)">
+                                    <input type="number" min="0" class="w-11 text-center text-[14px] font-semibold text-accent bg-transparent outline-none" value="${s.actualTime}" onchange="updateVSStage(${s.id},'actualTime',this.value)">
                                     <span class="text-[11px] text-ink-tertiary">小时</span>
                                 </div>
                             </div>
@@ -2160,9 +2262,9 @@
                             <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">行业模板</label>
                             <select class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" onchange="currentState.selectedTemplateId=this.value">${options}</select>
                         </div>
-                        <button type="button" onclick="runVSGen()" class="inline-flex items-center justify-center gap-2 rounded-[10px] bg-accent px-4 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors lg:shrink-0">
-                            <i class="fas fa-play text-[10px] opacity-90" aria-hidden="true"></i>
-                            生成价值流
+                        <button type="button" onclick="runVSGen()" class="inline-flex items-center justify-center gap-2 rounded-[10px] bg-accent px-4 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors lg:shrink-0" title="用当前所选模板覆盖下方阶段，可作为企业初稿后再改">
+                            <i class="fas fa-layer-group text-[10px] opacity-90" aria-hidden="true"></i>
+                            套用模板初稿
                         </button>
                     </div>
                     </div>
@@ -2484,6 +2586,73 @@
             return null;
         }
 
+        /** PDF：A4 纵向；压缩体积（JPEG + compress）；过长步骤按页切片，避免单页拉伸重叠 */
+        const PDF_PAGE_W_MM = 210;
+        const PDF_PAGE_H_MM = 297;
+        const PDF_MARGIN_MM = 10;
+        const PDF_IMG_W_MM = PDF_PAGE_W_MM - 2 * PDF_MARGIN_MM;
+        const PDF_USABLE_H_MM = PDF_PAGE_H_MM - 2 * PDF_MARGIN_MM;
+        const PDF_CAPTURE_SCALE = 1.35;
+        const PDF_JPEG_QUALITY = 0.72;
+        /** 限制长边像素，避免宽甘特等产生超大位图（有利于控制在约 20MB 内） */
+        const PDF_CANVAS_MAX_EDGE_PX = 2400;
+
+        function downscaleCanvasIfNeeded(canvas) {
+            const edge = Math.max(canvas.width, canvas.height);
+            if (edge <= PDF_CANVAS_MAX_EDGE_PX) return canvas;
+            const s = PDF_CANVAS_MAX_EDGE_PX / edge;
+            const w = Math.max(1, Math.round(canvas.width * s));
+            const h = Math.max(1, Math.round(canvas.height * s));
+            const out = document.createElement('canvas');
+            out.width = w;
+            out.height = h;
+            const ctx = out.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(canvas, 0, 0, w, h);
+            return out;
+        }
+
+        /** 将步骤截图按 A4 可用高度纵向切片为多张 JPEG 写入，避免单页超高导致重叠；体积远小于整页 PNG。 */
+        function appendCanvasToPdfAsPagedJpeg(pdf, canvas, opts) {
+            const needLeading = !!(opts && opts.needLeadingPageBreak);
+            const margin = PDF_MARGIN_MM;
+            const imgW = PDF_IMG_W_MM;
+            const usableH = PDF_USABLE_H_MM;
+            const q = PDF_JPEG_QUALITY;
+
+            const totalHmm = (canvas.height * imgW) / canvas.width;
+            const maxPxSlice = Math.max(32, Math.floor((usableH * canvas.width) / imgW));
+
+            let yPx = 0;
+            let first = true;
+
+            while (yPx < canvas.height) {
+                const slicePx = Math.min(maxPxSlice, canvas.height - yPx);
+                const sliceHmm = (slicePx * imgW) / canvas.width;
+
+                if (!first) {
+                    pdf.addPage();
+                } else if (needLeading) {
+                    pdf.addPage();
+                }
+                first = false;
+
+                const sliceCv = document.createElement('canvas');
+                sliceCv.width = canvas.width;
+                sliceCv.height = slicePx;
+                const ctx = sliceCv.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, sliceCv.width, sliceCv.height);
+                ctx.drawImage(canvas, 0, yPx, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
+
+                const dataUrl = sliceCv.toDataURL('image/jpeg', q);
+                pdf.addImage(dataUrl, 'JPEG', margin, margin, imgW, sliceHmm);
+
+                yPx += slicePx;
+            }
+        }
+
         /** @param {string} [filename] 下载文件名 */
         async function runPdfExportCore(filename) {
             const JsPDF = resolveJsPdfConstructor();
@@ -2521,14 +2690,18 @@
             await waitForLayoutMs(120);
 
             try {
-                const pdf = new JsPDF('p', 'mm', 'a4');
+                const pdf = new JsPDF({
+                    orientation: 'p',
+                    unit: 'mm',
+                    format: 'a4',
+                    compress: true
+                });
                 const contentIds = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5', 'step-6', 'step-7', 'step-8'];
                 for (let i = 0; i < contentIds.length; i++) {
                     const el = document.getElementById(contentIds[i]);
                     if (!el) throw new Error(`缺少节点 ${contentIds[i]}`);
-                    if (i > 0) pdf.addPage();
                     const canvas = await html2canvas(el, {
-                        scale: 2,
+                        scale: PDF_CAPTURE_SCALE,
                         useCORS: true,
                         allowTaint: true,
                         logging: false,
@@ -2537,13 +2710,8 @@
                     if (!canvas.width || !canvas.height) {
                         throw new Error(`${contentIds[i]} 截图尺寸为 0，请确认工作台已展开可见`);
                     }
-                    const imgData = canvas.toDataURL('image/png');
-                    const imgWidth = 190;
-                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                    if (!Number.isFinite(imgHeight) || imgHeight <= 0) {
-                        throw new Error(`${contentIds[i]} 截图尺寸计算异常`);
-                    }
-                    pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+                    const canvasForPdf = downscaleCanvasIfNeeded(canvas);
+                    appendCanvasToPdfAsPagedJpeg(pdf, canvasForPdf, { needLeadingPageBreak: i > 0 });
                 }
                 pdf.save(filename || 'BA_Transformation_Blueprint.pdf');
                 toast('PDF 已保存');
