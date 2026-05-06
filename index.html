@@ -27,8 +27,6 @@
         };
     </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
@@ -36,19 +34,21 @@
             --header-offset: 4.75rem;
             /* 左侧工作流展开宽度（较原 280px 缩减 40% → 168px） */
             --sidebar-expanded: 168px;
+            /* 主内容区最大宽度：原 1400px 加宽约 50%，并与视口留白取较小值 */
+            --app-max-width: min(2100px, calc(100vw - 2rem));
         }
         /* 全局缩放过大易导致 dvh + overflow:hidden 底部裁切；默认 1 保证一屏内控件完整可见 */
         body { zoom: 1; }
-        body.pdf-exporting { zoom: 1 !important; }
+        body.html-exporting { zoom: 1 !important; }
         body { -webkit-font-smoothing: antialiased; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .pdf-mode-active {
+        .html-export-print-mode {
             position: absolute; top: 0; left: 0; right: 0; z-index: 9999;
             background: white; padding: 40px; width: 210mm; margin: auto;
         }
-        .pdf-mode-active .step-wrapper { display: block !important; flex: none !important; margin-bottom: 40px; page-break-after: always; }
-        .pdf-mode-active .print-hidden { display: none !important; }
+        .html-export-print-mode .step-wrapper { display: block !important; flex: none !important; margin-bottom: 40px; page-break-after: always; }
+        .html-export-print-mode .print-hidden { display: none !important; }
         .step-wrapper { display: none; animation: fadeIn 0.28s ease-out; }
         .step-wrapper.active { display: flex; flex-direction: column; min-height: 0; flex: 1; }
         #workspace-scroll {
@@ -91,19 +91,25 @@
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
         }
         .roadmap-gantt-bar.sm { height: 14px; border-radius: 5px; }
+        /* 子路标起止横条：灰色虚线轮廓（非轨道竖格线） */
+        .roadmap-gantt-bar-stream {
+            background-color: rgba(82, 82, 91, 0.06) !important;
+            border: 1px dashed #5c5c63;
+            box-shadow: none !important;
+        }
         @media print {
             .roadmap-gantt-scroll { overflow: visible !important; }
         }
-        /* PDF 导出时解除一屏高度限制，避免截图被裁切 */
-        body.pdf-exporting,
-        body.pdf-exporting #workspace,
-        body.pdf-exporting #workspace-scroll {
+        /* HTML 快照导出时解除一屏高度限制，避免克隆出的版面被裁切 */
+        body.html-exporting,
+        body.html-exporting #workspace,
+        body.html-exporting #workspace-scroll {
             overflow: visible !important;
             height: auto !important;
             max-height: none !important;
         }
-        /* 禁止改为 display:block：会破坏 body→main 的 flex 分配，导致 grid 行高 1fr 塌成 0，html2canvas 截图尺寸为 0 */
-        body.pdf-exporting.app-shell {
+        /* 禁止改为 display:block：会破坏 body→main 的 flex 分配，导致 grid 行高 1fr 塌成 0，导出快照高度为 0 */
+        body.html-exporting.app-shell {
             display: flex !important;
             flex-direction: column !important;
             height: auto !important;
@@ -111,10 +117,10 @@
             max-height: none !important;
             overflow: visible !important;
         }
-        body.pdf-exporting.app-shell > header {
+        body.html-exporting.app-shell > header {
             flex-shrink: 0 !important;
         }
-        body.pdf-exporting .ai-assistant-root { display: none !important; }
+        body.html-exporting .ai-assistant-root { display: none !important; }
         .ai-assistant-float-btn {
             position: fixed;
             right: max(16px, env(safe-area-inset-right));
@@ -161,52 +167,52 @@
         }
         #ai-output { font-size: 13px; line-height: 1.55; color: #1d1d1f; }
 
-        body.pdf-exporting.app-shell > #main-layout {
+        body.html-exporting.app-shell > #main-layout {
             flex: 1 1 auto !important;
             min-height: calc(100vh - 80px) !important;
             max-height: none !important;
-            /* 侧栏脚本隐藏后若仍为双列网格，工作区只占右列会变窄，PDF 内中文挤压、重影似乱码 */
+            /* 侧栏隐藏后若仍为双列网格，工作区只占右列会变窄，导出快照里中文易挤压、重影似乱码 */
             grid-template-columns: minmax(0, 1fr) !important;
         }
-        body.pdf-exporting #main-layout > aside {
+        body.html-exporting #main-layout > aside {
             display: none !important;
         }
-        body.pdf-exporting #workspace-scroll {
+        body.html-exporting #workspace-scroll {
             display: flex !important;
             flex-direction: column !important;
             align-items: stretch !important;
             /* 由步骤内容撑开总高度，避免固定 min-height 导致截图高度计量误差、重叠或裁切 */
             min-height: auto !important;
         }
-        /* 导出时展开纵向滚动区，保证 html2canvas 收到完整 scrollHeight，避免表格/热力/举措显示不全 */
-        body.pdf-exporting .overflow-y-auto {
+        /* 导出 HTML 快照时展开纵向滚动区，保证克隆 DOM 含完整 scrollHeight，避免表格/热力/举措显示不全 */
+        body.html-exporting .overflow-y-auto {
             overflow-y: visible !important;
             max-height: none !important;
         }
-        body.pdf-exporting .overflow-auto {
+        body.html-exporting .overflow-auto {
             overflow: visible !important;
             max-height: none !important;
         }
         /* 甘特等横向滚动区域展开，避免右侧轨被裁掉 */
-        body.pdf-exporting .overflow-x-auto {
+        body.html-exporting .overflow-x-auto {
             overflow-x: visible !important;
         }
-        body.pdf-exporting {
+        body.html-exporting {
             text-rendering: geometricPrecision;
             -webkit-font-smoothing: antialiased;
         }
-        /* 桌面网格下 workspace 仍有 max-height:100%，导出时必须放开否则长步骤被压扁导致截图错位、裁切 */
-        body.pdf-exporting #main-layout > #workspace {
+        /* 桌面网格下 workspace 仍有 max-height:100%，导出时必须放开否则长步骤被压扁，快照版面错位、裁切 */
+        body.html-exporting #main-layout > #workspace {
             max-height: none !important;
             min-height: 0 !important;
             align-self: stretch !important;
         }
-        body.pdf-exporting .step-wrapper {
+        body.html-exporting .step-wrapper {
             animation: none !important;
             opacity: 1 !important;
             transform: none !important;
         }
-        body.pdf-exporting .step-wrapper.active {
+        body.html-exporting .step-wrapper.active {
             flex: 0 0 auto !important;
             min-height: auto !important;
             width: 100% !important;
@@ -216,19 +222,19 @@
             box-sizing: border-box !important;
             -webkit-font-smoothing: antialiased !important;
         }
-        body.pdf-exporting .ui-table-wrap,
-        body.pdf-exporting .ui-table-wrap table {
+        body.html-exporting .ui-table-wrap,
+        body.html-exporting .ui-table-wrap table {
             overflow: visible !important;
         }
-        /* PDF 截图时解除 flex 收缩，避免画布高度塌成一条 */
-        body.pdf-exporting .bmc-nine {
+        /* HTML 快照导出时解除 flex 收缩，避免画布类区块高度塌成一条 */
+        body.html-exporting .bmc-nine {
             flex: none !important;
             min-height: 420px;
         }
-        body.pdf-exporting .bmc-nine-main {
+        body.html-exporting .bmc-nine-main {
             min-height: 260px;
         }
-        body.pdf-exporting .roadmap-gantt-scroll {
+        body.html-exporting .roadmap-gantt-scroll {
             min-height: 480px;
             max-height: none !important;
             overflow: visible !important;
@@ -354,7 +360,7 @@
 <body class="app-shell bg-canvas text-ink min-h-screen lg:overflow-hidden" onload="initApp()">
 
     <header id="app-header" class="sticky top-0 z-50 shrink-0 overflow-visible bg-white/95 backdrop-blur-xl border-b border-black/[0.06] lg:relative lg:top-auto lg:z-10">
-        <div class="max-w-[1400px] mx-auto px-5 sm:px-8 py-1.5 sm:py-2">
+        <div class="mx-auto px-5 sm:px-8 py-1.5 sm:py-2 w-full max-w-[var(--app-max-width)]">
             <div class="flex flex-col gap-1.5 lg:flex-row lg:items-start lg:justify-between lg:gap-3">
                 <!-- flex-1 + min-w-0：大屏横向布局时左侧必须参与分配宽度，否则仅 min-w-0 会被压成接近 0，标题与宣传语消失 -->
                 <div class="flex min-w-0 flex-1 items-start gap-2.5 sm:gap-3">
@@ -376,7 +382,7 @@
 
     <div id="toast-msg" class="fixed top-[72px] sm:top-20 right-4 sm:right-8 z-[220] max-w-[90vw] rounded-full px-4 py-2.5 text-[13px] font-medium text-white shadow-card opacity-0 pointer-events-none transition-all duration-300 translate-y-[-6px]" role="status"></div>
 
-    <main id="main-layout" class="max-w-[1400px] mx-auto w-full px-5 sm:px-8 py-3 sm:py-4 lg:py-2 lg:px-6 grid grid-cols-1 gap-4 lg:gap-3 relative lg:min-h-0 lg:items-stretch lg:flex-1">
+    <main id="main-layout" class="mx-auto w-full max-w-[var(--app-max-width)] px-5 sm:px-8 py-3 sm:py-4 lg:py-2 lg:px-6 grid grid-cols-1 gap-4 lg:gap-3 relative lg:min-h-0 lg:items-stretch lg:flex-1">
         <aside id="sidebar" class="flex flex-col gap-4 lg:gap-2 min-h-0 lg:h-full lg:max-h-full lg:pt-0 lg:overflow-hidden">
             <div id="sidebar-toolbar" class="print-hidden relative z-[4] flex items-center justify-between gap-1.5 shrink-0 rounded-[10px] bg-canvas/80 py-1 px-0.5 lg:hidden">
                 <button type="button" id="sidebar-toggle-sm" onclick="toggleMobileWorkflowNav()" class="inline-flex items-center gap-1.5 rounded-[10px] border border-black/[0.08] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas w-full justify-center sm:w-auto sm:justify-start" aria-expanded="true" aria-controls="sidebar-workflow-stack">
@@ -396,7 +402,7 @@
         </aside>
 
         <div id="workspace" class="bg-white rounded-[16px] shadow-card border border-black/[0.06] flex flex-col min-h-[70vh] lg:min-h-0 lg:h-full lg:max-h-full overflow-hidden">
-            <div id="workspace-scroll" class="flex-1 overscroll-contain px-4 py-3 sm:px-6 sm:py-4 lg:px-6 lg:pb-2 lg:pt-1 flex flex-col min-h-0">
+            <div id="workspace-scroll" class="flex-1 overscroll-contain px-4 py-3 sm:px-6 sm:py-4 lg:px-7 xl:px-8 lg:pb-2 lg:pt-1 flex flex-col min-h-0">
             <div id="step-1" class="step-wrapper"></div>
             <div id="step-2" class="step-wrapper"></div>
             <div id="step-3" class="step-wrapper"></div>
@@ -420,8 +426,6 @@
         </div>
     </main>
 
-    <div id="pdf-container" class="hidden"></div>
-
     <script>
         // ========== 方法论说明（与当前 7 步主流程 + 数字化资产配置交互一致；步骤标题见 STEPS） ==========
         const METHODOLOGY = {
@@ -438,14 +442,16 @@
                 bullets: [
                     '「领域价值流模板」列表随步骤 1 所选行业筛选；可选模板「套用」或「空白开始」自建端到端阶段。',
                     '流程简图从左到右为业务顺序；点击某一阶段卡片后，仅在下方编辑该阶段：勾选五维（效率、质量、成本、风险/合规、客户体验，可少于五项），每维综合分 1～5，并可在维下维护多条 KPI（名称、现状、目标）。',
-                    '「整体价值流概览」汇总时间与各维跨阶段表现；「业务组件」请用逗号分隔，进入步骤 3 时将据此生成业务能力清单（L3）。'
+                    '「整体价值流概览」汇总时间与各维跨阶段表现；「业务组件」请用逗号分隔，进入步骤 3 时将据此生成业务能力清单（L3）。',
+                    '打开<strong class="text-ink font-medium">AI 规划助手</strong>可点「刷新预置洞察」：已配置 API 时按行业与画布上下文刷新各阶段<strong class="text-ink font-medium">五维综合分</strong>与价值说明（演示模式为本地示例）。'
                 ],
                 output: '产出：可视化价值流、分阶段五维与 KPI、端到端概览，以及供架构步骤引用的业务组件清单。'
             },
             s3: {
                 bullets: [
                     '从步骤 2「下一步」进入时，可按各阶段「业务组件」自动生成清单；亦可在本页「手工新增能力块」从零维护。',
-                    '列含：价值流阶段、业务能力 L3、描述、L1/L2、当前与目标成熟度（1～5）、ICE；四维差距列与 Excel、步骤 4 一致，便于往返。',
+                    'AI 助手中「刷新预置洞察」可在已配置 API 时，按上下文批量优化各能力块的<strong class="text-ink font-medium">描述、领域 L1、类型 L2</strong>（与步骤 2 五维刷新同属一类补丁，演示模式为本地示例）。',
+                    '「价值流阶段」列对应步骤 2 流程简图中<strong class="text-ink font-medium">拆分后的阶段名称</strong>（与卡片标题一致），每条 L3 对齐其所属阶段的业务组件来源；同一组件出现在多个阶段时会各占一行。「描述」只写<strong class="text-ink font-medium">该 L3 能力本身</strong>（做什么、产出什么），不写价值流/阶段铺垫。列还含：业务能力 L3、L1/L2、成熟度与 ICE；四维差距与 Excel、步骤 4 一致。',
                     '「新增能力块 / 删除」维护行数；「导出 / 导入 Excel」整表与步骤 4、5 联动（导入后刷新差距与热力）。'
                 ],
                 output: '产出：可增删改的业务能力清单（含成熟度、ICE、四维差距参考），支持 Excel 离线编辑。'
@@ -561,17 +567,30 @@
         }
 
         const CAPABILITY_DB = {
-            '全渠道交付': { sys: 'OMS', tech: '微服务/API', mat: { o: 3, p: 4, d: 2, i: 2 }, pri: { v: 5, u: 4, f: 3 } },
-            '需求预测': { sys: 'AI Platform', tech: 'Python/模型服务', mat: { o: 2, p: 3, d: 1, i: 1 }, pri: { v: 5, u: 5, f: 2 } },
-            '库存审批': { sys: 'ERP', tech: 'SAP/集成', mat: { o: 5, p: 5, d: 4, i: 4 }, pri: { v: 3, u: 3, f: 1 } },
-            '采购下单': { sys: 'SRM', tech: 'SaaS', mat: { o: 2, p: 3, d: 3, i: 3 }, pri: { v: 4, u: 4, f: 4 } },
-            '入库上架': { sys: 'WMS', tech: 'IoT', mat: { o: 3, p: 2, d: 3, i: 2 }, pri: { v: 2, u: 3, f: 5 } },
-            '设计评审': { sys: 'PLM', tech: 'Cloud', mat: { o: 4, p: 3, d: 4, i: 3 }, pri: { v: 5, u: 4, f: 4 } },
+            '全渠道交付': { sys: 'OMS', tech: '微服务/API', mat: { o: 3, p: 4, d: 2, i: 2 }, pri: { v: 5, u: 4, f: 3 }, l3Desc: '统筹多渠道订单接入、库存可视与履约路由，保障承诺一致与客户可感知的服务水平。' },
+            '需求预测': { sys: 'AI Platform', tech: 'Python/模型服务', mat: { o: 2, p: 3, d: 1, i: 1 }, pri: { v: 5, u: 5, f: 2 }, l3Desc: '融合历史、活动与外部信号形成可解释的需求计划，支撑采购、生产与补货的节奏决策。' },
+            '库存审批': { sys: 'ERP', tech: 'SAP/集成', mat: { o: 5, p: 5, d: 4, i: 4 }, pri: { v: 3, u: 3, f: 1 }, l3Desc: '对库存策略例外、额度与异动进行分级审批与留痕，在周转与供应风险之间取得平衡。' },
+            '采购下单': { sys: 'SRM', tech: 'SaaS', mat: { o: 2, p: 3, d: 3, i: 3 }, pri: { v: 4, u: 4, f: 4 }, l3Desc: '将请购与供应计划转化为可执行订单，协同供应商确认交期、价格与交付条款并跟踪执行。' },
+            '入库上架': { sys: 'WMS', tech: 'IoT', mat: { o: 3, p: 2, d: 3, i: 2 }, pri: { v: 2, u: 3, f: 5 }, l3Desc: '管理到货验收、质检与库位分配，保证账实同步并为拣发、盘点提供准确库存基础。' },
+            '设计评审': { sys: 'PLM', tech: 'Cloud', mat: { o: 4, p: 3, d: 4, i: 3 }, pri: { v: 5, u: 4, f: 4 }, l3Desc: '组织跨职能方案评审与决策关口，识别技术与商业风险并冻结可交付基线。' },
             default: { sys: 'BPM', tech: '低代码/API', mat: { o: 3, p: 3, d: 3, i: 3 }, pri: { v: 3, u: 3, f: 5 } }
         };
 
+        /** 步骤 3「描述」：仅内置示例 L3 带简短能力说明；其余留空由用户按能力本身填写，不写套话 */
+        function defaultCapabilityL3Desc(l3, linkedVs) {
+            void linkedVs;
+            const name = String(l3 || '').trim();
+            if (!name) return '';
+            const preset = CAPABILITY_DB[name];
+            return preset && preset.l3Desc ? String(preset.l3Desc).trim() : '';
+        }
+
         /** 步骤 1 所选行业，决定步骤 2 可见的价值流模板 */
         const WORKFLOW_INDUSTRIES = ['3C', '汽车', '家电'];
+        /** 切换行业或当前模板不适用时，优先选中的内置模板 key（须在该行业可选列表内） */
+        const DEFAULT_VS_TEMPLATE_BY_INDUSTRY = {
+            '3C': 'hwcb_5a'
+        };
 
         let currentState = {
             step: 1,
@@ -745,7 +764,7 @@
                     ]
                 }
             },
-            selectedTemplateId: 'hwcb_ipms',
+            selectedTemplateId: 'hwcb_5a',
             capabilityFramework: [],
             initiatives: [],
             itFeatures: [],
@@ -804,7 +823,8 @@
             if (!ids.length) ids = Object.keys(currentState.templates);
             if (!ids.length) return;
             if (!ids.includes(currentState.selectedTemplateId)) {
-                currentState.selectedTemplateId = ids[0];
+                const pref = DEFAULT_VS_TEMPLATE_BY_INDUSTRY[currentState.workflowIndustry];
+                currentState.selectedTemplateId = (pref && ids.includes(pref)) ? pref : ids[0];
             }
         }
 
@@ -1266,10 +1286,29 @@
                 selectedTemplateId: currentState.selectedTemplateId
             };
             if (stepId === 1) snap.bmc = { ...currentState.bmc };
-            if (stepId >= 2) snap.vsStages = (currentState.vsStages || []).map(s => ({ name: s.name, type: s.type, components: s.components }));
+            if (stepId >= 2) {
+                snap.vsStages = (currentState.vsStages || []).map(s => ({
+                    name: s.name,
+                    type: s.type,
+                    scenarios: s.scenarios,
+                    components: s.components,
+                    dEff: s.dEff,
+                    dQual: s.dQual,
+                    dCost: s.dCost,
+                    dRisk: s.dRisk,
+                    dCx: s.dCx,
+                    valDesc: s.valDesc || ''
+                }));
+            }
             if (stepId >= 3) {
                 snap.capabilities = (currentState.capabilityFramework || []).map(c => ({
-                    l3: c.l3, l1: c.l1, l2: c.l2, curMat: c.curMat, tgtMat: c.tgtMat, linkedVs: c.linkedVs,
+                    l3: c.l3,
+                    l1: c.l1,
+                    l2: c.l2,
+                    desc: c.desc || '',
+                    curMat: c.curMat,
+                    tgtMat: c.tgtMat,
+                    linkedVs: c.linkedVs,
                     ...(stepId >= 4 ? {
                         gapOrg: normalizeGapDim(c.gapOrg, gapFromMat((CAPABILITY_DB[c.l3] || CAPABILITY_DB.default).mat.o)),
                         gapProc: normalizeGapDim(c.gapProc, gapFromMat((CAPABILITY_DB[c.l3] || CAPABILITY_DB.default).mat.p)),
@@ -1434,6 +1473,12 @@
                 lines.push('· 长期可由 AI 从诊断历史学习新规则、归纳高频模板改动（机会点8）。');
                 return lines.join('\n');
             }
+            if (actionId === 'preset_insight_refresh') {
+                lines.push('预置洞察刷新（演示）：');
+                lines.push('· 已按阶段类型微调五维示例分，并示例填充价值说明与能力描述/L1/L2。');
+                lines.push('· 在助手「连接设置」配置 API 后，点击同一按钮可基于行业、画布与当前价值流生成更专业的打分与表述（workflowPatch.vsStageInsights / capabilityInsights）。');
+                return lines.join('\n');
+            }
             lines.push('暂不支持该动作的演示输出，请使用自由提问或配置 API。');
             return lines.join('\n');
         }
@@ -1490,8 +1535,10 @@
                 `· workflowPatch.bmc：键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串，与九宫格对应。\n` +
                 `· workflowPatch.valueStreamName：价值流名称（可选）。\n` +
                 `· workflowPatch.stages：价值流阶段数组；每项含 name、type(process|wait)、scenarios、components（逗号分隔组件）、actualTime（小时数，数字），可选 dEff,dQual,dCost,dRisk,dCx（1-5）。提供 stages 时会替换当前价值流阶段列表（与左侧手工/模板互斥于数据层，用户仍可再改）。\n` +
-                `· workflowPatch.capabilities：业务能力清单；非空则整体替换当前清单。每项含 l3，可选 l1,l2,desc,linkedVs,curMat,tgtMat(1-5),gapOrg,gapProc,gapData,gapIt（四维成熟度各为 0～5 整数，越高越成熟；亦可沿用英文 weak/medium/strong 或旧版缺失/弱/中/强）,sys,tech,ice。\n` +
+                `· workflowPatch.capabilities：业务能力清单；非空则整体替换当前清单。每项含 l3，可选 l1,l2,desc（只写该 L3 的能力内容与产出，禁止价值流/阶段类套话）,linkedVs（须与工作流2流程简图中「价值流拆分阶段」的 name 一致，勿只填整条价值流名称）,curMat,tgtMat(1-5),gapOrg,gapProc,gapData,gapIt（四维成熟度各为 0～5 整数，越高越成熟；亦可沿用英文 weak/medium/strong 或旧版缺失/弱/中/强）,sys,tech,ice。\n` +
                 `· workflowPatch.capabilityGaps：仅按 l3 匹配更新四维差距；每项含 l3 及 gapOrg/gapProc/gapData/gapIt 中需要改的字段（同上，0～5）。\n` +
+                `· workflowPatch.vsStageInsights：增量刷新价值流五维；数组每项的 name 须与当前 vsStages 阶段名完全一致，含 dEff,dQual,dCost,dRisk,dCx（1-5 整数），可选 valDesc、dimActive（五维布尔）。不增删阶段。\n` +
+                `· workflowPatch.capabilityInsights：增量刷新能力表述；数组每项含 l3，可选 linkedVs（区分同名 L3），及 desc、l1、l2；不替换整表。\n` +
                 `· workflowPatch.initiatives：变革举措；非空则整体替换。每项含 title，可选 caps(数组),gaps,window,benefit,cost（难易程度文案）,phase(P0|P1|P2),tech,deps,milestoneBand，streams 为子路标数组（start 为从 0 起的月索引，len 为持续月数）。\n` +
                 `· workflowPatch.roadmap：可选 startYm(YYYY-MM)、months(6-48)。\n` +
                 `当前用户步骤若与补丁无关，仍可给出补丁以便其切换步骤后已有数据；但不要无故清空未提及的模块。`;
@@ -1566,6 +1613,25 @@
             calcVSMetrics();
         }
 
+        /** 业务能力「价值流阶段」列：与工作流2流程简图中细分阶段 name 对齐；去掉「价值流名→阶段」旧写法；空则按各阶段业务组件精确匹配 l3 */
+        function normalizeCapabilityLinkedVs(rawLinkedVs, l3) {
+            let v = String(rawLinkedVs ?? '').trim();
+            if (v && (/→/.test(v) || /->/.test(v))) {
+                const seg = v.split(/\s*(?:→|->)\s*/).map(s => s.trim()).filter(Boolean);
+                if (seg.length >= 2) v = seg[seg.length - 1];
+            }
+            if (v) return v;
+            const name = String(l3 ?? '').trim();
+            if (!name) return '';
+            for (const st of currentState.vsStages || []) {
+                const parts = String(st.components || '').split(/[,，]/).map(x => x.trim()).filter(Boolean);
+                if (parts.includes(name)) {
+                    return String(st.name || '').trim() || `阶段 ${st.id}`;
+                }
+            }
+            return '';
+        }
+
         function applyCapabilitiesFromAiPatch(rows) {
             if (!Array.isArray(rows) || !rows.length) return;
             currentState.capabilityFramework = rows.map((raw, idx) => {
@@ -1581,13 +1647,14 @@
                 const gapData = normalizeGapDim(raw.gapData, gapFromMat(def.mat.d));
                 const gapIt = normalizeGapDim(raw.gapIt, gapFromMat(def.mat.i));
                 let ice = raw.ice != null && String(raw.ice).trim() !== '' ? String(raw.ice) : (def.pri.v * 0.4 + def.pri.u * 0.4 + def.pri.f * 0.2).toFixed(1);
+                const linkedVs = normalizeCapabilityLinkedVs(raw.linkedVs, l3);
                 return {
                     id: idx + 1,
                     l1,
                     l2,
                     l3,
-                    desc: String(raw.desc != null ? raw.desc : '').trim() || `支撑价值流：${String(raw.linkedVs || '').trim() || l3}`,
-                    linkedVs: String(raw.linkedVs != null ? raw.linkedVs : '').trim(),
+                    desc: String(raw.desc != null ? raw.desc : '').trim() || defaultCapabilityL3Desc(l3, linkedVs),
+                    linkedVs,
                     curMat,
                     tgtMat,
                     gapOrg,
@@ -1619,6 +1686,100 @@
                     }
                 });
             });
+        }
+
+        /** 按阶段名称合并 AI 给出的五维综合分与可选价值说明（不增删阶段） */
+        function mergeVsStageInsightsFromAiPatch(insights) {
+            if (!Array.isArray(insights) || !insights.length) return;
+            const stages = currentState.vsStages || [];
+            insights.forEach(ins => {
+                const nm = String(ins.name || ins.stageName || '').trim();
+                if (!nm) return;
+                const s = stages.find(st => String(st.name || '').trim() === nm);
+                if (!s) return;
+                VS_DIM_KEYS.forEach(k => {
+                    if (ins[k] != null && ins[k] !== '') {
+                        const n = parseInt(ins[k], 10);
+                        if (!isNaN(n)) s[k] = Math.max(1, Math.min(5, n));
+                    }
+                });
+                if (ins.dimActive && typeof ins.dimActive === 'object') {
+                    VS_DIM_KEYS.forEach(k => {
+                        if (typeof ins.dimActive[k] === 'boolean') s.dimActive[k] = ins.dimActive[k];
+                    });
+                }
+                if (ins.valDesc != null && String(ins.valDesc).trim()) s.valDesc = String(ins.valDesc).trim();
+            });
+            stages.forEach(ensureVsStageShape);
+            calcVSMetrics();
+        }
+
+        function findCapabilityRowForInsight(ins) {
+            const l3 = String(ins.l3 || '').trim();
+            if (!l3) return null;
+            const fw = currentState.capabilityFramework || [];
+            const lvRaw = ins.linkedVs != null ? String(ins.linkedVs).trim() : '';
+            const lvNorm = lvRaw ? normalizeCapabilityLinkedVs(lvRaw, l3) : '';
+            let c = fw.find(x => String(x.l3).trim() === l3 && String(x.linkedVs || '').trim() === lvNorm);
+            if (!c && lvRaw) c = fw.find(x => String(x.l3).trim() === l3 && String(x.linkedVs || '').trim() === lvRaw);
+            if (!c) c = fw.find(x => String(x.l3).trim() === l3);
+            return c || null;
+        }
+
+        /** 按 l3（及可选 linkedVs）合并描述、领域 L1、类型 L2，不替换整表 */
+        function mergeCapabilityInsightsFromAiPatch(rows) {
+            if (!Array.isArray(rows) || !rows.length) return;
+            rows.forEach(ins => {
+                const c = findCapabilityRowForInsight(ins);
+                if (!c) return;
+                if (ins.desc != null && String(ins.desc).trim()) c.desc = String(ins.desc).trim();
+                if (ins.l1 != null && String(ins.l1).trim()) c.l1 = String(ins.l1).trim();
+                if (ins.l2 != null && String(ins.l2).trim()) c.l2 = String(ins.l2).trim();
+            });
+        }
+
+        /** 演示模式：示例性微调五维与能力表述（未配置 API 时） */
+        function applyPresetInsightDemoRefresh() {
+            const insights = (currentState.vsStages || []).map(s => {
+                const o = { name: s.name };
+                VS_DIM_KEYS.forEach(k => {
+                    let v = parseInt(s[k], 10);
+                    if (isNaN(v)) v = 3;
+                    if (s.type === 'wait') {
+                        if (k === 'dRisk') v = Math.min(5, v + 1);
+                        if (k === 'dEff') v = Math.max(1, v - 1);
+                    } else {
+                        if (k === 'dEff') v = Math.min(5, v + 1);
+                        if (k === 'dQual') v = Math.min(5, v + 1);
+                    }
+                    o[k] = Math.max(1, Math.min(5, v));
+                });
+                if (!String(s.valDesc || '').trim()) {
+                    o.valDesc = `${s.name}：对齐 SLA、合规约束与端到端可视（演示刷新）。`;
+                }
+                return o;
+            });
+            mergeVsStageInsightsFromAiPatch(insights);
+            const fw = currentState.capabilityFramework || [];
+            if (fw.length) {
+                const capRows = fw.map(c => {
+                    const inf = inferL1L2FromComponent(c.l3 || '');
+                    return {
+                        l3: c.l3,
+                        linkedVs: c.linkedVs,
+                        desc: `${c.l3}：落实${inf.l2}所需流程规则、数据留痕与跨角色协同（演示刷新）。`,
+                        l1: inf.l1,
+                        l2: inf.l2
+                    };
+                });
+                mergeCapabilityInsightsFromAiPatch(capRows);
+            }
+            renderStep2();
+            if (fw.length) {
+                renderStep3();
+                renderStep4();
+                renderStep5();
+            }
         }
 
         function applyInitiativesFromAiPatch(list) {
@@ -1717,6 +1878,16 @@
                 touched.cap = true;
                 parts.push('差距四维');
             }
+            if (wp.vsStageInsights && wp.vsStageInsights.length) {
+                mergeVsStageInsightsFromAiPatch(wp.vsStageInsights);
+                touched.vs = true;
+                parts.push('价值流五维');
+            }
+            if (wp.capabilityInsights && wp.capabilityInsights.length) {
+                mergeCapabilityInsightsFromAiPatch(wp.capabilityInsights);
+                touched.cap = true;
+                parts.push('能力表述');
+            }
             if (wp.initiatives && wp.initiatives.length) {
                 applyInitiativesFromAiPatch(wp.initiatives);
                 touched.ini = true;
@@ -1778,6 +1949,72 @@
                 if (out) out.textContent = generateDemoAiReply('cap_check', userMsg, ctx);
                 return;
             }
+            if (actionId === 'preset_insight_refresh') {
+                if (!currentState.vsStages.length) {
+                    toast('请先在步骤 2 配置价值流阶段（套用模板或空白开始）', 'error');
+                    return;
+                }
+                const richCtx = buildAiContextSnapshot();
+                richCtx.selectedTemplateName = currentState.templates[currentState.selectedTemplateId]?.name || '';
+                const fwEarly = currentState.capabilityFramework || [];
+                if (fwEarly.length && (!richCtx.capabilities || !richCtx.capabilities.length)) {
+                    richCtx.capabilities = fwEarly.map(c => ({
+                        l3: c.l3,
+                        l1: c.l1,
+                        l2: c.l2,
+                        desc: c.desc || '',
+                        curMat: c.curMat,
+                        tgtMat: c.tgtMat,
+                        linkedVs: c.linkedVs
+                    }));
+                }
+                if (getAiStepId() >= 3 && (!richCtx.vsStages || !richCtx.vsStages.length) && (currentState.vsStages || []).length) {
+                    richCtx.vsStages = (currentState.vsStages || []).map(s => ({
+                        name: s.name,
+                        type: s.type,
+                        scenarios: s.scenarios,
+                        components: s.components,
+                        dEff: s.dEff,
+                        dQual: s.dQual,
+                        dCost: s.dCost,
+                        dRisk: s.dRisk,
+                        dCx: s.dCx,
+                        valDesc: s.valDesc || ''
+                    }));
+                }
+                if (!cfg.endpoint) {
+                    applyPresetInsightDemoRefresh();
+                    if (out) out.textContent = generateDemoAiReply('preset_insight_refresh', userMsg, richCtx);
+                    toast('演示模式：已本地示例刷新五维与能力表述（配置 API 可生成更专业内容）');
+                    return;
+                }
+                if (!out) return;
+                out.textContent = '生成中…';
+                try {
+                    const systemText = '你是企业数字化转型、流程治理与业务能力架构顾问，熟悉端到端价值流与架构分层；用语专业贴切，禁止空话套话。' + buildAiWorkflowPatchSystemSuffix();
+                    const userText = `任务：刷新「预置洞察」。先短述现状与改进要点，再在文末输出 workflowPatch，且本次【仅】使用增量字段 vsStageInsights、capabilityInsights（不要输出 stages/capabilities 做全表替换）。\n\n` +
+                        `vsStageInsights：每项 name 必须与上下文 vsStages 中某一阶段名称完全一致。给出 dEff、dQual、dCost、dRisk、dCx（1-5 整数），体现阶段语义与 type(process|wait) 差异（关口类 wait 通常风险/协同更敏感）。可选 valDesc（一句话价值）、可选 dimActive。\n\n` +
+                        `capabilityInsights：对应上下文 capabilities 各条；必须写 l3；若同一 l3 多行且 linkedVs 不同须同时写 linkedVs。给出 desc（只写该能力职责与关键产出）、l1（领域）、l2（能力类型）。若 capabilities 为空则 capabilityInsights 为 []。\n\n` +
+                        `上下文 JSON：\n${JSON.stringify(richCtx, null, 2)}\n用户补充：${userMsg || '无'}\n\n` +
+                        `输出 \`\`\`json 代码块，形如 {"workflowPatch":{"version":1,"vsStageInsights":[],"capabilityInsights":[]}}。`;
+                    const text = await callOpenAiCompatibleChat(systemText, userText);
+                    out.textContent = text;
+                    const wp = extractWorkflowPatchFromText(text);
+                    if (wp && ((wp.vsStageInsights && wp.vsStageInsights.length) || (wp.capabilityInsights && wp.capabilityInsights.length))) {
+                        const r = applyWorkflowPatchObject(wp);
+                        if (r.ok) toast('已写入：' + (r.summary || '预置洞察'));
+                        else toast('已生成回复：未写入有效字段，可点「应用到工作流」');
+                    } else {
+                        toast('已生成解读：若含 json 补丁请点击「应用到工作流」');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    applyPresetInsightDemoRefresh();
+                    out.textContent = generateDemoAiReply('preset_insight_refresh', userMsg, richCtx) + '\n\n——\n调用失败：' + (e && e.message ? e.message : e);
+                    toast('云端失败，已回退演示刷新');
+                }
+                return;
+            }
 
             if (!out) return;
             out.textContent = '生成中…';
@@ -1794,7 +2031,8 @@
                 heat_insight: '热力图解读与行动优先级',
                 ini_deep: '变革举措深化建议',
                 roadmap_ai: '路标甘特排程建议',
-                config_ai: '规则与模板优化思路'
+                config_ai: '规则与模板优化思路',
+                preset_insight_refresh: '刷新价值流五维与能力预置洞察'
             }[actionId] || actionId;
 
             try {
@@ -1870,11 +2108,13 @@
                 ],
                 2: [
                     { id: 'vs_template', label: '模板推荐' },
-                    { id: 'vs_health', label: '健康度解读' }
+                    { id: 'vs_health', label: '健康度解读' },
+                    { id: 'preset_insight_refresh', label: '刷新预置洞察' }
                 ],
                 3: [
                     { id: 'cap_check', label: '完整性检查' },
-                    { id: 'cap_infer', label: '校准 L1/L2' }
+                    { id: 'cap_infer', label: '校准 L1/L2' },
+                    { id: 'preset_insight_refresh', label: '刷新预置洞察' }
                 ],
                 4: [{ id: 'gap_suggest', label: '差距建议' }],
                 5: [{ id: 'heat_insight', label: '热力解读' }],
@@ -2142,7 +2382,7 @@
             }
         }
 
-        function sanitizePdfFilenameBase(title) {
+        function sanitizeExportFilenameBase(title) {
             return String(title || '规划版本').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_').slice(0, 72);
         }
 
@@ -2246,8 +2486,8 @@
             toast('已删除该版本');
         }
 
-        /** 根据历史快照生成 PDF（完成后恢复当前编辑状态） */
-        async function exportPdfFromHistoryRecord(recordId) {
+        /** 根据历史快照生成独立 HTML 文件（导出完成后恢复当前编辑状态） */
+        async function exportHtmlFromHistoryRecord(recordId) {
             const rec = loadBlueprintHistoryList().find(r => r.id === recordId);
             if (!rec || !rec.snapshot) {
                 toast('记录不存在', 'error');
@@ -2262,8 +2502,8 @@
                 currentState.step = STEP_TOTAL;
                 renderNav();
                 renderStepProgress();
-                const fname = `BA_${sanitizePdfFilenameBase(rec.title)}_${String(rec.id).slice(-8)}.pdf`;
-                await runPdfExportCore(fname);
+                const fname = `BA_${sanitizeExportFilenameBase(rec.title)}_${String(rec.id).slice(-8)}.html`;
+                await runHtmlExportCore(fname);
             } finally {
                 applyWorkflowSnapshot(backupSnap);
                 currentState.step = backupStep;
@@ -2407,7 +2647,7 @@
             });
         }
 
-        async function exportAssetPdfFromStandalone(recordId) {
+        async function exportAssetHtmlFromStandalone(recordId) {
             const main = document.getElementById('main-layout');
             const overlay = document.getElementById('assets-standalone-overlay');
             const hdr = document.getElementById('app-header');
@@ -2416,7 +2656,7 @@
                 if (main) main.style.removeProperty('display');
                 if (hdr) hdr.style.removeProperty('display');
                 await waitForLayoutMs(120);
-                await exportPdfFromHistoryRecord(recordId);
+                await exportHtmlFromHistoryRecord(recordId);
             } finally {
                 if (main) main.style.display = 'none';
                 if (hdr) hdr.style.display = 'none';
@@ -2429,7 +2669,7 @@
             if (!ov) return;
             const list = loadBlueprintHistoryList();
             const empty = `
-                <div class="max-w-[1400px] mx-auto px-4 py-6">
+                <div class="mx-auto px-4 py-6 w-full max-w-[var(--app-max-width)]">
                     <div class="rounded-[14px] border border-dashed border-black/[0.12] bg-white px-6 py-12 text-center shadow-nav">
                         <p class="text-[15px] font-semibold text-ink">暂无已保存资产</p>
                         <p class="text-[13px] text-ink-secondary mt-2 max-w-md mx-auto leading-relaxed">在主工作台完成<strong class="text-ink">变革路标计划</strong>并点击右下角<strong class="text-ink">保存</strong>后，将在此处列出；列表按 7 步展示核心摘要。</p>
@@ -2464,8 +2704,8 @@
                         <div class="flex flex-wrap gap-1">
                             <button type="button" onclick="showAssetDetailModalById(${rec.id})" class="rounded-[8px] bg-white border border-black/[0.10] px-2 py-1 text-[10px] font-semibold text-ink-secondary hover:bg-canvas">查看</button>
                             <button type="button" onclick="enterPlanningWorkspaceFromAsset(${rec.id})" class="rounded-[8px] bg-accent/12 border border-accent/25 px-2 py-1 text-[10px] font-semibold text-accent hover:bg-accent/18">编辑</button>
-                            <button type="button" onclick="exportAssetPdfFromStandalone(${rec.id})" class="rounded-[8px] bg-ink text-white px-2 py-1 text-[10px] font-semibold hover:bg-black">导出</button>
-                            <button type="button" onclick="deleteHistoryRecord(${rec.id})" class="rounded-[8px] border border-black/[0.08] px-2 py-1 text-[10px] font-semibold text-ink-tertiary hover:text-[#ff6961]" title="删除">删</button>
+                            <button type="button" onclick="exportAssetHtmlFromStandalone(${rec.id})" class="rounded-[8px] bg-ink text-white px-2 py-1 text-[10px] font-semibold hover:bg-black" title="导出为独立 HTML，便于长内容与多端预览">导出</button>
+                            <button type="button" onclick="deleteHistoryRecord(${rec.id})" class="rounded-[8px] border border-black/[0.08] px-2 py-1 text-[10px] font-semibold text-ink-tertiary hover:text-[#ff6961]" title="删除">删除</button>
                         </div>
                     </td>
                 </tr>`;
@@ -2481,7 +2721,7 @@
                         <button type="button" onclick="window.close()" class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">关闭</button>
                     </div>
                 </div>
-                <div class="max-w-[1600px] mx-auto px-3 py-4 overflow-x-auto">
+                <div class="mx-auto px-3 py-4 overflow-x-auto w-full max-w-[var(--app-max-width)]">
                     <table class="w-full min-w-[1100px] text-left border-collapse rounded-[12px] overflow-hidden border border-black/[0.06] bg-white shadow-nav">
                         <thead>
                             <tr class="bg-canvas/90 text-[10px] font-semibold text-ink-tertiary uppercase tracking-wide">
@@ -2542,7 +2782,7 @@
                 next.disabled = !canSave;
                 next.innerHTML = '保存<i class="fas fa-floppy-disk text-[10px] opacity-90 ml-1" aria-hidden="true"></i>';
                 next.onclick = () => saveBlueprintHistory();
-                next.title = canSave ? '保存为资产版本；侧栏「资产」打开库可查看、导出 PDF' : '请先完成举措与路标相关数据';
+                next.title = canSave ? '保存为资产版本；侧栏「资产」打开库可查看、导出 HTML 快照' : '请先完成举措与路标相关数据';
             } else {
                 next.disabled = false;
                 next.innerHTML = '下一步<i class="fas fa-chevron-right text-[10px] opacity-90 ml-0.5" aria-hidden="true"></i>';
@@ -2943,15 +3183,16 @@
                 c.tech || ''
             ]);
             const ws = XLSX.utils.aoa_to_sheet([head, ...dataRows]);
-            ws['!cols'] = [{ wch: 28 }, { wch: 22 }, { wch: 36 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 20 }];
+            ws['!cols'] = [{ wch: 37 }, { wch: 26 }, { wch: 41 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 20 }];
             XLSX.utils.book_append_sheet(wb, ws, '业务能力架构');
             const readme = [
                 ['业务能力架构 · Excel 说明'],
                 [''],
-                ['1. 「业务能力L3」为必填；其余列可空，导入时对缺失的四维差距与 ICE 等将按内置组件库或默认值补齐。'],
-                ['2. 四维差距列为 0～5 整数（越高越成熟）；亦可填旧版「缺失/弱/中/强」自动换算；留空则按内置组件成熟度推断。'],
-                ['3. 导入时将按表格顺序整体替换当前清单（步骤 4、5、举措引用名称时请自行核对）。'],
-                ['4. 清单为空时导出仅含表头，可作空白模板。']
+                ['1. 「业务能力L3」为必填；「描述」请直接写该能力做什么、产出什么（勿写价值流/阶段铺垫）；其余列可空，导入时对缺失的四维差距与 ICE 等将按内置组件库或默认值补齐；仅内置示例 L3 在描述为空时可带出简短说明。'],
+                ['2. 「价值流阶段」须填写工作流2流程简图中拆分阶段的名称（与卡片标题一致）；若仍写「价值流名→阶段名」将自动取箭头后一段；列为空且已维护阶段业务组件时会尝试按 L3 匹配阶段。'],
+                ['3. 四维差距列为 0～5 整数（越高越成熟）；亦可填旧版「缺失/弱/中/强」自动换算；留空则按内置组件成熟度推断。'],
+                ['4. 导入时将按表格顺序整体替换当前清单（步骤 4、5、举措引用名称时请自行核对）。'],
+                ['5. 清单为空时导出仅含表头，可作空白模板。']
             ];
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(readme), '使用说明');
             XLSX.writeFile(wb, `业务能力架构_${stamp}.xlsx`);
@@ -2979,8 +3220,9 @@
                 if (i === 0 && (c0.includes('价值流') || c0.includes('业务能力') || c0.includes('L3'))) continue;
                 const l3 = String(row[1] ?? '').trim();
                 if (!l3) continue;
-                const linkedVs = String(row[0] ?? '').trim();
-                const desc = row[2] != null ? String(row[2]) : '';
+                const linkedVs = normalizeCapabilityLinkedVs(String(row[0] ?? '').trim(), l3);
+                let desc = row[2] != null ? String(row[2]) : '';
+                if (!String(desc).trim()) desc = defaultCapabilityL3Desc(l3, linkedVs);
                 const l1 = String(row[3] ?? '').trim();
                 const l2 = String(row[4] ?? '').trim();
                 let curMat = parseInt(row[5], 10);
@@ -3286,16 +3528,20 @@
                 return false;
             }
             const blocks = [];
-            currentState.vsStages.forEach(st => {
-                const parts = (st.components || '').split(/[,，]/).map(x => x.trim()).filter(Boolean);
-                parts.forEach(p => blocks.push({ name: p, stage: st.name }));
-            });
             const seen = new Set();
+            currentState.vsStages.forEach(st => {
+                const stageLabel = String(st.name || '').trim() || `阶段 ${st.id}`;
+                const parts = (st.components || '').split(/[,，]/).map(x => x.trim()).filter(Boolean);
+                parts.forEach(p => {
+                    const key = `${st.id}::${p}`;
+                    if (seen.has(key)) return;
+                    seen.add(key);
+                    blocks.push({ name: p, stage: stageLabel, stageId: st.id });
+                });
+            });
             currentState.capabilityFramework = [];
             let idx = 0;
             blocks.forEach(b => {
-                if (seen.has(b.name)) return;
-                seen.add(b.name);
                 const def = CAPABILITY_DB[b.name] || CAPABILITY_DB.default;
                 const { l1, l2 } = inferL1L2FromComponent(b.name);
                 const cur = Math.round((def.mat.o + def.mat.p + def.mat.d + def.mat.i) / 4);
@@ -3305,8 +3551,8 @@
                 currentState.capabilityFramework.push({
                     id: idx,
                     l1, l2, l3: b.name,
-                    desc: `支撑价值流阶段「${b.stage}」的业务组件`,
-                    linkedVs: `${currentState.valueStreamName || '价值流'} → ${b.stage}`,
+                    desc: defaultCapabilityL3Desc(b.name, b.stage),
+                    linkedVs: b.stage,
                     curMat: cur, tgtMat: tgt,
                     gapOrg: gapFromMat(def.mat.o),
                     gapProc: gapFromMat(def.mat.p),
@@ -3763,7 +4009,6 @@
             const months = buildRoadmapMonthLabels();
             const initiatives = sortInitiativesByPhase(currentState.initiatives);
             initiatives.forEach((ini, idx) => ensureInitiativeRoadmapFields(ini, idx));
-            const streamColors = ['bg-accent/88', 'bg-[#5856d6]/82', 'bg-[#34c759]/78', 'bg-amber-500/76'];
             let rows = '';
             initiatives.forEach((ini) => {
                 const expanded = !!currentState.roadmapExpandedIniIds[String(ini.id)];
@@ -3833,7 +4078,7 @@
                         </div>
                     </div>
                     <div class="flex-1 min-w-0 relative roadmap-gantt-track py-2 px-0" style="--rg-months:${H}">
-                        <div class="roadmap-gantt-bar sm ${streamColors[si % streamColors.length]}" style="${stStyle}" title="${escapeHtmlText(st.label)} · 列 ${st.start + 1}–${st.start + st.len}"></div>
+                        <div class="roadmap-gantt-bar sm roadmap-gantt-bar-stream" style="${stStyle}" title="${escapeHtmlText(st.label)} · 列 ${st.start + 1}–${st.start + st.len}"></div>
                     </div>
                 </div>`;
                     });
@@ -4484,7 +4729,7 @@
             if (!currentState.capabilityFramework.length) {
                 body = `<div class="flex flex-1 min-h-0 flex-col justify-center items-center rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-10 text-center gap-3">
                     <p class="text-[15px] font-semibold text-ink">还没有能力清单</p>
-                    <p class="text-[14px] text-ink-secondary mt-1 max-w-lg mx-auto leading-relaxed">可从「${stepLabel(2)}」填写业务组件后点<strong class="text-ink font-medium">下一步</strong>自动生成；也可点击下方<strong class="text-ink font-medium">手工新增能力块</strong>从零维护。</p>
+                    <p class="text-[14px] text-ink-secondary mt-1 max-w-3xl mx-auto leading-relaxed">可从「${stepLabel(2)}」填写业务组件后点<strong class="text-ink font-medium">下一步</strong>自动生成；也可点击下方<strong class="text-ink font-medium">手工新增能力块</strong>从零维护。</p>
                     <button type="button" onclick="addCapabilityFrameworkRow()" class="print-hidden inline-flex items-center gap-2 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors">
                         <i class="fas fa-plus text-[11px]" aria-hidden="true"></i>
                         手工新增能力块
@@ -4501,21 +4746,21 @@
                     <div class="flex-1 min-h-0 overflow-auto">
                     <table class="w-full text-[13px] table-fixed">
                         <thead><tr>
-                            <th class="p-3 text-left font-semibold w-[12%] min-w-[6rem]">价值流阶段</th>
-                            <th class="p-3 text-left font-semibold w-[10%] min-w-[5rem]">业务能力 L3</th>
-                            <th class="p-3 text-left font-semibold w-[20%] min-w-[9rem]">描述</th>
-                            <th class="p-3 text-left font-semibold w-[10%] min-w-[4.5rem]">领域 L1</th>
-                            <th class="p-3 text-left font-semibold w-[10%] min-w-[4.5rem]">类型 L2</th>
-                            <th class="p-3 text-center font-semibold w-[6%]">当前</th>
-                            <th class="p-3 text-center font-semibold w-[6%]">目标</th>
-                            <th class="p-3 text-center font-semibold w-[6%]">ICE</th>
+                            <th class="p-3 text-left font-semibold w-[12.96%] min-w-[7.92rem]">价值流阶段</th>
+                            <th class="p-3 text-left font-semibold w-[13.2%] min-w-[7.2rem]">业务能力 L3</th>
+                            <th class="p-3 text-left font-semibold w-[31.84%] min-w-[9rem]" title="仅描述该 L3 做什么、产出什么">描述</th>
+                            <th class="p-3 text-left font-semibold w-[10%] min-w-[4rem]">领域 L1</th>
+                            <th class="p-3 text-left font-semibold w-[10%] min-w-[4rem]">类型 L2</th>
+                            <th class="p-3 text-center font-semibold w-[5%] min-w-[3rem]">当前</th>
+                            <th class="p-3 text-center font-semibold w-[5%] min-w-[3rem]">目标</th>
+                            <th class="p-3 text-center font-semibold w-[5%] min-w-[2.75rem]">ICE</th>
                             <th class="p-3 text-center font-semibold w-[3rem] print:hidden">操作</th>
                         </tr></thead><tbody>
                         ${currentState.capabilityFramework.map(c => `
                             <tr class="border-t border-black/[0.06] hover:bg-canvas/80 transition-colors align-top">
-                                <td class="p-3"><input type="text" class="w-full min-w-0 rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[12px] text-ink-tertiary leading-relaxed" value="${escapeHtmlText(c.linkedVs || '')}" onchange="updateFrameworkField(${c.id},'linkedVs',this.value)" title="价值流阶段（如：价值流名 → 阶段名）" /></td>
+                                <td class="p-3"><input type="text" class="w-full min-w-0 rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[12px] text-ink-tertiary leading-relaxed" value="${escapeHtmlText(c.linkedVs || '')}" onchange="updateFrameworkField(${c.id},'linkedVs',this.value)" title="与工作流2流程简图一致的细分阶段名称（该能力块所属阶段）" /></td>
                                 <td class="p-3"><input type="text" class="w-full min-w-0 rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[13px] font-semibold text-ink" value="${escapeHtmlText(c.l3)}" onchange="updateFrameworkField(${c.id},'l3',this.value)" title="业务能力 L3 名称" /></td>
-                                <td class="p-3"><textarea rows="2" title="描述" class="w-full min-h-[2.75rem] rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[13px] text-ink leading-relaxed resize-y bg-white focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" onchange="updateFrameworkField(${c.id},'desc',this.value)">${escapeHtmlText(c.desc || '')}</textarea></td>
+                                <td class="p-3"><textarea rows="2" title="只写该能力本身：职责、活动、产出物（不写价值流/阶段套话）" class="w-full min-h-[2.75rem] rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[13px] text-ink leading-relaxed resize-y bg-white focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" onchange="updateFrameworkField(${c.id},'desc',this.value)">${escapeHtmlText(c.desc || '')}</textarea></td>
                                 <td class="p-3"><input type="text" class="w-full min-w-0 rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[13px] text-ink" value="${escapeHtmlText(c.l1 || '')}" onchange="updateFrameworkField(${c.id},'l1',this.value)" /></td>
                                 <td class="p-3"><input type="text" class="w-full min-w-0 rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[13px] text-ink" value="${escapeHtmlText(c.l2 || '')}" onchange="updateFrameworkField(${c.id},'l2',this.value)" /></td>
                                 <td class="p-3 text-center align-middle"><input type="number" min="1" max="5" title="1–5 分" class="w-12 rounded-[8px] border border-black/[0.10] py-1.5 text-center text-[13px] font-semibold focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" value="${c.curMat}" onchange="updateFrameworkMat(${c.id},'curMat',this.value)"></td>
@@ -4960,7 +5205,7 @@
         }
 
         /** 导出前刷新各步 DOM，避免仅当前步骤内容与快照一致 */
-        function refreshAllStepsDomForPdf() {
+        function refreshAllStepsDomForExport() {
             renderStep1();
             renderStep2();
             renderStep3();
@@ -4971,102 +5216,74 @@
             renderStep8();
         }
 
-        function resolveJsPdfConstructor() {
-            if (window.jspdf && typeof window.jspdf.jsPDF === 'function') return window.jspdf.jsPDF;
-            if (typeof window.jsPDF === 'function') return window.jsPDF;
-            return null;
-        }
-
-        /** PDF：A4 纵向；分页切片 PNG；允许较大体积（目标约 10～20MB）以还原快照、减轻糊字与裁切 */
-        const PDF_PAGE_W_MM = 210;
-        const PDF_PAGE_H_MM = 297;
-        const PDF_MARGIN_MM = 10;
-        const PDF_IMG_W_MM = PDF_PAGE_W_MM - 2 * PDF_MARGIN_MM;
-        const PDF_USABLE_H_MM = PDF_PAGE_H_MM - 2 * PDF_MARGIN_MM;
-        /** 捕获缩放：略提高 dpi，中文笔画更清晰（文件更大可接受） */
-        const PDF_CAPTURE_SCALE = Math.min(3, Math.max(2.75, typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio * 1.65 : 3));
-        /** 分页切片用 PNG，避免 JPEG 块效应造成笔画粘连、行间错位感 */
-        const PDF_SLICE_FORMAT = 'PNG';
-        /** 仅当单页 canvas 极大时再缩小；提高上限减少非必要降采样导致的糊边 */
-        const PDF_CANVAS_MAX_EDGE_PX = 10000;
-
-        function downscaleCanvasIfNeeded(canvas) {
-            const edge = Math.max(canvas.width, canvas.height);
-            if (edge <= PDF_CANVAS_MAX_EDGE_PX) return canvas;
-            const s = PDF_CANVAS_MAX_EDGE_PX / edge;
-            const w = Math.max(1, Math.round(canvas.width * s));
-            const h = Math.max(1, Math.round(canvas.height * s));
-            const out = document.createElement('canvas');
-            out.width = w;
-            out.height = h;
-            const ctx = out.getContext('2d');
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, w, h);
-            ctx.drawImage(canvas, 0, 0, w, h);
-            return out;
-        }
-
-        /** 将步骤截图按 A4 可用高度纵向切片为多页写入（PNG 保文字边缘清晰；函数名历史遗留含 Jpeg） */
-        function appendCanvasToPdfAsPagedJpeg(pdf, canvas, opts) {
-            const needLeading = !!(opts && opts.needLeadingPageBreak);
-            const margin = PDF_MARGIN_MM;
-            const imgW = PDF_IMG_W_MM;
-            const usableH = PDF_USABLE_H_MM;
-
-            const maxPxSlice = Math.max(32, Math.floor((usableH * canvas.width) / imgW));
-
-            let yPx = 0;
-            let first = true;
-
-            while (yPx < canvas.height) {
-                const slicePx = Math.min(maxPxSlice, canvas.height - yPx);
-                let sliceHmm = (slicePx * imgW) / canvas.width;
-                sliceHmm = Math.round(sliceHmm * 1000) / 1000;
-                if (sliceHmm > usableH) sliceHmm = usableH;
-
-                if (!first) {
-                    pdf.addPage();
-                } else if (needLeading) {
-                    pdf.addPage();
-                }
-                first = false;
-
-                const sliceCv = document.createElement('canvas');
-                sliceCv.width = canvas.width;
-                sliceCv.height = slicePx;
-                const ctx = sliceCv.getContext('2d');
-                ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, sliceCv.width, sliceCv.height);
-                ctx.drawImage(canvas, 0, yPx, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
-
-                const dataUrl = PDF_SLICE_FORMAT === 'PNG'
-                    ? sliceCv.toDataURL('image/png')
-                    : sliceCv.toDataURL('image/jpeg', 0.92);
-                pdf.addImage(dataUrl, PDF_SLICE_FORMAT, margin, margin, imgW, sliceHmm);
-
-                yPx += slicePx;
-            }
-        }
-
         async function waitForFontsReady() {
             try {
                 if (document.fonts && typeof document.fonts.ready !== 'undefined') await document.fonts.ready;
             } catch (_) { /* ignore */ }
         }
 
-        /** @param {string} [filename] 下载文件名 */
-        async function runPdfExportCore(filename) {
-            const JsPDF = resolveJsPdfConstructor();
-            if (!JsPDF || typeof html2canvas !== 'function') {
-                toast('PDF 组件未加载（jspdf / html2canvas），请检查网络后重试', 'error');
-                return false;
-            }
+        function stripExportInteractiveHandlers(root) {
+            if (!root || root.nodeType !== 1) return;
+            root.querySelectorAll('*').forEach(n => {
+                [...n.attributes].forEach(a => {
+                    if (/^on/i.test(a.name)) n.removeAttribute(a.name);
+                });
+                if (n.hasAttribute('contenteditable')) n.removeAttribute('contenteditable');
+            });
+        }
 
-            toast('正在生成 PDF…', 'loading');
+        function syncLiveValuesIntoExportClone(origRoot, cloneRoot) {
+            const walk = (o, c) => {
+                if (!o || !c || o.nodeType !== 1 || c.nodeType !== 1) return;
+                const tag = o.tagName;
+                if (tag === 'INPUT') {
+                    const type = (o.getAttribute('type') || 'text').toLowerCase();
+                    if (type === 'checkbox' || type === 'radio') {
+                        if (o.checked) c.setAttribute('checked', 'checked');
+                        else c.removeAttribute('checked');
+                    } else if (type !== 'file' && type !== 'button' && type !== 'submit' && type !== 'reset' && type !== 'hidden') {
+                        c.setAttribute('value', o.value == null ? '' : String(o.value));
+                    }
+                } else if (tag === 'TEXTAREA') {
+                    c.textContent = o.value == null ? '' : String(o.value);
+                } else if (tag === 'SELECT') {
+                    const val = o.value;
+                    c.querySelectorAll('option').forEach(opt => {
+                        if (opt.value === val) opt.setAttribute('selected', 'selected');
+                        else opt.removeAttribute('selected');
+                    });
+                }
+                const oc = o.children;
+                const cc = c.children;
+                const nMax = Math.min(oc.length, cc.length);
+                for (let i = 0; i < nMax; i++) walk(oc[i], cc[i]);
+            };
+            walk(origRoot, cloneRoot);
+        }
+
+        function getExportStepHeadingForHtml(stepElId) {
+            if (stepElId === 'step-8') return `步骤 8 · ${CONFIG_PANEL.title}`;
+            const n = parseInt(String(stepElId).replace(/^step-/, ''), 10);
+            if (isNaN(n)) return stepElId;
+            const m = getStepMeta(n);
+            return m ? `步骤 ${n} · ${m.title}` : `步骤 ${n}`;
+        }
+
+        function downloadHtmlBlob(parts, filename) {
+            const blob = new Blob(parts, { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = String(filename || 'BA_Export.html').replace(/[/\\?%*:|"<>]/g, '_');
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 8000);
+        }
+
+        /** 导出独立 HTML（克隆 DOM + Tailwind CDN）；不用整页位图栅格化，避免 invalid string length */
+        async function runHtmlExportCore(filename) {
+            toast('正在生成 HTML…', 'loading');
             const workspace = document.getElementById('workspace');
             const sidebar = document.getElementById('sidebar');
             const hdr = document.getElementById('app-header');
@@ -5079,12 +5296,10 @@
             if (sidebar) sidebar.style.display = 'none';
             if (hdr) hdr.style.display = 'none';
             if (footer) footer.style.display = 'none';
-            workspace.classList.add('w-[210mm]', 'mx-auto', 'shadow-none', 'border-0');
+            workspace.classList.add('mx-auto', 'shadow-none', 'border-0');
 
-            /** 须先于 refreshAllStepsDomForPdf：否则 grid/flex 仍为一屏模式，子步骤高度塌成 0 */
-            document.body.classList.add('pdf-exporting');
-
-            refreshAllStepsDomForPdf();
+            document.body.classList.add('html-exporting');
+            refreshAllStepsDomForExport();
             document.querySelectorAll('.step-wrapper').forEach(el => el.classList.add('active'));
 
             const wsScroll = document.getElementById('workspace-scroll');
@@ -5095,63 +5310,60 @@
             await waitForFontsReady();
             await waitForLayoutMs(520);
 
+            const safeName = escapeHtmlText(String(filename || 'BA_Transformation_Blueprint.html').replace(/\.html?$/i, ''));
+            const iso = new Date().toISOString();
+            const contentIds = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5', 'step-6', 'step-7', 'step-8'];
+
             try {
-                const pdf = new JsPDF({
-                    orientation: 'p',
-                    unit: 'mm',
-                    format: 'a4',
-                    compress: false
-                });
-                const contentIds = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5', 'step-6', 'step-7', 'step-8'];
+                const parts = [];
+                parts.push('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">');
+                parts.push('<meta name="viewport" content="width=device-width, initial-scale=1">');
+                parts.push(`<title>${safeName}</title>`);
+                parts.push('<script src="https://cdn.tailwindcss.com"><\/script>');
+                parts.push('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous">');
+                parts.push('<style>');
+                parts.push('body{margin:0;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;}');
+                parts.push('.export-doc{max-width:1280px;margin:0 auto;padding:20px 16px 64px;}');
+                parts.push('.export-banner{background:#fff;border-radius:14px;border:1px solid rgba(0,0,0,.08);padding:16px 20px;margin-bottom:20px;}');
+                parts.push('.export-step{background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,.06);padding:16px 18px;margin-bottom:22px;box-shadow:0 1px 2px rgba(0,0,0,.04);}');
+                parts.push('.export-step h2{font-size:15px;font-weight:600;margin:0 0 14px;color:#0071e3;}');
+                parts.push('.export-step .overflow-y-auto,.export-step .overflow-auto{overflow:visible!important;max-height:none!important;}');
+                parts.push('.export-step .overflow-x-auto{overflow-x:visible!important;}');
+                parts.push('@media print{.export-step{page-break-after:always;}}');
+                parts.push('<\/style><\/head><body><div class="export-doc">');
+                parts.push('<header class="export-banner">');
+                parts.push('<h1 class="text-[17px] font-semibold text-ink m-0 mb-1.5">【问道】企业数智化转型规划 · HTML 快照</h1>');
+                parts.push(`<p class="text-[12px] text-[#6e6e73] m-0 leading-relaxed">生成时间（ISO）：${escapeHtmlText(iso)}。请用浏览器打开本文件；需联网加载 Tailwind / Font Awesome 以还原样式。表单为静态展示。</p>`);
+                parts.push('<\/header>');
+
                 for (let i = 0; i < contentIds.length; i++) {
-                    const el = document.getElementById(contentIds[i]);
-                    if (!el) throw new Error(`缺少节点 ${contentIds[i]}`);
-                    if (i > 0) await waitForLayoutMs(72);
+                    const sid = contentIds[i];
+                    const el = document.getElementById(sid);
+                    if (!el) throw new Error(`缺少节点 ${sid}`);
+                    if (i > 0) await waitForLayoutMs(40);
                     void el.offsetWidth;
                     void el.scrollHeight;
-                    const canvas = await html2canvas(el, {
-                        scale: PDF_CAPTURE_SCALE,
-                        useCORS: true,
-                        allowTaint: true,
-                        logging: false,
-                        imageTimeout: 20000,
-                        backgroundColor: '#ffffff',
-                        letterRendering: false,
-                        foreignObjectRendering: false,
-                        onclone: (clonedDoc) => {
-                            clonedDoc.body.classList.add('pdf-exporting');
-                            const wEl = clonedDoc.getElementById('workspace');
-                            if (wEl) {
-                                wEl.style.fontFamily = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei UI","Microsoft YaHei",sans-serif';
-                            }
-                            clonedDoc.querySelectorAll('.overflow-y-auto').forEach((node) => {
-                                node.style.overflow = 'visible';
-                                node.style.maxHeight = 'none';
-                            });
-                            clonedDoc.querySelectorAll('.overflow-auto').forEach((node) => {
-                                node.style.overflow = 'visible';
-                                node.style.maxHeight = 'none';
-                            });
-                            clonedDoc.querySelectorAll('.overflow-x-auto').forEach((node) => {
-                                node.style.overflowX = 'visible';
-                            });
-                        }
-                    });
-                    if (!canvas.width || !canvas.height) {
-                        throw new Error(`${contentIds[i]} 截图尺寸为 0，请确认工作台已展开可见`);
-                    }
-                    const canvasForPdf = downscaleCanvasIfNeeded(canvas);
-                    appendCanvasToPdfAsPagedJpeg(pdf, canvasForPdf, { needLeadingPageBreak: i > 0 });
+                    const clone = el.cloneNode(true);
+                    syncLiveValuesIntoExportClone(el, clone);
+                    stripExportInteractiveHandlers(clone);
+                    const h2 = getExportStepHeadingForHtml(sid);
+                    parts.push(`<section class="export-step" id="${sid}"><h2>${escapeHtmlText(h2)}<\/h2>`);
+                    parts.push(clone.innerHTML);
+                    parts.push('<\/section>');
                 }
-                pdf.save(filename || 'BA_Transformation_Blueprint.pdf');
-                toast('PDF 已保存');
+
+                parts.push('<\/div><\/body><\/html>');
+                const baseFn = filename || 'BA_Transformation_Blueprint.html';
+                const outFile = String(baseFn).toLowerCase().endsWith('.html') ? baseFn : `${baseFn}.html`;
+                downloadHtmlBlob(parts, outFile);
+                toast('HTML 已保存');
                 return true;
             } catch (e) {
                 console.error(e);
                 toast(`导出失败：${e && e.message ? e.message : '请查看控制台'}`, 'error');
                 return false;
             } finally {
-                document.body.classList.remove('pdf-exporting');
+                document.body.classList.remove('html-exporting');
                 if (sidebar) sidebar.style.display = '';
                 if (hdr) hdr.style.display = '';
                 if (footer) footer.style.display = '';
