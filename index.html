@@ -394,72 +394,102 @@
         const METHODOLOGY = {
             s1: {
                 bullets: [
-                    '商业画布九要素与页面九宫格一致：客户细分、价值主张、渠道、客户关系、收入来源、核心资源、关键业务、重要伙伴、成本结构。',
-                    '可使用「导出 Excel / 导入 Excel」线下协作或批量回填；填写后点击「运行诊断」，按规则库汇总得分并列出需关注项与建议。',
-                    '诊断规则在侧栏「数字化资产配置 → 画布诊断规则」中维护（主字段关键词、可选联动字段、扣分与提示文案）。'
+                    '页面顶部与「导出 Excel / 导入 Excel」同一行的行业下拉，决定步骤 2「领域价值流模板」的可见范围（与资产配置里各模板的「适用行业」一致；模板未勾选行业则对所有行业可见）。',
+                    '九宫格与 BMC 九要素一一对应：客户细分、价值主张、渠道、客户关系、收入来源、核心资源、关键业务、重要伙伴、成本结构。',
+                    '支持导出/导入 Excel 做线下协作或批量回填；填写后可点「运行诊断」，按侧栏「数字化资产配置 → 画布诊断规则」汇总得分、预警项与改进建议。',
+                    '诊断规则在资产配置中维护（主字段关键词、可选联动字段、扣分与提示文案），随项目快照一并保存。'
                 ],
-                output: '产出：结构化商业画布内容；可选的诊断报告（综合得分、预警项、改进建议），作为后续价值流与架构分析的战略输入。'
+                output: '产出：结构化商业画布；可选规则库诊断报告，作为价值流与能力架构分析的输入。'
             },
             s2: {
                 bullets: [
-                    '选择「行业模板」并「套用模板」，或「空白开始」自建。① 流程简图从左到右为端到端顺序；点击某一阶段卡片后，下方仅编辑该阶段。',
-                    '② 对选中阶段勾选五类维度（效率、质量、成本、风险/合规、客户体验，可少于五项）：每类填写综合分 1～5（驱动简图色条、阶段健康度与底部汇总），并在维度下自定义多条 KPI（指标名称、现状值、目标值）。',
-                    '③ 「整体价值流概览」汇总 LT/VT/PCE 及各维度跨阶段均值。各阶段「业务组件」请用逗号分隔填写，进入下一步时将据此自动生成业务能力清单。'
+                    '「领域价值流模板」列表随步骤 1 所选行业筛选；可选模板「套用」或「空白开始」自建端到端阶段。',
+                    '流程简图从左到右为业务顺序；点击某一阶段卡片后，仅在下方编辑该阶段：勾选五维（效率、质量、成本、风险/合规、客户体验，可少于五项），每维综合分 1～5，并可在维下维护多条 KPI（名称、现状、目标）。',
+                    '「整体价值流概览」汇总时间与各维跨阶段表现；「业务组件」请用逗号分隔，进入步骤 3 时将据此生成业务能力清单（L3）。'
                 ],
-                output: '产出：可视化价值流；按阶段切换的五维综合分与自定义 KPI（现状/目标）；整体时间与多维概览；业务组件字段供架构步骤引用。'
+                output: '产出：可视化价值流、分阶段五维与 KPI、端到端概览，以及供架构步骤引用的业务组件清单。'
             },
             s3: {
                 bullets: [
-                    '从「价值流设计」点击「下一步」进入本页时，系统会按各阶段填写的业务组件自动生成清单；清单为空时也可在本页「手工新增能力块」从零维护。',
-                    '列表从左到右为：价值流阶段、业务能力 L3、描述、领域 L1、类型 L2、当前/目标成熟度（1～5 分）、ICE（新建行按默认模板计算）；均可直接编辑价值流阶段与 L3 名称。',
-                    '工具栏「新增能力块」追加一行；行末「删除」可移除该项（删至为空时步骤 4/5 暂无数据）。下一步「能力差距分析」维护四维差距，热力图沿用此处的 L1/L2 分层。',
-                    '「导出 Excel」生成与清单字段一致的表（含四维差距、参考系统与技术栈列便于往返）；「导入 Excel」整表替换当前清单并刷新步骤 4/5；详见文件中「使用说明」表。'
+                    '从步骤 2「下一步」进入时，可按各阶段「业务组件」自动生成清单；亦可在本页「手工新增能力块」从零维护。',
+                    '列含：价值流阶段、业务能力 L3、描述、L1/L2、当前与目标成熟度（1～5）、ICE；四维差距列与 Excel、步骤 4 一致，便于往返。',
+                    '「新增能力块 / 删除」维护行数；「导出 / 导入 Excel」整表与步骤 4、5 联动（导入后刷新差距与热力）。'
                 ],
-                output: '产出：可增删改、支持 Excel 离线编辑的业务能力清单（价值流阶段、L3、描述、L1/L2、成熟度、ICE 及差距参考列）。'
+                output: '产出：可增删改的业务能力清单（含成熟度、ICE、四维差距参考），支持 Excel 离线编辑。'
             },
             s4: {
                 bullets: [
-                    '对每个能力块，从组织、流程、数据、IT 四个维度用下拉框标注差距程度：缺失、弱、中、强（与页面矩阵列一致）。',
-                    '最右「系统」列为该能力关联的参考系统名称，由生成逻辑带出，便于对照，不参与四维打分。',
-                    '修改本页后，「能力热力图标注」的红黄绿色块会联动更新；也可从热力图卡片跳回本页修订。'
+                    '对每个能力块，组织、流程、数据、IT 四维各选 0～5 分：分数越高表示该维越成熟；越低表示越需补齐。列尾「均分」为四维算术平均。',
+                    '最右侧「系统」为参考系统名称（由模板或导入带出），仅供对照，不参与打分。',
+                    '修改后步骤 5「能力热力分布」即时重算红黄绿；亦可从热力卡片跳回本页修订。'
                 ],
-                output: '产出：能力块 ×（组织、流程、数据、IT）四维差距矩阵，带系统参考列。'
+                output: '产出：能力 × 四维成熟度矩阵（0～5）与系统参考列，驱动热力着色与后续变革举措草案。'
             },
             s5: {
                 bullets: [
-                    '着色规则由四维差距自动计算：出现「缺失」或至少两项为「缺失/弱」时倾向红色（优先处理）；仅一项偏弱为黄色（纳入计划）；其余为绿色（相对健康）。',
-                    '页面按架构清单中的 L1 → L2 归类分层展示能力块（L3）卡片；顶部「热力分布汇总」提供按 L1、按 L2 的红/黄/绿计数、小计与绿色占比，便于快速看懂热力分布结构。',
-                    '点击能力块卡片可跳转至「能力差距分析」修改下拉评分；从本页「下一步」进入举措页时，系统会为红/黄能力块生成变革举措草案（多为绿时插入巩固类草案）。'
+                    '着色规则：任一维为 0，或至少两项≤2 → 红（优先）；仅一项≤2 → 黄（纳入计划）；其余 → 绿。可与步骤 4「均分」对照。',
+                    '「热力分布汇总」按 L1、按 L2 统计红/黄/绿数量与健康占比；下方「分层热力视图」按 L1→L2 展示能力块卡片。',
+                    '点击卡片跳转步骤 4 改分；本页「下一步」可为红/黄能力块生成变革举措草案（整体偏绿时插入一条巩固类草案）。'
                 ],
-                output: '产出：按 L1/L2 分层的着色热力视图 + 分层汇总统计，并作为变革举措自动生成的输入。'
+                output: '产出：分层热力视图与汇总统计，作为变革举措规划的数据输入。'
             },
             s6: {
                 bullets: [
-                    '举措清单由热力图结果自动生成草案：攻坚/优化类标题、关联能力块、待补齐维度（组织/流程/数据/IT）、预期收益、成本量级与时间窗口；并按顺序默认标注 P0/P1/P2。',
-                    '在本页填写「技术方案与交付形态」「关键依赖与前置条件」，供步骤 7 甘特与子路标引用。可与页面顶部时间轴工具条设置规划起始月与跨度（与路标页共用，默认约 24 个月并可调整范围）。',
-                    '生成后可持续手工增删改每条举措，再进入路标页查看甘特排布。'
+                    '草案含：可调整的 P0/P1/P2、关联能力块、待补齐维度、时间窗口文案、预期收益、难易程度（自由文本）与依赖描述。',
+                    '本页可删除不需要的条目；编辑收益、难易程度与「关键依赖与前置条件」。不含甘特时间轴配置。',
+                    '起始月、规划跨度与子路标均在步骤 7「变革路标计划」统一编辑，避免与本页重复配置。'
                 ],
-                output: '产出：变革举措清单（含优先级、技术/依赖说明及路标时间轴字段），与能力块关联。'
+                output: '产出：确认后的变革举措清单（优先级 + 收益/难易/依赖），供路标甘特铺排。'
             },
             s7: {
                 bullets: [
-                    '以横向年/月时间轴展示各举措及其子路标条（如依赖就绪、方案设计、开发联调、上线固化等），举措顺序遵循 P0→P1→P2。',
-                    '支持「刷新甘特 / 重算时间轴」：按当前举措顺序与已设规划跨度重新铺排；表头展示年份与季度分界。',
-                    '起始月份、规划跨度（月）在步骤 6 或 7 的时间轴控件中配置，改动后两页展示保持一致。'
+                    '在本页统一设置「起始月、规划跨度（月）」；甘特横轴展示各举措及子路标，排序遵循 P0→P1→P2。',
+                    '「按优先级重排条块」按当前跨度为各举措重分配时间片；展开行可改子路标名称与起止月，也可在「汇总」区整体调整跨度（子条按比例伸缩）。',
+                    '与步骤 6 清单联动：步骤 6 删除或改优先级后，本页刷新一致。'
                 ],
-                output: '产出：变革路标甘特（时间轴 × 举措与子工作包），用于里程碑型交付对齐。'
+                output: '产出：带时间轴的变革路标甘特（举措 + 子工作包），用于交付节奏对齐。'
             },
             s8: {
                 bullets: [
-                    '画布诊断规则：为画布各字段配置触发关键词、可选第二字段联动与扣分；步骤 1「运行诊断」时累计扣分并输出提示列表。',
-                    '价值流模板库：维护端到端阶段、场景与业务组件；保存后在「价值流设计」中套用，再按阶段补充五维综合分、KPI 现状/目标及价值描述等。',
-                    '右上角「导出 Excel」可下载含「画布诊断规则」「价值流模板」两个工作表的模板（含当前内容）；手工填写后「导入 Excel」按表合并刷新本页及步骤 2 下拉模板；详见文件中「使用说明」表。'
+                    '画布诊断规则：为各画布字段配置触发关键词、可选第二字段联动与扣分；步骤 1「运行诊断」时累计扣分并输出提示列表。',
+                    '价值流模板库：维护阶段、场景与业务组件；可为模板勾选「适用行业」，与步骤 1 所选行业、步骤 2 模板下拉一致（不勾选任何行业 = 全部行业可见）。',
+                    '「导出 Excel」含规则与模板两表：模板表带「适用行业」列（逗号分隔，与步骤 1 下拉选项一致；留空表示全部）。旧版无该列的导入会保留条目原有行业关联。',
+                    '导入 Excel 按模板键合并写入；详见「使用说明」工作表。'
                 ],
-                output: '产出：可复用的诊断规则与价值流模板资产；支持 Excel 模板离线编辑后与页面双向同步（随工作流快照保存）。'
+                output: '产出：诊断规则与按行业可见的价值流模板资产；支持 Excel 往返并与步骤 1/2 联动（随工作流快照保存）。'
             }
         };
 
-        const GAP_LEVELS = ['缺失', '弱', '中', '强'];
+        const GAP_SCORE_MIN = 0;
+        const GAP_SCORE_MAX = 5;
+
+        /** 步骤 4 四维差距：0～5 分（越高越成熟）；兼容旧版「缺失/弱/中/强」与快照导入 */
+        function legacyGapLabelToScore(s) {
+            const t = String(s ?? '').trim();
+            if (t === '缺失') return 0;
+            if (t === '弱') return 2;
+            if (t === '中') return 3;
+            if (t === '强') return 5;
+            return null;
+        }
+
+        function normalizeGapDim(v, fallback) {
+            const fb = typeof fallback === 'number' && !isNaN(fallback)
+                ? Math.max(GAP_SCORE_MIN, Math.min(GAP_SCORE_MAX, Math.round(fallback)))
+                : 3;
+            if (v == null || v === '') return fb;
+            const lab = legacyGapLabelToScore(v);
+            if (lab !== null) return lab;
+            const s = String(v).trim();
+            const low = s.toLowerCase();
+            if (low === 'missing' || low === 'none') return 0;
+            if (low === 'weak' || low === 'low') return 2;
+            if (low === 'medium' || low === 'mid') return 3;
+            if (low === 'strong' || low === 'high') return 5;
+            const n = parseFloat(s.replace(/,/g, '.'));
+            if (!isNaN(n)) return Math.max(GAP_SCORE_MIN, Math.min(GAP_SCORE_MAX, Math.round(n)));
+            return fb;
+        }
 
         /** 价值流五维健康度（见《价值流完善.md》：精益+BSC+4A，不止耗时/PCE） */
         const VS_DIM_KEYS = ['dEff', 'dQual', 'dCost', 'dRisk', 'dCx'];
@@ -507,9 +537,14 @@
             default: { sys: 'BPM', tech: '低代码/API', mat: { o: 3, p: 3, d: 3, i: 3 }, pri: { v: 3, u: 3, f: 5 } }
         };
 
+        /** 步骤 1 所选行业，决定步骤 2 可见的价值流模板 */
+        const WORKFLOW_INDUSTRIES = ['3C', '汽车', '家电'];
+
         let currentState = {
             step: 1,
             activePanel: 'workflow',
+            /** 与 WORKFLOW_INDUSTRIES 一致；步骤 2 仅列出 industries 含该值的模板 */
+            workflowIndustry: '3C',
             /** 预置内容严格对齐《商业画布参考.md》：华为终端「1+8」产品销售 */
             bmc: {
                 customerSegments: `核心细分：追求科技体验、品质生活的中高端消费者（以25~45岁职场人士为主）
@@ -577,10 +612,11 @@
             /** 价值流设计：当前在 ② 中编辑的阶段 id（与 ① 卡片联动） */
             vsSelectedStageId: null,
             vsStages: [],
-            /** 下拉与模板库列表顺序：研发 → GTM → MKT → 电商 → 零售 → 服务 → 渠道 → 车/MSS（对象键序即展示序） */
+            /** 下拉与模板库列表顺序：研发 → GTM → MKT → 电商 → 零售 → 服务 → 渠道 → 车/MSS（对象键序即展示序）；name 为「领域：价值流」 */
             templates: {
                 hwcb_ipd: {
-                    name: '3C行业+研发+IPD',
+                    name: '研发：IPD',
+                    industries: ['3C', '家电'],
                     stages: [
                         { id: 1, name: '需求与Charter', type: 'process', defaultTime: 160, scenarios: '用户研究, 竞品对标, 路线图(Roadmap)', components: '需求管理(RM), Charter与投资组合' },
                         { id: 2, name: '概念与设计', type: 'process', defaultTime: 200, scenarios: '系统工程方案, 造型与UX, 可制造性', components: '系统架构(SysEng), ID/UX, 成本与DFM' },
@@ -591,7 +627,8 @@
                 },
                 /** GTM(IPMS)：DCP1/2/3 为决策关口，简图中以「等待」类型呈现 */
                 hwcb_ipms: {
-                    name: '3C行业+GTM+IPMS',
+                    name: 'GTM：IPMS',
+                    industries: ['3C', '家电'],
                     stages: [
                         { id: 1, name: '规划与立项', type: 'process', defaultTime: 160, scenarios: '细分市场与定位, Charter与商业论证, 投资组合对齐', components: '市场洞察, Charter包, 损益与目标毛利' },
                         { id: 2, name: '拓展准备', type: 'process', defaultTime: 200, scenarios: '渠道/伙伴拓展蓝图, 区域准入与合规清单, 拓展资源与节奏', components: '渠道规划, 伙伴与SI体系, 拓展项目群管理' },
@@ -606,7 +643,8 @@
                     ]
                 },
                 industry_marketing: {
-                    name: '3C行业+MKT+营销流',
+                    name: 'MKT：营销流',
+                    industries: ['3C', '家电'],
                     stages: [
                         { id: 1, name: '洞察与目标', type: 'process', defaultTime: 72, scenarios: '人群画像, 竞品与舆情, 经营目标拆解', components: '市场洞察, 目标与预算, 受众分层' },
                         { id: 2, name: '策略制定', type: 'process', defaultTime: 96, scenarios: '定位与卖点, 渠道与战役组合, 风险与合规', components: '传播策略, 渠道策略, 审批与合规清单' },
@@ -616,7 +654,8 @@
                     ]
                 },
                 hwcb_5a: {
-                    name: '3C行业+电商+5A增长链路',
+                    name: '电商：5A链路',
+                    industries: ['3C', '家电'],
                     stages: [
                         { id: 1, name: 'Awareness 认知', type: 'process', defaultTime: 8, scenarios: '信息流/搜索曝光, 品牌Campaign, KOL预热', components: '媒介投放, 品牌创意, 素材与达人管理' },
                         { id: 2, name: 'Appeal 吸引', type: 'process', defaultTime: 12, scenarios: '种草内容, 直播间心智, 对比评测', components: '内容营销, 直播运营, 达人种草管理' },
@@ -626,7 +665,8 @@
                     ]
                 },
                 retail: {
-                    name: '3C行业+零售+预测到交付',
+                    name: '零售：预测到交付',
+                    industries: ['3C', '家电'],
                     stages: [
                         { id: 1, name: '需求预测', type: 'process', defaultTime: 2, scenarios: '常态预测, 促销高峰', components: '需求预测, 数据汇总' },
                         { id: 2, name: '库存与审批', type: 'wait', defaultTime: 48, scenarios: '标准审批, 加急通道', components: '库存审批, 信用审核' },
@@ -636,7 +676,8 @@
                     ]
                 },
                 hwcb_itr: {
-                    name: '3C行业+服务+ITR',
+                    name: '服务：ITR',
+                    industries: ['3C', '家电'],
                     stages: [
                         { id: 1, name: '服务请求', type: 'process', defaultTime: 1, scenarios: '热线/在线/自助报障, App与IoT远程上报', components: '全渠道入口, 身份校验, 请求分类标签' },
                         { id: 2, name: '服务受理', type: 'process', defaultTime: 4, scenarios: 'SLA定级, 派单与预约, 跨渠道协同', components: '工单系统, 知识库推荐, 调度与座席' },
@@ -646,7 +687,8 @@
                     ]
                 },
                 industry_trade: {
-                    name: '3C行业+渠道+交易流',
+                    name: '渠道：交易流',
+                    industries: ['3C', '家电'],
                     stages: [
                         { id: 1, name: '计划', type: 'process', defaultTime: 72, scenarios: '销售与供应计划, 需求波动与版本节奏', components: 'S&OP, 要货计划, 预测校验' },
                         { id: 2, name: '交付', type: 'process', defaultTime: 96, scenarios: '订单履约, 物流与签收, 逆向与异常', components: 'OMS, WMS/TMS, 异常升级' },
@@ -658,7 +700,8 @@
                 },
                 /** 汽车流通/MSS 平台典型端到端：获客 → 线索 → 商机 → 成交 → 交车 → 售后 */
                 auto_mss_mhc: {
-                    name: '车行业+MSS+卖好车',
+                    name: 'MSS：卖好车',
+                    industries: ['汽车'],
                     stages: [
                         { id: 1, name: '营销获客', type: 'process', defaultTime: 72, scenarios: '品牌招商活动, 垂媒/信息流投放, 经销商集客', components: '营销投放, 线索采集与清洗, 渠道与线索运营看板' },
                         { id: 2, name: '线索跟进', type: 'process', defaultTime: 48, scenarios: '首次触达, 意向分级, 超时预警与再分配', components: 'CRM/SCRM, 外呼与企微, 线索评分与分配引擎' },
@@ -687,13 +730,13 @@
 
         /** 主流程 7 步（左侧序号与右侧步骤编号一致）；数字化资产配置不在此数组 */
         const STEPS = [
-            { id: 1, nodeShort: '画布', title: '商业画布蓝图', icon: 'fa-cubes', key: 's1', guide: '九宫格填写战略要素；可导出/导入 Excel，「运行诊断」用配置侧的规则库做一致性检查。' },
-            { id: 2, nodeShort: '价值流', title: '价值流设计', icon: 'fa-stream', key: 's2', guide: '选模板 → 点击简图卡片选中阶段 → 填该阶段五维综合分与具体指标（现状/目标）→ 看底部整体概览。' },
-            { id: 3, nodeShort: '架构', title: '业务能力架构', icon: 'fa-sitemap', key: 's3', guide: '自动生成或手工维护；支持导出/导入 Excel；含差距列便于与步骤 4 对齐。' },
-            { id: 4, nodeShort: '差距', title: '能力差距分析', icon: 'fa-table-cells', key: 's4', guide: '对每个能力块在组织、流程、数据、IT 四维下拉标注缺失/弱/中/强；右侧系统列为参考信息。' },
-            { id: 5, nodeShort: '热力图', title: '能力热力图标注', icon: 'fa-fire', key: 's5', guide: '顶部按 L1/L2 汇总红黄牌分布；下方按领域分层看各能力块热力；点卡片回差距页改分。' },
-            { id: 6, nodeShort: '举措', title: '变革举措与方案', icon: 'fa-lightbulb', key: 's6', guide: '热力图下一步自动生成草案；补充技术方案与依赖，设置路标起始月/跨度，供甘特页使用。' },
-            { id: 7, nodeShort: '路标', title: '变革路标计划', icon: 'fa-bars-staggered', key: 's7', guide: 'P0→P1→P2 横向排布子路标甘特；可重算时间轴，起始月与规划跨度与举措页一致。' }
+            { id: 1, nodeShort: '画布', title: '商业画布蓝图', icon: 'fa-cubes', key: 's1' },
+            { id: 2, nodeShort: '流程', title: '价值流程诊断', icon: 'fa-stream', key: 's2' },
+            { id: 3, nodeShort: '架构', title: '业务能力架构', icon: 'fa-sitemap', key: 's3' },
+            { id: 4, nodeShort: '差距', title: '能力差距分析', icon: 'fa-table-cells', key: 's4' },
+            { id: 5, nodeShort: '热力', title: '能力热力分布', icon: 'fa-fire', key: 's5' },
+            { id: 6, nodeShort: '举措', title: '变革举措规划', icon: 'fa-lightbulb', key: 's6' },
+            { id: 7, nodeShort: '路标', title: '变革路标计划', icon: 'fa-bars-staggered', key: 's7' }
         ];
 
         const STEP_TOTAL = 7;
@@ -702,7 +745,7 @@
         /** 侧栏「配置」面板：画布规则与价值流模板，不计入 7 步 */
         const CONFIG_PANEL = {
             title: '数字化资产配置',
-            guide: '顶部 Tab 切换规则与模板；可用导出/导入 Excel 批量维护。右下角「AI 规划助手」可做配置类启发式问答。不影响主流程 7 步的录入顺序。',
+            guide: '顶部 Tab：画布诊断规则、价值流模板库（含适用行业，与步骤 1 顶部行业下拉、步骤 2 模板筛选一致）。可导出/导入 Excel。右下角「AI 规划助手」可做启发式问答。不计入主流程 7 步。',
             icon: 'fa-sliders'
         };
 
@@ -710,6 +753,73 @@
 
         function getStepMeta(stepId) {
             return STEPS.find(s => s.id === stepId);
+        }
+
+        function templateAppliesToIndustry(tpl, industry) {
+            if (!tpl || !industry) return true;
+            const arr = tpl.industries;
+            if (!Array.isArray(arr) || !arr.length) return true;
+            return arr.includes(industry);
+        }
+
+        function getTemplateIdsForWorkflowIndustry(industry) {
+            return Object.keys(currentState.templates).filter(k => templateAppliesToIndustry(currentState.templates[k], industry));
+        }
+
+        function ensureSelectedTemplateForIndustry() {
+            let ids = getTemplateIdsForWorkflowIndustry(currentState.workflowIndustry);
+            if (!ids.length) ids = Object.keys(currentState.templates);
+            if (!ids.length) return;
+            if (!ids.includes(currentState.selectedTemplateId)) {
+                currentState.selectedTemplateId = ids[0];
+            }
+        }
+
+        function setWorkflowIndustry(val) {
+            if (!WORKFLOW_INDUSTRIES.includes(val)) return;
+            currentState.workflowIndustry = val;
+            ensureSelectedTemplateForIndustry();
+            renderStep1();
+            if (currentState.step === 2 && currentState.activePanel === 'workflow') renderStep2();
+        }
+
+        /** 适用行业：逗号/分号分隔，仅保留 WORKFLOW_INDUSTRIES 中的词 */
+        function parseIndustryTagsFromConfigCell(cell) {
+            const s = String(cell ?? '').trim();
+            if (!s || s === '—' || s === '-' || /^全部$/i.test(s) || /^all$/i.test(s)) return [];
+            return s.split(/[,，;；、]/).map(x => x.trim()).filter(x => WORKFLOW_INDUSTRIES.includes(x));
+        }
+
+        function templateIndustryBadgeLabel(tpl) {
+            if (!tpl || !Array.isArray(tpl.industries) || !tpl.industries.length) return '全部行业';
+            return tpl.industries.join('、');
+        }
+
+        /** 保存模板时读取适用行业勾选：全不选表示不限行业 */
+        function collectTemplateIndustriesFromForm() {
+            const arr = [];
+            WORKFLOW_INDUSTRIES.forEach((ind, i) => {
+                const el = document.getElementById('tpl-industry-' + i);
+                if (el && el.checked) arr.push(ind);
+            });
+            return arr;
+        }
+
+        function renderTemplateIndustryCheckboxesHtml() {
+            const tpl = currentState.editingTemplateKey ? currentState.templates[currentState.editingTemplateKey] : null;
+            const sel = tpl && Array.isArray(tpl.industries) ? tpl.industries : [];
+            const hasRestrict = sel.length > 0;
+            return `<div class="mb-4 rounded-[12px] border border-black/[0.08] bg-canvas/80 px-3 py-3 space-y-2">
+                <p class="text-[12px] font-semibold text-ink">适用行业（与步骤 1 所选行业联动）</p>
+                <p class="text-[11px] text-ink-secondary leading-snug">不勾选任何项 → 步骤 2 中<strong class="text-ink font-medium">全部</strong>行业下拉可见该模板；勾选则<strong class="text-ink font-medium">仅</strong>所选行业可见。</p>
+                <div class="flex flex-wrap gap-x-4 gap-y-2">${WORKFLOW_INDUSTRIES.map((ind, i) => {
+                const checked = hasRestrict && sel.includes(ind);
+                return `<label class="inline-flex items-center gap-2 text-[13px] text-ink cursor-pointer select-none">
+                    <input type="checkbox" id="tpl-industry-${i}" class="rounded border-black/[0.2] text-accent focus:ring-accent/30" ${checked ? 'checked' : ''} />
+                    <span>${ind}</span>
+                </label>`;
+            }).join('')}</div>
+            </div>`;
         }
 
         /** 主流程步骤引用：步骤 N/7 · 标题 */
@@ -724,7 +834,6 @@
             const blockClass = extraClass ? ` ${extraClass}` : '';
             return `<div class="step-page-head min-w-0 shrink-0${blockClass}">
                 <h2 class="text-[17px] sm:text-[18px] lg:text-[17px] font-semibold text-ink tracking-tight leading-tight">${s.title}</h2>
-                <p class="text-[12px] text-ink-secondary mt-1 leading-snug line-clamp-2 lg:line-clamp-1 lg:text-[12px]" title="${s.guide}">${s.guide}</p>
             </div>`;
         }
 
@@ -1117,6 +1226,7 @@
             const snap = {
                 stepId,
                 stepTitle: stepId === 8 ? CONFIG_PANEL.title : (meta ? meta.title : ''),
+                workflowIndustry: currentState.workflowIndustry || '3C',
                 valueStreamName: currentState.valueStreamName || '',
                 rulesCount: (currentState.rules || []).length,
                 templateKeys: Object.keys(currentState.templates || {}),
@@ -1126,7 +1236,13 @@
             if (stepId >= 2) snap.vsStages = (currentState.vsStages || []).map(s => ({ name: s.name, type: s.type, components: s.components }));
             if (stepId >= 3) {
                 snap.capabilities = (currentState.capabilityFramework || []).map(c => ({
-                    l3: c.l3, l1: c.l1, l2: c.l2, curMat: c.curMat, tgtMat: c.tgtMat, linkedVs: c.linkedVs
+                    l3: c.l3, l1: c.l1, l2: c.l2, curMat: c.curMat, tgtMat: c.tgtMat, linkedVs: c.linkedVs,
+                    ...(stepId >= 4 ? {
+                        gapOrg: normalizeGapDim(c.gapOrg, gapFromMat((CAPABILITY_DB[c.l3] || CAPABILITY_DB.default).mat.o)),
+                        gapProc: normalizeGapDim(c.gapProc, gapFromMat((CAPABILITY_DB[c.l3] || CAPABILITY_DB.default).mat.p)),
+                        gapData: normalizeGapDim(c.gapData, gapFromMat((CAPABILITY_DB[c.l3] || CAPABILITY_DB.default).mat.d)),
+                        gapIt: normalizeGapDim(c.gapIt, gapFromMat((CAPABILITY_DB[c.l3] || CAPABILITY_DB.default).mat.i))
+                    } : {})
                 }));
             }
             if (stepId >= 5 && (currentState.capabilityFramework || []).length) {
@@ -1253,9 +1369,9 @@
                 return lines.join('\n');
             }
             if (actionId === 'gap_suggest') {
-                lines.push('四维差距参考（演示，非替代步骤4下拉）：');
+                lines.push('四维差距参考（演示，非替代步骤 4 打分）：');
                 (currentState.capabilityFramework || []).slice(0, 15).forEach(c => {
-                    const hint = c.curMat <= 2 ? '整体倾向偏弱维（建议审视缺失/弱）' : c.curMat === 3 ? '中等水平（可关注流程与数据）' : '相对成熟（保持或精细化）';
+                    const hint = c.curMat <= 2 ? '整体倾向偏弱维（建议审视 0～2 分维度）' : c.curMat === 3 ? '中等水平（可关注流程与数据）' : '相对成熟（保持或精细化）';
                     lines.push(`· ${c.l3}（成熟度 ${c.curMat}）：${hint}`);
                 });
                 return lines.join('\n');
@@ -1265,7 +1381,7 @@
                 const yels = (currentState.capabilityFramework || []).filter(c => heatCategory(c) === 'yellow');
                 lines.push(`热力解读（演示）：优先 ${reds.length} · 计划 ${yels.length}`);
                 if (reds.length) lines.push('重点优先：' + reds.map(c => c.l3).join('、'));
-                lines.push('· 红色多为多维差距叠加或存在「缺失」类维度；详见卡片四维摘要。');
+                lines.push('· 红色多为「某维 0 分」或多维 ≤2 分叠加；详见卡片四维分数摘要。');
                 return lines.join('\n');
             }
             if (actionId === 'ini_deep') {
@@ -1332,8 +1448,6 @@
             return txt || '（模型返回为空）';
         }
 
-        const AI_GAP_LEVELS = ['缺失', '弱', '中', '强'];
-
         function buildAiWorkflowPatchSystemSuffix() {
             return `\n\n【结构化回填】在给出中文解读后，必须追加一个 Markdown 代码块（语言标记为 json），内含唯一对象，格式示例：
 \`\`\`json
@@ -1343,23 +1457,11 @@
                 `· workflowPatch.bmc：键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串，与九宫格对应。\n` +
                 `· workflowPatch.valueStreamName：价值流名称（可选）。\n` +
                 `· workflowPatch.stages：价值流阶段数组；每项含 name、type(process|wait)、scenarios、components（逗号分隔组件）、actualTime（小时数，数字），可选 dEff,dQual,dCost,dRisk,dCx（1-5）。提供 stages 时会替换当前价值流阶段列表（与左侧手工/模板互斥于数据层，用户仍可再改）。\n` +
-                `· workflowPatch.capabilities：业务能力清单；非空则整体替换当前清单。每项含 l3，可选 l1,l2,desc,linkedVs,curMat,tgtMat(1-5),gapOrg,gapProc,gapData,gapIt（取值：缺失/弱/中/强）,sys,tech,ice。\n` +
-                `· workflowPatch.capabilityGaps：仅按 l3 匹配更新四维差距；每项含 l3 及 gapOrg/gapProc/gapData/gapIt 中需要改的字段。\n` +
-                `· workflowPatch.initiatives：变革举措；非空则整体替换。每项含 title，可选 caps(数组),gaps,window,benefit,cost,phase(P0|P1|P2),tech,deps,milestoneBand，streams 为子路标数组（start 为从 0 起的月索引，len 为持续月数）。\n` +
+                `· workflowPatch.capabilities：业务能力清单；非空则整体替换当前清单。每项含 l3，可选 l1,l2,desc,linkedVs,curMat,tgtMat(1-5),gapOrg,gapProc,gapData,gapIt（四维成熟度各为 0～5 整数，越高越成熟；亦可沿用英文 weak/medium/strong 或旧版缺失/弱/中/强）,sys,tech,ice。\n` +
+                `· workflowPatch.capabilityGaps：仅按 l3 匹配更新四维差距；每项含 l3 及 gapOrg/gapProc/gapData/gapIt 中需要改的字段（同上，0～5）。\n` +
+                `· workflowPatch.initiatives：变革举措；非空则整体替换。每项含 title，可选 caps(数组),gaps,window,benefit,cost（难易程度文案）,phase(P0|P1|P2),tech,deps,milestoneBand，streams 为子路标数组（start 为从 0 起的月索引，len 为持续月数）。\n` +
                 `· workflowPatch.roadmap：可选 startYm(YYYY-MM)、months(6-48)。\n` +
                 `当前用户步骤若与补丁无关，仍可给出补丁以便其切换步骤后已有数据；但不要无故清空未提及的模块。`;
-        }
-
-        function normalizeGapDim(v, fallback) {
-            if (v == null || v === '') return fallback;
-            const s = String(v).trim();
-            if (AI_GAP_LEVELS.includes(s)) return s;
-            const low = s.toLowerCase();
-            if (low === 'missing' || low === 'none') return '缺失';
-            if (low === 'weak' || low === 'low') return '弱';
-            if (low === 'medium' || low === 'mid') return '中';
-            if (low === 'strong' || low === 'high') return '强';
-            return fallback;
         }
 
         function extractWorkflowPatchFromText(text) {
@@ -1475,8 +1577,13 @@
                 const c = currentState.capabilityFramework.find(x => x.l3 === q)
                     || currentState.capabilityFramework.find(x => (x.l3 && (x.l3.includes(q) || q.includes(x.l3))));
                 if (!c) return;
+                const def = CAPABILITY_DB[c.l3] || CAPABILITY_DB.default;
+                const mk = { gapOrg: 'o', gapProc: 'p', gapData: 'd', gapIt: 'i' };
                 ['gapOrg', 'gapProc', 'gapData', 'gapIt'].forEach(k => {
-                    if (u[k] != null && u[k] !== '') c[k] = normalizeGapDim(u[k], c[k]);
+                    if (u[k] != null && u[k] !== '') {
+                        const prev = normalizeGapDim(c[k], gapFromMat(def.mat[mk[k]]));
+                        c[k] = normalizeGapDim(u[k], prev);
+                    }
                 });
             });
         }
@@ -1817,6 +1924,7 @@
             renderHeaderMethodFlow();
             renderNav();
             renderStepProgress();
+            migrateCapabilityFrameworkGapScores();
             initAiAssistant();
             renderStep();
         }
@@ -1857,7 +1965,7 @@
 
         const BLUEPRINT_HISTORY_LS = 'archipro-blueprint-history-v1';
         const BLUEPRINT_HISTORY_MAX = 40;
-        const WORKFLOW_SNAPSHOT_KEYS = ['bmc', 'bmcReport', 'rules', 'valueStreamName', 'vsDimWeights', 'vsSelectedStageId', 'vsStages', 'templates', 'selectedTemplateId', 'capabilityFramework', 'initiatives', 'itFeatures', 'newTplSteps', 'configTab', 'roadmapStartYm', 'roadmapMonths', 'roadmapExpandedIniIds'];
+        const WORKFLOW_SNAPSHOT_KEYS = ['bmc', 'bmcReport', 'rules', 'workflowIndustry', 'valueStreamName', 'vsDimWeights', 'vsSelectedStageId', 'vsStages', 'templates', 'selectedTemplateId', 'capabilityFramework', 'initiatives', 'itFeatures', 'newTplSteps', 'configTab', 'roadmapStartYm', 'roadmapMonths', 'roadmapExpandedIniIds'];
 
         function loadBlueprintHistoryList() {
             try {
@@ -1885,12 +1993,28 @@
             return snap;
         }
 
+        function migrateCapabilityFrameworkGapScores() {
+            const fw = currentState.capabilityFramework || [];
+            fw.forEach(c => {
+                const def = CAPABILITY_DB[c.l3] || CAPABILITY_DB.default;
+                c.gapOrg = normalizeGapDim(c.gapOrg, gapFromMat(def.mat.o));
+                c.gapProc = normalizeGapDim(c.gapProc, gapFromMat(def.mat.p));
+                c.gapData = normalizeGapDim(c.gapData, gapFromMat(def.mat.d));
+                c.gapIt = normalizeGapDim(c.gapIt, gapFromMat(def.mat.i));
+            });
+        }
+
         function applyWorkflowSnapshot(raw) {
             const s = raw && typeof raw === 'object' ? raw : {};
             WORKFLOW_SNAPSHOT_KEYS.forEach(k => {
                 if (s[k] === undefined) return;
                 currentState[k] = JSON.parse(JSON.stringify(s[k]));
             });
+            migrateCapabilityFrameworkGapScores();
+            if (!currentState.workflowIndustry || !WORKFLOW_INDUSTRIES.includes(currentState.workflowIndustry)) {
+                currentState.workflowIndustry = '3C';
+            }
+            ensureSelectedTemplateForIndustry();
             calcVSMetrics();
         }
 
@@ -1937,7 +2061,12 @@
                 else g++;
             });
             const s3 = cf.length ? `${cf.length} 项能力块` : '—';
-            const weakDims = cf.filter(c => ['缺失', '弱'].includes(c.gapOrg) || ['缺失', '弱'].includes(c.gapProc)).length;
+            const weakDims = cf.filter(c => {
+                const def = CAPABILITY_DB[c.l3] || CAPABILITY_DB.default;
+                const o = normalizeGapDim(c.gapOrg, gapFromMat(def.mat.o));
+                const p = normalizeGapDim(c.gapProc, gapFromMat(def.mat.p));
+                return o <= 2 || p <= 2;
+            }).length;
             const s4 = cf.length ? `四维差距已填 · ${weakDims} 项偏弱维` : '—';
             const s5 = cf.length ? `红 ${r} / 黄 ${y} / 绿 ${g}` : '—';
             const ini = snap.initiatives || [];
@@ -2064,11 +2193,11 @@
             document.getElementById('asset-detail-title').textContent = rec.title || '未命名版本';
             const rows = [
                 ['步骤 1 · 商业画布蓝图', `价值主张：${sum.s1full}`, `客户细分：${String(bmc.customerSegments || '—').slice(0, 200)}`],
-                ['步骤 2 · 价值流设计', sum.s2, `模板：${snap.selectedTemplateId || '—'}`],
+                ['步骤 2 · 价值流程诊断', sum.s2, `模板：${snap.selectedTemplateId || '—'}`],
                 ['步骤 3 · 业务能力架构', sum.s3, cfTopNames(snap.capabilityFramework)],
                 ['步骤 4 · 能力差距分析', sum.s4, ''],
-                ['步骤 5 · 能力热力图标注', sum.s5, ''],
-                ['步骤 6 · 变革举措与方案', sum.s6, iniTitlesSnippet(snap.initiatives)],
+                ['步骤 5 · 能力热力分布', sum.s5, ''],
+                ['步骤 6 · 变革举措规划', sum.s6, iniTitlesSnippet(snap.initiatives)],
                 ['步骤 7 · 变革路标计划', sum.s7, '']
             ];
             document.getElementById('asset-detail-body').innerHTML = rows.map(([t, a, b]) => `
@@ -2452,9 +2581,10 @@
             wsRules['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 18 }, { wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 6 }, { wch: 48 }];
             XLSX.utils.book_append_sheet(wb, wsRules, '画布诊断规则');
 
-            const tplHead = ['模板键（合并依据）', '模板显示名称', '阶段序号', '阶段名称', '类型(process或wait)', '默认耗时小时', '场景', '业务组件'];
+            const tplHead = ['模板键（合并依据）', '模板显示名称', '阶段序号', '阶段名称', '类型(process或wait)', '默认耗时小时', '场景', '业务组件', '适用行业（逗号分隔，留空=全部；可选：3C,汽车,家电）'];
             const tplRows = [];
             Object.entries(currentState.templates).forEach(([key, t]) => {
+                const indCell = (!t.industries || !t.industries.length) ? '' : t.industries.join(',');
                 (t.stages || []).forEach((s, idx) => {
                     tplRows.push([
                         key,
@@ -2464,12 +2594,13 @@
                         s.type === 'wait' ? 'wait' : 'process',
                         s.defaultTime != null ? s.defaultTime : (parseInt(s.actualTime, 10) || 1),
                         s.scenarios || '',
-                        s.components || ''
+                        s.components || '',
+                        idx === 0 ? indCell : ''
                     ]);
                 });
             });
             const wsTpl = XLSX.utils.aoa_to_sheet([tplHead, ...tplRows]);
-            wsTpl['!cols'] = [{ wch: 26 }, { wch: 22 }, { wch: 8 }, { wch: 28 }, { wch: 18 }, { wch: 12 }, { wch: 36 }, { wch: 36 }];
+            wsTpl['!cols'] = [{ wch: 26 }, { wch: 22 }, { wch: 8 }, { wch: 28 }, { wch: 18 }, { wch: 12 }, { wch: 36 }, { wch: 36 }, { wch: 28 }];
             XLSX.utils.book_append_sheet(wb, wsTpl, '价值流模板');
 
             const readme = [
@@ -2482,8 +2613,10 @@
                 [''],
                 ['价值流模板'],
                 ['1. 同一「模板键」的多行组成一个模板；「模板显示名称」可与各行保持一致。'],
-                ['2. 模板键与现有内置键一致时会覆盖该条模板；新键将并入模板库（建议 custom_ 前缀）。'],
-                ['3. 类型仅支持 process 或 wait；文件中未出现的模板不会被删除（按模板键合并写入）。']
+                ['2. 「适用行业」列：填 3C / 汽车 / 家电，多个用英文逗号分隔；留空表示全部行业（与步骤 1 顶部行业、步骤 2 下拉筛选一致）。通常写在每个模板的第一行即可。'],
+                ['3. 模板键与现有内置键一致时会覆盖该条模板；新键将并入模板库（建议 custom_ 前缀）。'],
+                ['4. 类型仅支持 process 或 wait；文件中未出现的模板不会被删除（按模板键合并写入）。'],
+                ['5. 若导入表无「适用行业」列（旧版 Excel），系统会尽量保留该模板键在页面上已有的行业关联。']
             ];
             XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(readme), '使用说明');
             XLSX.writeFile(wb, `数字化资产配置_${stamp}.xlsx`);
@@ -2539,6 +2672,8 @@
         }
 
         function parseTemplatesFromConfigMatrix(matrix) {
+            const header = matrix[0] || [];
+            const industryColRecognized = header.length > 8 && (/适用|行业/.test(String(header[8] ?? '')) || String(header[8] ?? '').trim().length > 0);
             const groups = new Map();
             let currentKey = null;
             for (let i = 0; i < matrix.length; i++) {
@@ -2551,21 +2686,23 @@
                 const defaultTime = parseInt(row[5], 10);
                 const scenarios = String(row[6] ?? '');
                 const components = String(row[7] ?? '');
+                const industryCell = row.length > 8 ? row[8] : '';
                 if (i === 0 && (keyCell.includes('模板键') || keyCell.includes('模板'))) continue;
                 if (keyCell) {
                     currentKey = keyCell;
                     if (!groups.has(currentKey)) {
-                        groups.set(currentKey, { name: nameCell || currentKey, stages: [] });
+                        groups.set(currentKey, { name: nameCell || currentKey, stages: [], industrySet: new Set() });
                     } else if (nameCell) {
                         groups.get(currentKey).name = nameCell;
                     }
                 }
                 if (!currentKey || !stageName) continue;
                 if (!groups.has(currentKey)) {
-                    groups.set(currentKey, { name: nameCell || currentKey, stages: [] });
+                    groups.set(currentKey, { name: nameCell || currentKey, stages: [], industrySet: new Set() });
                 }
                 const g = groups.get(currentKey);
                 if (nameCell) g.name = nameCell;
+                parseIndustryTagsFromConfigCell(industryCell).forEach(x => g.industrySet.add(x));
                 const type = typeRaw === 'wait' ? 'wait' : 'process';
                 const dt = isNaN(defaultTime) ? 1 : Math.max(0, defaultTime);
                 g.stages.push({
@@ -2581,14 +2718,17 @@
             groups.forEach((v, k) => {
                 if (!v.stages.length) return;
                 v.stages.forEach((s, idx) => { s.id = idx + 1; });
+                const inds = [...v.industrySet];
                 out[k] = { name: v.name || k, stages: v.stages };
+                if (inds.length) out[k].industries = inds;
             });
-            return out;
+            return { parsed: out, mergePreserveIndustry: !industryColRecognized };
         }
 
         function ensureSelectedTemplateAfterConfigImport() {
             const ids = Object.keys(currentState.templates);
             if (!ids.length) return;
+            ensureSelectedTemplateForIndustry();
             if (!currentState.selectedTemplateId || !ids.includes(currentState.selectedTemplateId)) {
                 currentState.selectedTemplateId = ids[0];
             }
@@ -2626,11 +2766,18 @@
                     }
                     if (wsTpl) {
                         const matrix = XLSX.utils.sheet_to_json(wsTpl, { header: 1, defval: '', raw: false });
-                        const parsedTpl = parseTemplatesFromConfigMatrix(matrix);
+                        const { parsed: parsedTpl, mergePreserveIndustry } = parseTemplatesFromConfigMatrix(matrix);
                         const keys = Object.keys(parsedTpl);
                         if (keys.length) {
                             keys.forEach(k => {
-                                currentState.templates[k] = parsedTpl[k];
+                                let incoming = parsedTpl[k];
+                                if (mergePreserveIndustry) {
+                                    const prev = currentState.templates[k];
+                                    if (prev && Array.isArray(prev.industries) && prev.industries.length) {
+                                        incoming = { ...incoming, industries: [...prev.industries] };
+                                    }
+                                }
+                                currentState.templates[k] = incoming;
                             });
                             tplUpdated = keys.length;
                         }
@@ -2663,7 +2810,7 @@
             }
             const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
             const wb = XLSX.utils.book_new();
-            const head = ['价值流阶段', '业务能力L3', '描述', '领域L1', '类型L2', '当前成熟度(1-5)', '目标成熟度(1-5)', 'ICE', '组织差距', '流程差距', '数据差距', 'IT差距', '参考系统', '技术栈参考'];
+            const head = ['价值流阶段', '业务能力L3', '描述', '领域L1', '类型L2', '当前成熟度(1-5)', '目标成熟度(1-5)', 'ICE', '组织(0-5)', '流程(0-5)', '数据(0-5)', 'IT(0-5)', '参考系统', '技术栈参考'];
             const dataRows = (currentState.capabilityFramework || []).map(c => [
                 c.linkedVs || '',
                 c.l3 || '',
@@ -2673,10 +2820,10 @@
                 c.curMat,
                 c.tgtMat,
                 c.ice != null ? String(c.ice) : '',
-                c.gapOrg || '',
-                c.gapProc || '',
-                c.gapData || '',
-                c.gapIt || '',
+                normalizeGapDim(c.gapOrg, gapFromMat((CAPABILITY_DB[c.l3] || CAPABILITY_DB.default).mat.o)),
+                normalizeGapDim(c.gapProc, gapFromMat((CAPABILITY_DB[c.l3] || CAPABILITY_DB.default).mat.p)),
+                normalizeGapDim(c.gapData, gapFromMat((CAPABILITY_DB[c.l3] || CAPABILITY_DB.default).mat.d)),
+                normalizeGapDim(c.gapIt, gapFromMat((CAPABILITY_DB[c.l3] || CAPABILITY_DB.default).mat.i)),
                 c.sys || '',
                 c.tech || ''
             ]);
@@ -2687,7 +2834,7 @@
                 ['业务能力架构 · Excel 说明'],
                 [''],
                 ['1. 「业务能力L3」为必填；其余列可空，导入时对缺失的四维差距与 ICE 等将按内置组件库或默认值补齐。'],
-                ['2. 差距列须为：缺失 / 弱 / 中 / 强（与步骤 4 一致）；留空则自动推断。'],
+                ['2. 四维差距列为 0～5 整数（越高越成熟）；亦可填旧版「缺失/弱/中/强」自动换算；留空则按内置组件成熟度推断。'],
                 ['3. 导入时将按表格顺序整体替换当前清单（步骤 4、5、举措引用名称时请自行核对）。'],
                 ['4. 清单为空时导出仅含表头，可作空白模板。']
             ];
@@ -2706,12 +2853,6 @@
             const skip = new Set(['使用说明', 'README', '说明']);
             const other = names.find(n => !skip.has(n));
             return other ? wb.Sheets[other] : null;
-        }
-
-        function normalizeImportedGapLevel(val, fallback) {
-            const s = String(val ?? '').trim();
-            if (GAP_LEVELS.includes(s)) return s;
-            return fallback;
         }
 
         function parseCapabilityFrameworkFromMatrix(matrix) {
@@ -2735,10 +2876,10 @@
                 tgtMat = Math.max(1, Math.min(5, tgtMat));
                 const def = CAPABILITY_DB[l3] || CAPABILITY_DB.default;
                 const hasGapCols = row.length >= 12;
-                const gapOrg = normalizeImportedGapLevel(hasGapCols ? row[8] : '', gapFromMat(def.mat.o));
-                const gapProc = normalizeImportedGapLevel(hasGapCols ? row[9] : '', gapFromMat(def.mat.p));
-                const gapData = normalizeImportedGapLevel(hasGapCols ? row[10] : '', gapFromMat(def.mat.d));
-                const gapIt = normalizeImportedGapLevel(hasGapCols ? row[11] : '', gapFromMat(def.mat.i));
+                const gapOrg = normalizeGapDim(hasGapCols ? row[8] : '', gapFromMat(def.mat.o));
+                const gapProc = normalizeGapDim(hasGapCols ? row[9] : '', gapFromMat(def.mat.p));
+                const gapData = normalizeGapDim(hasGapCols ? row[10] : '', gapFromMat(def.mat.d));
+                const gapIt = normalizeGapDim(hasGapCols ? row[11] : '', gapFromMat(def.mat.i));
                 let iceStr = '';
                 const iceRaw = row[7];
                 if (iceRaw != null && String(iceRaw).trim() !== '') {
@@ -3067,19 +3208,40 @@
             return true;
         }
 
+        /** 由内嵌组件成熟度(1–5)推断四维默认差距分（与旧版 缺失/弱/中/强 刻度对齐） */
         function gapFromMat(m) {
-            if (m <= 2) return '缺失';
-            if (m === 3) return '弱';
-            if (m === 4) return '中';
-            return '强';
+            const x = parseInt(m, 10);
+            if (isNaN(x)) return 2;
+            if (x <= 2) return 0;
+            if (x === 3) return 2;
+            if (x === 4) return 3;
+            return 5;
         }
 
         function heatCategory(block) {
-            const gaps = [block.gapOrg, block.gapProc, block.gapData, block.gapIt];
-            const bad = gaps.filter(g => g === '缺失' || g === '弱').length;
-            if (bad >= 2 || gaps.includes('缺失')) return 'red';
-            if (bad === 1 || gaps.includes('弱')) return 'yellow';
+            const def = CAPABILITY_DB[block.l3] || CAPABILITY_DB.default;
+            const gaps = [
+                normalizeGapDim(block.gapOrg, gapFromMat(def.mat.o)),
+                normalizeGapDim(block.gapProc, gapFromMat(def.mat.p)),
+                normalizeGapDim(block.gapData, gapFromMat(def.mat.d)),
+                normalizeGapDim(block.gapIt, gapFromMat(def.mat.i))
+            ];
+            const le2 = gaps.filter(g => g <= 2).length;
+            if (gaps.some(g => g === 0) || le2 >= 2) return 'red';
+            if (le2 === 1) return 'yellow';
             return 'green';
+        }
+
+        /** 步骤 4 表格：四维算术平均分（展示用，与热力着色同一套归一规则） */
+        function gapFourDimAvgRow(c) {
+            const def = CAPABILITY_DB[c.l3] || CAPABILITY_DB.default;
+            const vals = [
+                normalizeGapDim(c.gapOrg, gapFromMat(def.mat.o)),
+                normalizeGapDim(c.gapProc, gapFromMat(def.mat.p)),
+                normalizeGapDim(c.gapData, gapFromMat(def.mat.d)),
+                normalizeGapDim(c.gapIt, gapFromMat(def.mat.i))
+            ];
+            return Math.round((vals.reduce((a, b) => a + b, 0) / 4) * 10) / 10;
         }
 
         /** 统计一组能力块的红/黄/绿数量 */
@@ -3142,9 +3304,15 @@
             const cat = heatCategory(c);
             const cls = cat === 'red' ? 'heat-red' : cat === 'yellow' ? 'heat-yellow' : 'heat-green';
             const badge = cat === 'red' ? '优先处理' : cat === 'yellow' ? '纳入计划' : '相对健康';
+            const def = CAPABILITY_DB[c.l3] || CAPABILITY_DB.default;
+            const go = normalizeGapDim(c.gapOrg, gapFromMat(def.mat.o));
+            const gp = normalizeGapDim(c.gapProc, gapFromMat(def.mat.p));
+            const gd = normalizeGapDim(c.gapData, gapFromMat(def.mat.d));
+            const gi = normalizeGapDim(c.gapIt, gapFromMat(def.mat.i));
+            const avg = gapFourDimAvgRow(c);
             return `<button type="button" onclick="setStep(4)" class="rounded-[14px] border-2 p-3 lg:p-3 text-left transition hover:shadow-card min-h-[7rem] lg:min-h-0 flex flex-col ${cls} focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                             <p class="text-[15px] lg:text-[16px] font-semibold text-ink leading-snug">${escapeHtmlText(c.l3)}</p>
-                            <p class="text-[11px] lg:text-[12px] text-ink-secondary mt-2 leading-relaxed flex-1">组织 ${escapeHtmlText(c.gapOrg)} · 流程 ${escapeHtmlText(c.gapProc)} · 数据 ${escapeHtmlText(c.gapData)} · IT ${escapeHtmlText(c.gapIt)}</p>
+                            <p class="text-[11px] lg:text-[12px] text-ink-secondary mt-2 leading-relaxed flex-1">组织 ${go} · 流程 ${gp} · 数据 ${gd} · IT ${gi} · 均分 ${avg}</p>
                             <p class="mt-2 lg:mt-3 inline-flex text-[11px] font-semibold px-2 py-1 rounded-full shrink-0 ${cat === 'red' ? 'bg-[#ff6961]/15 text-[#b91c1c]' : cat === 'yellow' ? 'bg-amber-100/80 text-amber-900' : 'bg-emerald-100/80 text-emerald-900'}">${badge}</p>
                         </button>`;
         }
@@ -3183,11 +3351,10 @@
             return { start: s, len: l };
         }
 
-        /** 甘特起始月/跨度变更后刷新当前页（步骤 6、7 与时间轴联动） */
+        /** 甘特起始月/跨度变更后刷新路标页（时间轴仅在步骤 7 配置） */
         function afterRoadmapTimelineChange() {
             syncItFeaturesFromInitiatives();
-            if (currentState.step === 6) renderStep6();
-            else if (currentState.step === 7) renderStep7();
+            if (currentState.step === 7) renderStep7();
         }
 
         function setRoadmapStartYm(ym) {
@@ -3325,8 +3492,8 @@
             return 'bg-emerald-100/85 text-emerald-900 ring-1 ring-emerald-800/12';
         }
 
-        /** 补齐举措上路标所需字段（优先级、技术方案、依赖、里程碑带、甘特子轨） */
-        function ensureInitiativeRoadmapFields(ini, sortedIdx, forceStreams = false) {
+        /** 补齐举措上路标所需字段（优先级、技术方案、依赖、里程碑带、甘特子轨）；skipStreams：仅维护元数据，不自动生成子路标（步骤 6 列表用） */
+        function ensureInitiativeRoadmapFields(ini, sortedIdx, forceStreams = false, skipStreams = false) {
             ensureRoadmapTimelineDefaults();
             const H = getRoadmapHorizon();
             const cap = currentState.capabilityFramework.find(c => ini.caps && ini.caps.includes(c.l3));
@@ -3344,6 +3511,15 @@
             if (!ini.milestoneBand) {
                 ini.milestoneBand = ini.phase === 'P0' ? '奠基窗口（T0–6 月）' : ini.phase === 'P1' ? '扩展窗口（6–14 月）' : '固化与优化（14–24 月）';
             }
+            if (skipStreams) {
+                if (ini.streams?.length) {
+                    ini.streams = ini.streams.map(st => {
+                        const seg = clampRoadmapSeg(st.start, st.len, H);
+                        return { label: st.label || '子路标', start: seg.start, len: seg.len };
+                    });
+                }
+                return;
+            }
             if (forceStreams || !ini.streams || !ini.streams.length) {
                 const base = Math.min(sortedIdx * 2, Math.max(0, H - 8));
                 ini.streams = [
@@ -3353,7 +3529,7 @@
                     clampRoadmapSeg(base + 7, 3, H)
                 ].map((seg, i) => ({
                     ...seg,
-                    label: ['前置：依赖与数据就绪', '方案设计与评审定型', '开发交付与联调上线', '推广运营与机制固化'][i]
+                    label: ['规划与Charter立项', '方案设计及评审', '开发交付与测试', '试点推行与验收'][i]
                 }));
             } else {
                 ini.streams = ini.streams.map(st => {
@@ -3378,6 +3554,28 @@
         function updateInitiativeField(id, field, value) {
             const ini = currentState.initiatives.find(x => x.id === id);
             if (ini) ini[field] = value;
+        }
+
+        function updateInitiativePhase(id, phase) {
+            const p = ['P0', 'P1', 'P2'].includes(phase) ? phase : 'P2';
+            const ini = currentState.initiatives.find(x => x.id === id);
+            if (!ini || ini.phase === p) return;
+            ini.phase = p;
+            syncItFeaturesFromInitiatives();
+            renderStep6();
+            if (currentState.step === 7) renderStep7();
+        }
+
+        function removeInitiative(id) {
+            if (!window.confirm('确定删除该变革举措？「变革路标计划」中对应行将同步移除。')) return;
+            currentState.initiatives = currentState.initiatives.filter(x => x.id !== id);
+            try {
+                delete currentState.roadmapExpandedIniIds[String(id)];
+            } catch (e) { /* ignore */ }
+            syncItFeaturesFromInitiatives();
+            renderStep6();
+            if (currentState.step === 7) renderStep7();
+            toast('已删除该举措');
         }
 
         function buildRoadmapMonthLabels() {
@@ -3414,7 +3612,7 @@
             return last ? `${last.y}年${last.m}月` : '—';
         }
 
-        /** 步骤 6 / 甘特卡片内共用：起始月 + 跨度（uid 区分 DOM id） */
+        /** 路标页（或内嵌甘特）共用：起始月 + 跨度（uid 区分 DOM id） */
         function buildRoadmapTimelineToolbarHtml(uid) {
             ensureRoadmapTimelineDefaults();
             const H = getRoadmapHorizon();
@@ -3443,7 +3641,8 @@
                 </div>`;
         }
 
-        function buildRoadmapGanttHtml() {
+        function buildRoadmapGanttHtml(opts) {
+            const showTimelineToolbar = !opts || opts.timelineToolbar !== false;
             ensureRoadmapTimelineDefaults();
             const H = getRoadmapHorizon();
             const months = buildRoadmapMonthLabels();
@@ -3532,8 +3731,7 @@
                     <div class="text-[10px] text-ink-secondary">${mo.m}月</div>
                 </div>`;
             }).join('');
-            return `
-            <div class="flex flex-col flex-1 min-h-0 rounded-[14px] border border-black/[0.08] bg-white shadow-nav overflow-hidden roadmap-gantt-scroll" style="--rg-months:${H}">
+            const toolbarBlock = showTimelineToolbar ? `
                 <div class="shrink-0 border-b border-black/[0.06] bg-canvas/50 px-3 py-2.5">
                     <div class="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
                         ${buildRoadmapTimelineToolbarHtml('card')}
@@ -3542,7 +3740,10 @@
                         </button>
                     </div>
                     <p class="text-[11px] text-ink-secondary mt-2 leading-snug">① 先设上面「起始月、长度」② 点 <span class="font-medium text-ink">▸</span> 展开改子任务 ③ 或在每行「汇总」改整体起止（子条按比例伸缩）</p>
-                </div>
+                </div>` : '';
+            return `
+            <div class="flex flex-col flex-1 min-h-0 rounded-[14px] border border-black/[0.08] bg-white shadow-nav overflow-hidden roadmap-gantt-scroll" style="--rg-months:${H}">
+                ${toolbarBlock}
                 <div class="flex-1 min-h-0 overflow-auto roadmap-gantt-scroll">
                     <div class="min-w-[720px] lg:min-w-[920px]">
                         <div class="flex sticky top-0 z-20 border-b border-black/[0.08] bg-white shadow-[0_1px_0_rgba(0,0,0,0.04)]">
@@ -3583,11 +3784,16 @@
             currentState.capabilityFramework.forEach((c, i) => {
                 const cat = heatCategory(c);
                 if (cat === 'green') return;
+                const def = CAPABILITY_DB[c.l3] || CAPABILITY_DB.default;
+                const gO = normalizeGapDim(c.gapOrg, gapFromMat(def.mat.o));
+                const gP = normalizeGapDim(c.gapProc, gapFromMat(def.mat.p));
+                const gD = normalizeGapDim(c.gapData, gapFromMat(def.mat.d));
+                const gI = normalizeGapDim(c.gapIt, gapFromMat(def.mat.i));
                 const gaps = [];
-                if (c.gapOrg !== '强') gaps.push('组织');
-                if (c.gapProc !== '强') gaps.push('流程');
-                if (c.gapData !== '强') gaps.push('数据');
-                if (c.gapIt !== '强') gaps.push('IT');
+                if (gO < 5) gaps.push('组织');
+                if (gP < 5) gaps.push('流程');
+                if (gD < 5) gaps.push('数据');
+                if (gI < 5) gaps.push('IT');
                 currentState.initiatives.push({
                     id: i + 1,
                     title: cat === 'red' ? `攻坚：${c.l3} 能力补齐` : `优化：${c.l3} 能力提升`,
@@ -3595,7 +3801,7 @@
                     gaps,
                     window: cat === 'red' ? '近期（0–6 月）' : '中期（6–18 月）',
                     benefit: '缩短端到端周期，降低手工与返工',
-                    cost: cat === 'red' ? '高' : '中'
+                    cost: cat === 'red' ? '难' : '中'
                 });
             });
             if (!currentState.initiatives.length) {
@@ -3607,7 +3813,7 @@
                     gaps: ['数据', 'IT'],
                     window: '长期',
                     benefit: '巩固数字化成效',
-                    cost: '低'
+                    cost: '易'
                 });
             }
             currentState.initiatives.sort((a, b) => {
@@ -3625,7 +3831,7 @@
             syncItFeaturesFromInitiatives();
             if (!silent) {
                 renderStep6();
-                toast('已生成变革举措草案（含优先级与技术/依赖及路标轨）');
+                toast('已生成变革举措草案（含优先级与依赖；甘特与时间轴请在「变革路标计划」配置）');
             }
             return true;
         }
@@ -3638,7 +3844,9 @@
         function updateGap(id, dim, val) {
             const c = currentState.capabilityFramework.find(x => x.id === id);
             if (c) {
-                c[dim] = val;
+                const def = CAPABILITY_DB[c.l3] || CAPABILITY_DB.default;
+                const fb = { gapOrg: gapFromMat(def.mat.o), gapProc: gapFromMat(def.mat.p), gapData: gapFromMat(def.mat.d), gapIt: gapFromMat(def.mat.i) };
+                c[dim] = normalizeGapDim(val, fb[dim] ?? 3);
                 renderStep5();
                 renderStep4();
             }
@@ -3792,21 +4000,28 @@
                 scenarios: s.scenarios || '',
                 components: s.components || ''
             }));
+            const inds = collectTemplateIndustriesFromForm();
             const editKey = currentState.editingTemplateKey;
             if (editKey && currentState.templates[editKey]) {
-                currentState.templates[editKey] = { name, stages };
+                const payload = { name, stages };
+                if (inds.length) payload.industries = inds;
+                currentState.templates[editKey] = payload;
                 currentState.editingTemplateKey = null;
                 currentState.newTplSteps = [];
                 renderStep8();
                 renderStep2();
-                toast('模板已更新（含行业预置模板）');
+                ensureSelectedTemplateForIndustry();
+                toast('模板已更新（含适用行业设置）');
                 return;
             }
             const key = 'custom_' + Date.now();
-            currentState.templates[key] = { name, stages };
+            const payloadNew = { name, stages };
+            if (inds.length) payloadNew.industries = inds;
+            currentState.templates[key] = payloadNew;
             currentState.newTplSteps = [];
             renderStep8();
             renderStep2();
+            ensureSelectedTemplateForIndustry();
             toast(`模板已保存，可在「${stepLabel(2)}」选用该模板`);
         }
 
@@ -3816,12 +4031,12 @@
                 const cls = active
                     ? 'bg-accent-muted text-accent shadow-nav ring-1 ring-[rgba(0,113,227,0.18)]'
                     : 'text-ink-secondary hover:bg-canvas hover:text-ink';
-                return `<button type="button" onclick="setStep(${s.id})" class="w-full flex items-start gap-2 rounded-[10px] px-2.5 py-1.5 lg:py-1.5 text-left transition-all ${cls}">
-                    <span class="flex h-7 min-w-[1.75rem] lg:h-7 flex-col items-center justify-center rounded-md leading-none ${active ? 'bg-accent text-white' : 'bg-canvas text-ink-tertiary'}">
-                        <span class="text-[11px] font-bold">${s.id}</span>
-                        <span class="text-[8px] font-semibold opacity-80 mt-px">/${STEP_TOTAL}</span>
+                return `<button type="button" onclick="setStep(${s.id})" class="w-full flex items-start gap-2.5 rounded-[10px] px-2.5 py-2 text-left transition-all ${cls}">
+                    <span class="flex h-8 min-w-[2rem] shrink-0 flex-col items-center justify-center rounded-md leading-none ${active ? 'bg-accent text-white' : 'bg-canvas text-ink-tertiary'}">
+                        <span class="text-[12px] font-bold">${s.id}</span>
+                        <span class="text-[9px] font-semibold opacity-80 mt-px">/${STEP_TOTAL}</span>
                     </span>
-                    <span class="nav-step-title text-[11px] lg:text-[11px] font-medium leading-snug pt-0.5">${s.title}</span>
+                    <span class="nav-step-title text-[12px] font-semibold leading-snug pt-0.5">${s.title}</span>
                 </button>`;
             }).join('');
             const cfgBtn = document.getElementById('nav-config-btn');
@@ -3919,6 +4134,9 @@
                     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 flex-1 min-w-0">
                         ${stepPageHeading(1, 'flex-1')}
                         <div class="flex flex-wrap items-center gap-2 shrink-0">
+                            <select id="bmc-industry-select" aria-label="行业（筛选步骤 2 价值流模板）" class="inline-flex shrink-0 items-center rounded-[10px] border border-black/[0.12] bg-white px-3 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas hover:text-ink transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 min-w-[6.75rem]" onchange="setWorkflowIndustry(this.value)" title="行业：决定步骤 2「领域价值流模板」可见范围（与资产配置模板适用行业一致）">
+                                    ${WORKFLOW_INDUSTRIES.map(ind => `<option value="${ind}" ${currentState.workflowIndustry === ind ? 'selected' : ''}>${ind}</option>`).join('')}
+                                </select>
                             <button type="button" onclick="exportBmcExcel()" class="inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-black/[0.12] bg-white px-3 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas hover:text-ink transition-colors" title="下载含说明与当前内容的模板，Excel 改完后可导入">
                                 <i class="fas fa-file-export text-[11px]" aria-hidden="true"></i>
                                 导出 Excel
@@ -3946,14 +4164,18 @@
         function renderStep2() {
             calcVSMetrics();
             syncVsSelectedStage();
-            const options = Object.entries(currentState.templates).map(([k, t]) =>
-                `<option value="${k}" ${k === currentState.selectedTemplateId ? 'selected' : ''}>${t.name}</option>`).join('');
+            ensureSelectedTemplateForIndustry();
+            const tplIds = getTemplateIdsForWorkflowIndustry(currentState.workflowIndustry);
+            const options = (tplIds.length ? tplIds : Object.keys(currentState.templates)).map(k => {
+                const t = currentState.templates[k];
+                return `<option value="${k}" ${k === currentState.selectedTemplateId ? 'selected' : ''}>${escapeHtmlText(t.name)}</option>`;
+            }).join('');
             let matrix = '';
             let flow = '';
             if (!currentState.vsStages.length) {
                 flow = `<div class="flex flex-1 min-h-0 flex-col justify-center rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-10 text-center gap-3">
                     <p class="text-[15px] font-semibold text-ink">尚未配置价值流阶段</p>
-                    <p class="text-[14px] text-ink-secondary mt-1 max-w-xl mx-auto leading-relaxed"><strong class="text-ink font-medium">①</strong> 选好上方「行业模板」→ <strong class="text-ink font-medium">②</strong> 点「套用模板」→ <strong class="text-ink font-medium">③</strong> 在流程简图中<strong class="text-ink">点击卡片</strong>选中阶段，再在下方填写该阶段的维度与指标。也可「空白开始」自建。</p>
+                    <p class="text-[14px] text-ink-secondary mt-1 max-w-xl mx-auto leading-relaxed"><strong class="text-ink font-medium">①</strong> 在步骤 1 已选行业；请选好上方「领域价值流模板」→ <strong class="text-ink font-medium">②</strong> 点「套用模板」→ <strong class="text-ink font-medium">③</strong> 在流程简图中<strong class="text-ink">点击卡片</strong>选中阶段，再在下方填写该阶段的维度与指标。也可「空白开始」自建。</p>
                     <div class="flex flex-wrap justify-center gap-2 mt-2 print-hidden">
                         <button type="button" onclick="runVSGen()" class="inline-flex items-center gap-2 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors">
                             <i class="fas fa-layer-group text-[11px]" aria-hidden="true"></i>
@@ -4126,7 +4348,7 @@
                             <input class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" value="${escapeHtmlText(currentState.valueStreamName)}" onchange="currentState.valueStreamName=this.value">
                         </div>
                         <div class="flex flex-col gap-1 flex-1 min-w-[200px]">
-                            <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">行业模板</label>
+                            <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">领域价值流模板（${escapeHtmlText(currentState.workflowIndustry)}）</label>
                             <select class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" onchange="currentState.selectedTemplateId=this.value">${options}</select>
                         </div>
                         <button type="button" onclick="runVSGen()" class="inline-flex items-center justify-center gap-2 rounded-[10px] bg-accent px-4 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors lg:shrink-0" title="生成下方流程与各阶段，可随时再改">
@@ -4215,9 +4437,20 @@
         }
 
         function gapSelect(id, field, current) {
-            return `<select class="rounded-[10px] border border-black/[0.10] bg-white py-2 px-2 text-[13px] text-ink min-w-[4rem] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" onchange="updateGap(${id},'${field}',this.value)">
-                ${GAP_LEVELS.map(g => `<option value="${g}" ${g === current ? 'selected' : ''}>${g}</option>`).join('')}
-            </select>`;
+            const row = currentState.capabilityFramework.find(x => x.id === id);
+            const def = CAPABILITY_DB[row?.l3] || CAPABILITY_DB.default;
+            const fb = {
+                gapOrg: gapFromMat(def.mat.o),
+                gapProc: gapFromMat(def.mat.p),
+                gapData: gapFromMat(def.mat.d),
+                gapIt: gapFromMat(def.mat.i)
+            };
+            const cur = normalizeGapDim(current, fb[field] ?? 3);
+            let opts = '';
+            for (let g = GAP_SCORE_MIN; g <= GAP_SCORE_MAX; g++) {
+                opts += `<option value="${g}" ${g === cur ? 'selected' : ''}>${g}</option>`;
+            }
+            return `<select class="rounded-[10px] border border-black/[0.10] bg-white py-2 px-2 text-[13px] text-ink min-w-[3.25rem] tabular-nums focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" onchange="updateGap(${id},'${field}',this.value)">${opts}</select>`;
         }
 
         function renderStep4() {
@@ -4234,6 +4467,7 @@
                         <th class="p-3 text-left font-semibold">能力块</th>
                         <th class="p-3 text-center font-semibold">组织</th><th class="p-3 text-center font-semibold">流程</th>
                         <th class="p-3 text-center font-semibold">数据</th><th class="p-3 text-center font-semibold">IT</th>
+                        <th class="p-3 text-center font-semibold tabular-nums">均分</th>
                         <th class="p-3 text-center font-semibold">系统</th>
                     </tr></thead><tbody>
                     ${currentState.capabilityFramework.map(c => `
@@ -4243,6 +4477,7 @@
                             <td class="p-3 text-center">${gapSelect(c.id, 'gapProc', c.gapProc)}</td>
                             <td class="p-3 text-center">${gapSelect(c.id, 'gapData', c.gapData)}</td>
                             <td class="p-3 text-center">${gapSelect(c.id, 'gapIt', c.gapIt)}</td>
+                            <td class="p-3 text-center font-semibold tabular-nums text-accent">${gapFourDimAvgRow(c)}</td>
                             <td class="p-3 text-center text-[12px] text-ink-secondary">${c.sys}</td>
                         </tr>`).join('')}
                     </tbody></table></div></div>`;
@@ -4318,7 +4553,7 @@
                         ${l2Parts}
                     </section>`;
                 }).join('');
-                body = `<div class="flex flex-col flex-1 min-h-0 gap-2">
+                body = `<div class="flex flex-col gap-2 min-w-0">
                     <section class="rounded-[14px] border border-black/[0.08] bg-white p-3 shadow-nav shrink-0">
                         <h3 class="text-[13px] font-semibold text-ink mb-2">热力分布汇总</h3>
                         <p class="text-[11px] text-ink-secondary mb-2 leading-snug">按业务能力架构 <strong class="text-ink font-medium">L1 / L2</strong> 统计各热力等级的能力块数量；「% 健康」为相对健康（绿）占该分组总数的比例。</p>
@@ -4367,7 +4602,7 @@
                         <h3 class="text-[13px] font-semibold text-ink">分层热力视图</h3>
                         <span class="text-[11px] text-ink-tertiary">按 L1 → L2 归类，卡片为能力块（L3）</span>
                     </div>
-                    <div class="flex-1 min-h-0 overflow-y-auto pr-1 space-y-0">${layeredSections}</div>
+                    <div class="w-full min-w-0 pr-1 space-y-0 pb-1">${layeredSections}</div>
                     <p class="shrink-0 text-[12px] lg:text-[13px] text-ink-secondary">点击卡片可跳到差距分析步骤修改评分。</p>
                 </div>`;
             }
@@ -4379,7 +4614,7 @@
                     ${workspaceSidebarToggleHtml()}
                     <div class="flex-1 min-w-0">${stepPageHeading(5, '')}</div>
                 </div>
-                <div class="flex flex-col flex-1 min-h-0 min-w-0">${body}</div>
+                <div class="flex flex-col flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain">${body}</div>
                 </div>`;
             applySidebarCollapsed();
         }
@@ -4393,33 +4628,44 @@
                 </div>`;
             } else {
                 const sortedIni = sortInitiativesByPhase(currentState.initiatives);
-                sortedIni.forEach((ini, idx) => ensureInitiativeRoadmapFields(ini, idx));
+                sortedIni.forEach((ini, idx) => ensureInitiativeRoadmapFields(ini, idx, false, true));
                 syncItFeaturesFromInitiatives();
                 body = `<div class="flex flex-col flex-1 min-h-0 gap-2 overflow-y-auto pr-1">` + sortedIni.map(ini => {
-                    const phCls = initiativePhaseChipClass(ini.phase || 'P2');
+                    const ph = ini.phase || 'P2';
+                    const phaseSel = `<select aria-label="优先级 P0/P1/P2" class="rounded-[10px] border border-black/[0.10] bg-canvas/50 px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-ink shrink-0 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 tabular-nums" onchange="updateInitiativePhase(${ini.id},this.value)">
+                            <option value="P0" ${ph === 'P0' ? 'selected' : ''}>P0</option>
+                            <option value="P1" ${ph === 'P1' ? 'selected' : ''}>P1</option>
+                            <option value="P2" ${ph === 'P2' ? 'selected' : ''}>P2</option>
+                        </select>`;
                     return `
                     <div class="rounded-[14px] border border-black/[0.06] bg-white p-4 shadow-nav shrink-0 ring-1 ring-black/[0.03]">
                         <div class="flex flex-wrap items-start gap-2 justify-between">
-                            <div class="flex flex-wrap items-center gap-2 min-w-0">
-                                <span class="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide shrink-0 ${phCls}">${ini.phase || 'P2'}</span>
-                                <h3 class="text-[15px] lg:text-[16px] font-semibold text-ink leading-snug">${escapeHtmlText(ini.title)}</h3>
+                            <div class="flex flex-wrap items-center gap-2 min-w-0 flex-1">
+                                ${phaseSel}
+                                <h3 class="text-[15px] lg:text-[16px] font-semibold text-ink leading-snug min-w-0">${escapeHtmlText(ini.title)}</h3>
                             </div>
-                            <span class="text-[11px] font-semibold uppercase tracking-wider text-ink-secondary bg-canvas px-2.5 py-0.5 rounded-full shrink-0">${escapeHtmlText(ini.window)}</span>
+                            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                <button type="button" onclick="removeInitiative(${ini.id})" class="print-hidden inline-flex h-8 w-8 items-center justify-center rounded-[10px] border border-black/[0.08] bg-canvas text-ink-tertiary hover:text-[#c41e1e] hover:border-[#fecaca] transition-colors" title="删除该举措"><i class="fas fa-trash text-[12px]" aria-hidden="true"></i></button>
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-ink-secondary bg-canvas px-2.5 py-0.5 rounded-full">${escapeHtmlText(ini.window)}</span>
+                            </div>
                         </div>
-                        <p class="text-[11px] text-accent mt-1.5 font-medium">${escapeHtmlText(ini.milestoneBand || '')}</p>
                         <div class="mt-2 grid gap-1.5 text-[13px] text-ink-secondary leading-relaxed">
                             <p><span class="text-ink font-medium">能力块：</span>${escapeHtmlText((ini.caps || []).join('、'))}</p>
                             <p><span class="text-ink font-medium">重点补齐：</span>${escapeHtmlText((ini.gaps || []).join('、'))}</p>
                         </div>
                         <div class="mt-3 grid gap-2 border-t border-black/[0.06] pt-3">
-                            <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wide">技术方案与交付形态</label>
-                            <textarea class="w-full min-h-[52px] rounded-[10px] border border-black/[0.10] bg-canvas/50 px-3 py-2 text-[13px] text-ink leading-relaxed focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" rows="2" onchange="updateInitiativeField(${ini.id},'tech',this.value);syncItFeaturesFromInitiatives();">${escapeHtmlText(ini.tech)}</textarea>
                             <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wide">关键依赖与前置条件</label>
                             <textarea class="w-full min-h-[52px] rounded-[10px] border border-black/[0.10] bg-canvas/50 px-3 py-2 text-[13px] text-ink leading-relaxed focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" rows="2" onchange="updateInitiativeField(${ini.id},'deps',this.value);syncItFeaturesFromInitiatives();">${escapeHtmlText(ini.deps)}</textarea>
                         </div>
-                        <div class="mt-3 grid sm:grid-cols-2 gap-3 text-[13px] border-t border-black/[0.06] pt-3">
-                            <p><span class="text-ink-tertiary text-[12px]">预期收益</span><br><span class="text-ink">${escapeHtmlText(ini.benefit)}</span></p>
-                            <p><span class="text-ink-tertiary text-[12px]">成本量级</span><br><span class="text-ink">${escapeHtmlText(ini.cost)}</span></p>
+                        <div class="mt-3 grid sm:grid-cols-2 gap-3 border-t border-black/[0.06] pt-3">
+                            <div class="grid gap-1.5">
+                                <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wide">预期收益</label>
+                                <textarea class="w-full min-h-[52px] rounded-[10px] border border-black/[0.10] bg-canvas/50 px-3 py-2 text-[13px] text-ink leading-relaxed focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" rows="2" onchange="updateInitiativeField(${ini.id},'benefit',this.value);syncItFeaturesFromInitiatives();">${escapeHtmlText(ini.benefit)}</textarea>
+                            </div>
+                            <div class="grid gap-1.5">
+                                <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wide">难易程度</label>
+                                <textarea class="w-full min-h-[52px] rounded-[10px] border border-black/[0.10] bg-canvas/50 px-3 py-2 text-[13px] text-ink leading-relaxed focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" rows="2" placeholder="如：难 / 中 / 易，或自定义说明" onchange="updateInitiativeField(${ini.id},'cost',this.value);syncItFeaturesFromInitiatives();">${escapeHtmlText(ini.cost)}</textarea>
+                            </div>
                         </div>
                     </div>`;
                 }).join('') + `</div>`;
@@ -4432,7 +4678,6 @@
                     ${workspaceSidebarToggleHtml()}
                     <div class="flex-1 min-w-0">${stepPageHeading(6, '')}</div>
                 </div>
-                ${currentState.initiatives.length ? `<div class="shrink-0 rounded-[12px] border border-black/[0.06] bg-white px-3 py-2.5 shadow-nav print-hidden">${buildRoadmapTimelineToolbarHtml('s6')}</div>` : ''}
                 <div class="flex flex-col flex-1 min-h-0 min-w-0">${body}</div>
                 </div>`;
             applySidebarCollapsed();
@@ -4448,7 +4693,19 @@
             } else {
                 sortInitiativesByPhase(currentState.initiatives).forEach((ini, idx) => ensureInitiativeRoadmapFields(ini, idx));
                 syncItFeaturesFromInitiatives();
-                body = buildRoadmapGanttHtml();
+                body = `
+                <div class="flex flex-col flex-1 min-h-0 gap-2 min-w-0">
+                    <div class="shrink-0 rounded-[14px] border border-black/[0.08] bg-white px-3 py-2.5 shadow-nav print-hidden">
+                        <div class="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+                            ${buildRoadmapTimelineToolbarHtml('s7')}
+                            <button type="button" onclick="refreshRoadmapStreams()" class="print-hidden self-start rounded-[10px] px-2.5 py-1.5 text-[12px] font-semibold text-accent hover:bg-accent/10 transition-colors" title="按 P0→P1→P2 重新分配各条时间片">
+                                按优先级重排条块
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-ink-secondary mt-2 leading-snug">① 在此统一设置「起始月、规划跨度」② 点举措左侧 <span class="font-medium text-ink">▸</span> 展开编辑子路标 ③ 或在每行「汇总」调整整体跨度（子条按比例伸缩）</p>
+                    </div>
+                    <div class="flex flex-col flex-1 min-h-0 min-w-0">${buildRoadmapGanttHtml({ timelineToolbar: false })}</div>
+                </div>`;
             }
 
             document.getElementById('step-7').innerHTML = `
@@ -4483,9 +4740,17 @@
             const tplsHtml = Object.entries(currentState.templates).map(([key, t]) => {
                 const isBuiltIn = !key.startsWith('custom');
                 const editingHere = currentState.editingTemplateKey === key;
+                const indLbl = templateIndustryBadgeLabel(t);
                 return `
-                <button type="button" onclick="beginEditTemplate('${key.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')" class="w-full text-left flex justify-between items-center gap-3 p-3 lg:p-4 rounded-[14px] border ${editingHere ? 'border-accent ring-2 ring-accent/25 bg-accent-muted/35' : 'border-black/[0.06] bg-white'} text-[13px] lg:text-[14px] shadow-nav hover:bg-canvas/80 transition-colors">
-                    <div class="min-w-0"><span class="font-semibold text-ink">${escapeHtmlText(t.name)}</span><span class="text-ink-tertiary ml-2">${t.stages.length} 个阶段</span>${editingHere ? '<span class="ml-2 text-[11px] font-semibold text-accent">编辑中</span>' : ''}</div>
+                <button type="button" onclick="beginEditTemplate('${key.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')" class="w-full text-left flex justify-between items-start gap-3 p-3 lg:p-4 rounded-[14px] border ${editingHere ? 'border-accent ring-2 ring-accent/25 bg-accent-muted/35' : 'border-black/[0.06] bg-white'} text-[13px] lg:text-[14px] shadow-nav hover:bg-canvas/80 transition-colors">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                            <span class="font-semibold text-ink">${escapeHtmlText(t.name)}</span>
+                            <span class="text-[11px] text-ink-tertiary">${t.stages.length} 个阶段</span>
+                            ${editingHere ? '<span class="text-[11px] font-semibold text-accent">编辑中</span>' : ''}
+                        </div>
+                        <p class="text-[11px] text-ink-secondary mt-1 leading-snug">适用行业：<span class="font-medium text-ink">${escapeHtmlText(indLbl)}</span></p>
+                    </div>
                     <span class="shrink-0 text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${isBuiltIn ? 'bg-canvas text-ink-secondary' : 'bg-accent-muted text-accent'}">${isBuiltIn ? '内置' : '自定义'}</span>
                 </button>`;
             }).join('');
@@ -4522,7 +4787,7 @@
                 <section id="config-panel-rules" role="tabpanel" aria-labelledby="tab-rules" class="${isRules ? '' : 'hidden'} flex flex-col flex-1 min-h-0">
                     <div class="rounded-[14px] border border-black/[0.06] bg-canvas/60 p-3 sm:p-4 mb-2 flex flex-col flex-1 min-h-0">
                         <h3 class="text-[15px] lg:text-[16px] font-semibold text-ink mb-0.5">画布诊断规则</h3>
-                        <p class="text-[12px] lg:text-[13px] text-ink-secondary mb-2 lg:mb-3 leading-snug line-clamp-2" title="配置自动检查条件，帮助团队在填写画布时发现明显不一致。">配置自动检查条件，帮助团队在填写画布时发现明显不一致。</p>
+                        <p class="text-[12px] lg:text-[13px] text-ink-secondary mb-2 lg:mb-3 leading-snug">配置自动检查条件，帮助团队在填写画布时发现明显不一致。<span class="text-ink-tertiary">（规则不按行业区分；若需按行业筛选价值流模板，请到「价值流模板库」Tab。）</span></p>
                         <div class="rounded-[12px] border border-black/[0.06] bg-white p-3 sm:p-4 mb-3 shadow-nav shrink-0">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                 <select id="rule-field" class="rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">${Object.entries(FIELD_MAP).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
@@ -4537,13 +4802,17 @@
                 <section id="config-panel-templates" role="tabpanel" aria-labelledby="tab-templates" class="${isTpl ? '' : 'hidden'} flex flex-col flex-1 min-h-0">
                     <div class="rounded-[14px] border border-black/[0.06] bg-canvas/60 p-3 sm:p-4 mb-2 flex flex-col flex-1 min-h-0">
                         <h3 class="text-[15px] lg:text-[16px] font-semibold text-ink mb-0.5">价值流模板库</h3>
-                        <p class="text-[12px] lg:text-[13px] text-ink-secondary mb-2 lg:mb-3 leading-snug">保存常用流程，便于在不同项目中快速复用。点击下方<strong class="text-ink font-medium">内置/自定义模板卡片</strong>即可载入并修改阶段；套用后在「价值流设计」中点击阶段卡片，补充<strong class="text-ink font-medium">五维综合分、KPI 现状/目标与价值描述</strong>等以完善健康度与组件信息。</p>
+                        <p class="text-[12px] lg:text-[13px] text-ink-secondary mb-2 lg:mb-3 leading-snug">保存常用流程，便于在不同项目中快速复用。每条模板可配置<strong class="text-ink font-medium">适用行业</strong>，与步骤 1 顶部行业下拉一致（${WORKFLOW_INDUSTRIES.join('、')}）；步骤 2「领域价值流模板」下拉仅展示当前行业可用的条目（不勾选行业 = 全部行业可见）。点击下方<strong class="text-ink font-medium">模板卡片</strong>载入编辑阶段与行业；套用后在「价值流程诊断」中点击阶段卡片，补充<strong class="text-ink font-medium">五维综合分、KPI 现状/目标与价值描述</strong>。</p>
+                        <div class="rounded-[12px] border border-accent/25 bg-accent-muted/25 px-3 py-2 mb-3 text-[12px] text-ink-secondary leading-snug shrink-0">
+                            <strong class="text-ink">Excel：</strong>导出模板表含「适用行业」列；导入时若文件无该列（旧版），将保留页面上该模板键已有的行业关联，避免误清空。
+                        </div>
                         <div class="rounded-[12px] border border-black/[0.06] bg-white p-3 sm:p-4 mb-2 shadow-nav shrink-0">
                             ${currentState.editingTemplateKey ? `<div class="flex flex-wrap items-center justify-between gap-2 mb-3 rounded-[10px] bg-accent-muted/50 border border-accent/20 px-3 py-2 text-[12px] text-ink">
                                 <span>正在编辑模板 <span class="font-semibold text-accent">${escapeHtmlText(currentState.templates[currentState.editingTemplateKey]?.name || '')}</span>（保存后覆盖当前条目）</span>
                                 <button type="button" onclick="cancelTemplateEdit()" class="shrink-0 rounded-[8px] border border-black/[0.10] bg-white px-2.5 py-1 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">取消编辑</button>
                             </div>` : ''}
-                            <input id="tpl-name" placeholder="模板名称" value="${currentState.editingTemplateKey && currentState.templates[currentState.editingTemplateKey] ? escapeHtmlText(currentState.templates[currentState.editingTemplateKey].name) : ''}" class="w-full rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] mb-4 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
+                            <input id="tpl-name" placeholder="模板名称（建议「领域：价值流」样式，如 GTM：IPMS）" value="${currentState.editingTemplateKey && currentState.templates[currentState.editingTemplateKey] ? escapeHtmlText(currentState.templates[currentState.editingTemplateKey].name) : ''}" class="w-full rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] mb-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
+                            ${renderTemplateIndustryCheckboxesHtml()}
                             <div class="rounded-[12px] border border-black/[0.06] bg-canvas p-4 mb-3 space-y-3">
                                 <div class="flex flex-wrap gap-3">
                                     <input id="tmp-step-name" placeholder="阶段名称" class="flex-1 min-w-[160px] rounded-[10px] border border-black/[0.10] bg-white px-3 py-2.5 text-[14px]">
