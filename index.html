@@ -326,6 +326,12 @@
             #sidebar.sidebar-collapsed #sidebar-history-panel {
                 padding: 0.5rem;
             }
+            #sidebar.sidebar-collapsed #sidebar-assets-btn {
+                justify-content: center;
+                padding-left: 0.35rem;
+                padding-right: 0.35rem;
+                gap: 0;
+            }
         }
         /* 小屏：折叠工作流整块；顶栏 sticky 时工具条留在可视区顶部稍下，避免被遮挡 */
         @media (max-width: 1023px) {
@@ -2511,10 +2517,10 @@
                 <div class="sidebar-expand-only mb-1.5">
                     <h4 class="text-[13px] font-semibold text-ink tracking-tight">资产</h4>
                 </div>
-                <button type="button" onclick="openAssetsLibraryWindow()" class="w-full inline-flex items-center justify-center gap-2 rounded-[10px] bg-ink text-white text-[12px] font-semibold py-2 px-3 hover:bg-black transition-colors">
-                    <i class="fas fa-layer-group text-[11px]" aria-hidden="true"></i>
-                    打开资产库
-                    <span class="opacity-85 font-normal tabular-nums text-[11px]">(${n})</span>
+                <button type="button" id="sidebar-assets-btn" onclick="openAssetsLibraryWindow()" title="${escapeHistHtml(`打开资产库（${n}）`)}" class="w-full inline-flex items-center justify-center gap-2 rounded-[10px] bg-ink text-white text-[12px] font-semibold py-2 px-3 hover:bg-black transition-colors">
+                    <i class="fas fa-layer-group text-[11px] shrink-0" aria-hidden="true"></i>
+                    <span class="sidebar-expand-only">打开资产库</span>
+                    <span class="sidebar-expand-only opacity-85 font-normal tabular-nums text-[11px]">(${n})</span>
                 </button>`;
         }
 
