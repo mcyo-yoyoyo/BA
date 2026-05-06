@@ -68,6 +68,32 @@
         .progress-dot { width: 6px; height: 6px; border-radius: 9999px; background: #d2d2d7; transition: background .2s, transform .2s; }
         .progress-dot.done { background: #34c759; }
         .progress-dot.current { background: #0071e3; transform: scale(1.25); }
+        /* 变革路标甘特：竖向网格线与粘性标签列 */
+        .roadmap-gantt-scroll { --rg-months: 24; }
+        .roadmap-gantt-track {
+            position: relative;
+            min-height: 28px;
+            background-image: repeating-linear-gradient(
+                90deg,
+                transparent 0,
+                transparent calc(100% / var(--rg-months, 24) - 1px),
+                rgba(0, 0, 0, 0.06) calc(100% / var(--rg-months, 24) - 1px),
+                rgba(0, 0, 0, 0.06) calc(100% / var(--rg-months, 24))
+            );
+        }
+        .roadmap-gantt-bar {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            min-width: 8px;
+            height: 18px;
+            border-radius: 6px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+        }
+        .roadmap-gantt-bar.sm { height: 14px; border-radius: 5px; }
+        @media print {
+            .roadmap-gantt-scroll { overflow: visible !important; }
+        }
         /* PDF 导出时解除一屏高度限制，避免截图被裁切 */
         body.pdf-exporting,
         body.pdf-exporting #workspace,
@@ -77,10 +103,32 @@
             max-height: none !important;
         }
         body.pdf-exporting { overflow: visible !important; }
+        /* 禁止改为 display:block：会破坏 body→main 的 flex 分配，导致 grid 行高 1fr 塌成 0，html2canvas 截图尺寸为 0 */
         body.pdf-exporting.app-shell {
-            display: block !important;
+            display: flex !important;
+            flex-direction: column !important;
             height: auto !important;
+            min-height: 100vh !important;
             max-height: none !important;
+            overflow: visible !important;
+        }
+        body.pdf-exporting.app-shell > header {
+            flex-shrink: 0 !important;
+        }
+        body.pdf-exporting.app-shell > #main-layout {
+            flex: 1 1 auto !important;
+            min-height: calc(100vh - 80px) !important;
+            max-height: none !important;
+        }
+        body.pdf-exporting #workspace-scroll {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            min-height: calc(100vh - 140px) !important;
+        }
+        body.pdf-exporting .step-wrapper.active {
+            flex: 0 0 auto !important;
+            min-height: auto !important;
         }
         /* PDF 截图时解除 flex 收缩，避免画布高度塌成一条 */
         body.pdf-exporting .bmc-nine {
@@ -89,6 +137,10 @@
         }
         body.pdf-exporting .bmc-nine-main {
             min-height: 260px;
+        }
+        body.pdf-exporting .roadmap-gantt-scroll {
+            min-height: 480px;
+            overflow: visible !important;
         }
         /* 桌面端：整体纵向 flex，主区占满顶栏以下剩余高度，避免 calc 与 zoom 导致与顶栏叠层 */
         @media (min-width: 1024px) {
@@ -180,16 +232,8 @@
             #sidebar.sidebar-collapsed #nav-config-btn .nav-config-label {
                 display: none !important;
             }
-            #sidebar.sidebar-collapsed .sidebar-export-card {
+            #sidebar.sidebar-collapsed #sidebar-history-panel {
                 padding: 0.5rem;
-            }
-            #sidebar.sidebar-collapsed #btn-export {
-                margin-top: 0;
-                padding-left: 0.5rem;
-                padding-right: 0.5rem;
-            }
-            #sidebar.sidebar-collapsed #btn-export .btn-export-text {
-                display: none !important;
             }
         }
         /* 小屏：折叠工作流整块；顶栏 sticky 时工具条留在可视区顶部稍下，避免被遮挡 */
@@ -234,8 +278,9 @@
                 </div>
             </div>
         </div>
-        <div id="toast-msg" class="fixed top-[72px] sm:top-20 right-4 sm:right-8 z-[60] max-w-[90vw] rounded-full px-4 py-2.5 text-[13px] font-medium text-white shadow-card opacity-0 pointer-events-none transition-all duration-300 translate-y-[-6px]" role="status"></div>
     </header>
+
+    <div id="toast-msg" class="fixed top-[72px] sm:top-20 right-4 sm:right-8 z-[220] max-w-[90vw] rounded-full px-4 py-2.5 text-[13px] font-medium text-white shadow-card opacity-0 pointer-events-none transition-all duration-300 translate-y-[-6px]" role="status"></div>
 
     <main id="main-layout" class="max-w-[1400px] mx-auto w-full px-5 sm:px-8 py-3 sm:py-4 lg:py-2 lg:px-6 grid grid-cols-1 gap-4 lg:gap-3 relative lg:min-h-0 lg:items-stretch lg:flex-1">
         <aside id="sidebar" class="flex flex-col gap-4 lg:gap-2 min-h-0 lg:h-full lg:max-h-full lg:pt-0 lg:overflow-hidden">
@@ -247,21 +292,12 @@
             </div>
             <div id="sidebar-workflow-stack" class="print-hidden flex flex-col min-h-0 flex-1 lg:overflow-hidden lg:pt-0">
                 <nav id="nav-list" class="flex flex-col gap-0.5 rounded-[14px] bg-white p-1.5 lg:p-1 shadow-nav border border-black/[0.06] lg:flex-1 lg:min-h-0 lg:overflow-y-auto no-scrollbar"></nav>
+                <div id="sidebar-history-panel" class="print-hidden shrink-0 mt-3 lg:mt-2 rounded-[14px] bg-white border border-black/[0.06] p-3 lg:p-2.5 shadow-nav lg:max-h-[min(42vh,320px)] flex flex-col min-h-0"></div>
                 <p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider mt-3 mb-1.5 lg:mt-2 lg:mb-1 shrink-0 sidebar-expand-only">配置</p>
                 <button type="button" id="nav-config-btn" onclick="openConfigPanel()" class="print-hidden w-full flex items-center gap-2 rounded-[10px] px-3 py-2 text-left transition-all border border-black/[0.06] bg-white shadow-nav text-ink-secondary hover:bg-canvas hover:text-ink lg:py-1.5">
                     <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-canvas text-ink-tertiary"><i class="fas fa-sliders text-[12px]" aria-hidden="true"></i></span>
                     <span class="nav-config-label text-[12px] font-medium leading-snug">数字化资产配置</span>
                 </button>
-            </div>
-            <div class="print-hidden shrink-0">
-                <div class="sidebar-export-card rounded-[14px] bg-white border border-black/[0.06] p-3 lg:p-3 shadow-nav">
-                    <h4 class="text-[14px] font-semibold text-ink tracking-tight sidebar-expand-only">导出交付物</h4>
-                    <p class="text-[12px] text-ink-secondary mt-1 leading-snug sidebar-expand-only">导出含 7 步主流程各页，并附带「数字化资产配置」独立章节。</p>
-                    <button type="button" onclick="handleExportPDF()" id="btn-export" class="mt-2 lg:mt-2 w-full inline-flex items-center justify-center gap-2 rounded-[10px] bg-ink text-white text-[12px] font-semibold py-2 px-3 hover:bg-black transition-colors">
-                        <i class="fas fa-file-arrow-down text-xs opacity-90" aria-hidden="true"></i>
-                        <span class="btn-export-text">导出 PDF</span>
-                    </button>
-                </div>
             </div>
         </aside>
 
@@ -278,11 +314,11 @@
             </div>
 
             <div id="footer-nav" class="flex justify-between items-center gap-2 sm:gap-3 px-5 sm:px-6 lg:px-6 py-2 lg:py-1.5 shrink-0 border-t border-black/[0.06] bg-canvas/50 rounded-b-[16px] print-hidden">
-                <button type="button" onclick="navigate(-1)" id="btn-prev" class="inline-flex items-center gap-2 rounded-[10px] px-3 py-2 text-[13px] font-semibold text-ink-secondary bg-white border border-black/[0.08] hover:bg-canvas disabled:opacity-40 disabled:pointer-events-none transition-colors lg:py-1.5">
+                <button type="button" id="btn-prev" class="inline-flex items-center gap-2 rounded-[10px] px-3 py-2 text-[13px] font-semibold text-ink-secondary bg-white border border-black/[0.08] hover:bg-canvas disabled:opacity-40 disabled:pointer-events-none transition-colors lg:py-1.5">
                     <i class="fas fa-chevron-left text-[10px]" aria-hidden="true"></i>
                     上一步
                 </button>
-                <button type="button" onclick="navigate(1)" id="btn-next" class="inline-flex items-center gap-2 rounded-[10px] px-4 py-2 text-[13px] font-semibold text-white bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:pointer-events-none transition-colors shadow-nav lg:py-1.5">
+                <button type="button" id="btn-next" class="inline-flex items-center gap-2 rounded-[10px] px-4 py-2 text-[13px] font-semibold text-white bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:pointer-events-none transition-colors shadow-nav lg:py-1.5">
                     下一步
                     <i class="fas fa-chevron-right text-[10px] opacity-90" aria-hidden="true"></i>
                 </button>
@@ -345,15 +381,18 @@
             },
             s6: {
                 bullets: [
-                    '针对红/黄能力块识别变革专题：专题名称、目标能力块、解决的差距维度、预期收益/成本、近中远期时间窗口。'
+                    '针对红/黄能力块识别变革专题：专题名称、目标能力块、差距维度、收益/成本、时间窗口。',
+                    '同步沉淀优先级（P0/P1/P2）、技术方案与交付形态、关键依赖与前置条件，供路标甘特直接引用。'
                 ],
-                output: '产出：变革举措清单，与能力块关联。'
+                output: '产出：变革举措清单（含优先级与技术/依赖说明），与能力块关联。'
             },
             s7: {
                 bullets: [
-                    '将举措转化为变革路标：名称、对应举措、优先级 P0/P1/P2、技术方案、依赖、按月/季里程碑。'
+                    '按举措优先级（P0→P1→P2）横向排布年/月时间轴，对标咨询公司变革蓝图「里程碑 + 甘特」交付。',
+                    '每条举措展开子路标：依赖就绪、方案设计、开发联调、上线固化等，可与技术方案、依赖条款对照。',
+                    '支持一键按当前举措顺序重算时间轴；颗粒度以月为主，表头同步展示年份与季度分界。'
                 ],
-                output: '产出：变革路标规划全景（甘特/看板视图）。'
+                output: '产出：变革路标计划（横轴时间 × 举措与子工作包）。'
             },
             s8: {
                 bullets: [
@@ -443,7 +482,11 @@
             newTplSteps: [],
             sidebarCollapsed: false,
             /** 配置页 Tab：rules | templates */
-            configTab: 'rules'
+            configTab: 'rules',
+            /** 步骤 7 甘特：起始月 YYYY-MM、跨度（月）、举措 id 展开子路标 */
+            roadmapStartYm: '',
+            roadmapMonths: 24,
+            roadmapExpandedIniIds: {}
         };
 
         /** 主流程 7 步（左侧序号与右侧步骤编号一致）；数字化资产配置不在此数组 */
@@ -453,11 +496,12 @@
             { id: 3, nodeShort: '架构', title: '业务能力架构', icon: 'fa-sitemap', key: 's3', guide: '把价值流里出现的「能力块」整理成分层的清单，并标注现状与目标成熟度。' },
             { id: 4, nodeShort: '差距', title: '能力差距分析', icon: 'fa-table-cells', key: 's4', guide: '对照目标，看看人在组织、做事流程、数据和系统四类上差在哪里，用下拉框标程度即可。' },
             { id: 5, nodeShort: '热力图', title: '能力热力图标注', icon: 'fa-fire', key: 's5', guide: '红黄绿一眼看懂优先级：红色优先改，黄色计划优化，绿色表示相对达标。' },
-            { id: 6, nodeShort: '举措', title: '变革举措清单', icon: 'fa-lightbulb', key: 's6', guide: '把热力图上要紧的几块能力，收成几条「要做的事」：谁来做、补哪类差距、大概什么时间窗。' },
-            { id: 7, nodeShort: '路标', title: '变革路标规划', icon: 'fa-road', key: 's7', guide: '把变革举措落成系统侧可交付的功能点与路线，方便和研发 / 供应商对齐排期。' }
+            { id: 6, nodeShort: '举措', title: '变革举措与方案', icon: 'fa-lightbulb', key: 's6', guide: '汇总热力图重点任务，标注 P0/P1/P2、技术方案与依赖说明，作为路标甘特的输入基线。' },
+            { id: 7, nodeShort: '路标', title: '变革路标计划', icon: 'fa-bars-staggered', key: 's7', guide: '按年月横向展开变革蓝图：举措优先排序，下设方案/依赖类子路标条，对标 PMO 级里程碑计划。' }
         ];
 
         const STEP_TOTAL = 7;
+        const ROADMAP_HORIZON_MONTHS = 24;
 
         /** 侧栏「配置」面板：画布规则与价值流模板，不计入 7 步 */
         const CONFIG_PANEL = {
@@ -573,6 +617,11 @@
         }
 
         function bindHeaderResizeSync() {
+            if (window.__baHeaderResizeBound) {
+                syncHeaderOffset();
+                return;
+            }
+            window.__baHeaderResizeBound = true;
             syncHeaderOffset();
             window.addEventListener('resize', syncHeaderOffset);
             const el = document.getElementById('app-header');
@@ -583,6 +632,11 @@
         }
 
         function initApp() {
+            if (isAssetsStandaloneMode()) {
+                initAssetsStandalonePage();
+                return;
+            }
+            window.applyAssetRecordById = applyAssetRecordById;
             bindHeaderResizeSync();
             requestAnimationFrame(() => {
                 syncHeaderOffset();
@@ -603,12 +657,15 @@
         function navigate(dir) {
             if (currentState.activePanel !== 'workflow') return;
             const next = currentState.step + dir;
-            if (next >= 1 && next <= STEP_TOTAL) {
-                currentState.step = next;
-                renderNav();
-                renderStepProgress();
-                renderStep();
+            if (next < 1 || next > STEP_TOTAL) return;
+            if (dir === 1) {
+                if (currentState.step === 2) runFrameworkGen({ silent: true });
+                else if (currentState.step === 5) runInitiativesGen({ silent: true });
             }
+            currentState.step = next;
+            renderNav();
+            renderStepProgress();
+            renderStep();
         }
 
         function setStep(id) {
@@ -625,6 +682,462 @@
             renderNav();
             renderStepProgress();
             renderStep();
+        }
+
+        function escapeHistHtml(s) {
+            return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        }
+
+        const BLUEPRINT_HISTORY_LS = 'archipro-blueprint-history-v1';
+        const BLUEPRINT_HISTORY_MAX = 40;
+        const WORKFLOW_SNAPSHOT_KEYS = ['bmc', 'bmcReport', 'rules', 'valueStreamName', 'vsStages', 'templates', 'selectedTemplateId', 'capabilityFramework', 'initiatives', 'itFeatures', 'newTplSteps', 'configTab', 'roadmapStartYm', 'roadmapMonths', 'roadmapExpandedIniIds'];
+
+        function loadBlueprintHistoryList() {
+            try {
+                const raw = localStorage.getItem(BLUEPRINT_HISTORY_LS);
+                const arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveBlueprintHistoryList(list) {
+            try {
+                localStorage.setItem(BLUEPRINT_HISTORY_LS, JSON.stringify(list.slice(0, BLUEPRINT_HISTORY_MAX)));
+            } catch (e) {
+                toast('本地存储失败，请清理浏览器空间后重试', 'error');
+            }
+        }
+
+        function getSerializableWorkflowSnapshot() {
+            const snap = {};
+            WORKFLOW_SNAPSHOT_KEYS.forEach(k => {
+                snap[k] = JSON.parse(JSON.stringify(currentState[k] !== undefined ? currentState[k] : null));
+            });
+            return snap;
+        }
+
+        function applyWorkflowSnapshot(raw) {
+            const s = raw && typeof raw === 'object' ? raw : {};
+            WORKFLOW_SNAPSHOT_KEYS.forEach(k => {
+                if (s[k] === undefined) return;
+                currentState[k] = JSON.parse(JSON.stringify(s[k]));
+            });
+            calcVSMetrics();
+        }
+
+        function formatHistoryTime(iso) {
+            try {
+                const d = new Date(iso);
+                return d.toLocaleString('zh-CN', { hour12: false, month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                return String(iso || '');
+            }
+        }
+
+        function sanitizePdfFilenameBase(title) {
+            return String(title || '规划版本').replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_').slice(0, 72);
+        }
+
+        function isAssetsStandaloneMode() {
+            return (window.location.hash || '').replace(/^#/, '') === 'assets';
+        }
+
+        function openAssetsLibraryWindow() {
+            const base = window.location.href.split('#')[0];
+            const url = `${base}#assets`;
+            const w = window.open(url, 'ba-planning-assets', 'width=1280,height=860,scrollbars=yes,resizable=yes');
+            if (!w) toast('请允许浏览器弹出窗口以打开资产库', 'error');
+        }
+
+        /** 从快照提取资产列表行所需的 7 步核心摘要 */
+        function summarizeSnapshotForAssetsRow(snap) {
+            if (!snap || typeof snap !== 'object') snap = {};
+            const bmc = snap.bmc || {};
+            const vp = String(bmc.valuePropositions || '').replace(/\s+/g, ' ').trim();
+            const cust = String(bmc.customerSegments || '').replace(/\s+/g, ' ').trim();
+            const s1 = vp ? vp.slice(0, 56) + (vp.length > 56 ? '…' : '') : (cust ? `细分：${cust.slice(0, 40)}` : '—');
+            const vsName = String(snap.valueStreamName || '—').trim();
+            const stages = snap.vsStages || [];
+            const s2 = stages.length ? `${vsName} · ${stages.length} 阶段` : `${vsName} · 未生成阶段`;
+            const cf = snap.capabilityFramework || [];
+            let r = 0, y = 0, g = 0;
+            cf.forEach(c => {
+                const cat = heatCategory(c);
+                if (cat === 'red') r++;
+                else if (cat === 'yellow') y++;
+                else g++;
+            });
+            const s3 = cf.length ? `${cf.length} 项能力块` : '—';
+            const weakDims = cf.filter(c => ['缺失', '弱'].includes(c.gapOrg) || ['缺失', '弱'].includes(c.gapProc)).length;
+            const s4 = cf.length ? `四维差距已填 · ${weakDims} 项偏弱维` : '—';
+            const s5 = cf.length ? `红 ${r} / 黄 ${y} / 绿 ${g}` : '—';
+            const ini = snap.initiatives || [];
+            const ph = { P0: 0, P1: 0, P2: 0 };
+            ini.forEach(i => {
+                if (ph[i.phase] != null) ph[i.phase]++;
+            });
+            const s6 = ini.length ? `${ini.length} 条 · P0 ${ph.P0} / P1 ${ph.P1} / P2 ${ph.P2}` : '—';
+            const rs = snap.roadmapStartYm || '';
+            const rm = snap.roadmapMonths;
+            const s7 = rs && rm ? `${rs} 起 · ${rm} 个月` : '—';
+            return { s1, s2, s3, s4, s5, s6, s7, s1full: vp || cust || '—' };
+        }
+
+        /** 步骤 7 底部「保存」：写入历史记录（不影响当前编辑会话） */
+        function saveBlueprintHistory() {
+            if (currentState.step !== STEP_TOTAL || currentState.activePanel !== 'workflow') return;
+            if (!currentState.initiatives.length) {
+                toast('请先完成前面的步骤并生成举措与路标数据后再保存', 'error');
+                return;
+            }
+            const defaultTitle = `${currentState.valueStreamName || '数字化转型规划'} · ${new Date().toLocaleString('zh-CN', { hour12: false })}`;
+            const input = window.prompt('为该保存版本命名（留空则使用默认名称）', defaultTitle);
+            if (input === null) return;
+            const title = (input || '').trim() || defaultTitle;
+            const record = {
+                id: Date.now(),
+                savedAt: new Date().toISOString(),
+                title,
+                snapshot: getSerializableWorkflowSnapshot()
+            };
+            const list = loadBlueprintHistoryList();
+            list.unshift(record);
+            saveBlueprintHistoryList(list);
+            toast('已保存。可在侧栏「资产」打开资产库查看与管理');
+            renderSidebarHistoryPanel();
+        }
+
+        /** 主工作台调用：按 id 载入资产快照 */
+        function applyAssetRecordById(id) {
+            const rec = loadBlueprintHistoryList().find(r => r.id === Number(id));
+            if (!rec || !rec.snapshot) {
+                toast('记录不存在或已失效', 'error');
+                return false;
+            }
+            applyWorkflowSnapshot(rec.snapshot);
+            currentState.activePanel = 'workflow';
+            currentState.step = STEP_TOTAL;
+            renderNav();
+            renderStepProgress();
+            renderStep();
+            toast('已从资产库载入，可在各步骤继续修改');
+            return true;
+        }
+
+        function deleteHistoryRecord(id) {
+            if (!window.confirm('确定删除这条历史版本吗？')) return;
+            const list = loadBlueprintHistoryList().filter(r => r.id !== id);
+            saveBlueprintHistoryList(list);
+            renderSidebarHistoryPanel();
+            if (isAssetsStandaloneMode()) renderAssetsStandaloneContent();
+            toast('已删除该版本');
+        }
+
+        /** 根据历史快照生成 PDF（完成后恢复当前编辑状态） */
+        async function exportPdfFromHistoryRecord(recordId) {
+            const rec = loadBlueprintHistoryList().find(r => r.id === recordId);
+            if (!rec || !rec.snapshot) {
+                toast('记录不存在', 'error');
+                return;
+            }
+            const backupSnap = getSerializableWorkflowSnapshot();
+            const backupStep = currentState.step;
+            const backupPanel = currentState.activePanel;
+            try {
+                applyWorkflowSnapshot(rec.snapshot);
+                currentState.activePanel = 'workflow';
+                currentState.step = STEP_TOTAL;
+                renderNav();
+                renderStepProgress();
+                const fname = `BA_${sanitizePdfFilenameBase(rec.title)}_${String(rec.id).slice(-8)}.pdf`;
+                await runPdfExportCore(fname);
+            } finally {
+                applyWorkflowSnapshot(backupSnap);
+                currentState.step = backupStep;
+                currentState.activePanel = backupPanel;
+                renderNav();
+                renderStepProgress();
+                renderStep();
+                renderSidebarHistoryPanel();
+            }
+        }
+
+        function ensureAssetDetailModal() {
+            let m = document.getElementById('asset-detail-modal');
+            if (m) return m;
+            m = document.createElement('div');
+            m.id = 'asset-detail-modal';
+            m.className = 'hidden fixed inset-0 z-[260] flex items-center justify-center p-4 bg-black/50';
+            m.innerHTML = `
+                <div class="absolute inset-0" onclick="closeAssetDetailModal()" aria-hidden="true"></div>
+                <div class="relative bg-white rounded-[14px] max-w-2xl w-full max-h-[88vh] overflow-hidden shadow-card border border-black/[0.08] flex flex-col">
+                    <div class="flex justify-between items-start gap-2 px-4 py-3 border-b border-black/[0.06] shrink-0">
+                        <h3 id="asset-detail-title" class="text-[15px] font-semibold text-ink leading-snug pr-2"></h3>
+                        <button type="button" onclick="closeAssetDetailModal()" class="shrink-0 rounded-[10px] p-2 text-ink-tertiary hover:bg-canvas hover:text-ink" aria-label="关闭"><i class="fas fa-times text-[14px]" aria-hidden="true"></i></button>
+                    </div>
+                    <div id="asset-detail-body" class="overflow-y-auto p-4 text-[13px] text-ink-secondary leading-relaxed space-y-3"></div>
+                </div>`;
+            document.body.appendChild(m);
+            return m;
+        }
+
+        function closeAssetDetailModal() {
+            const m = document.getElementById('asset-detail-modal');
+            if (m) m.classList.add('hidden');
+        }
+
+        function showAssetDetailModal(rec) {
+            if (!rec) return;
+            ensureAssetDetailModal();
+            const snap = rec.snapshot || {};
+            const sum = summarizeSnapshotForAssetsRow(snap);
+            const bmc = snap.bmc || {};
+            document.getElementById('asset-detail-title').textContent = rec.title || '未命名版本';
+            const rows = [
+                ['步骤 1 · 商业画布蓝图', `价值主张：${sum.s1full}`, `客户细分：${String(bmc.customerSegments || '—').slice(0, 200)}`],
+                ['步骤 2 · 价值流设计', sum.s2, `模板：${snap.selectedTemplateId || '—'}`],
+                ['步骤 3 · 业务能力架构', sum.s3, cfTopNames(snap.capabilityFramework)],
+                ['步骤 4 · 能力差距分析', sum.s4, ''],
+                ['步骤 5 · 能力热力图标注', sum.s5, ''],
+                ['步骤 6 · 变革举措与方案', sum.s6, iniTitlesSnippet(snap.initiatives)],
+                ['步骤 7 · 变革路标计划', sum.s7, '']
+            ];
+            document.getElementById('asset-detail-body').innerHTML = rows.map(([t, a, b]) => `
+                <div class="rounded-[12px] border border-black/[0.06] bg-canvas/40 px-3 py-2.5">
+                    <p class="text-[11px] font-semibold text-accent uppercase tracking-wide">${escapeHistHtml(t)}</p>
+                    <p class="text-[13px] text-ink mt-1">${escapeHistHtml(a)}</p>
+                    ${b ? `<p class="text-[12px] text-ink-tertiary mt-1 leading-snug">${escapeHistHtml(b)}</p>` : ''}
+                </div>`).join('');
+            document.getElementById('asset-detail-modal').classList.remove('hidden');
+        }
+
+        function cfTopNames(cf) {
+            if (!cf || !cf.length) return '';
+            return '示例能力块：' + cf.slice(0, 5).map(c => c.l3).join('、') + (cf.length > 5 ? '…' : '');
+        }
+
+        function iniTitlesSnippet(ini) {
+            if (!ini || !ini.length) return '';
+            return ini.slice(0, 4).map(i => i.title).join('；') + (ini.length > 4 ? '…' : '');
+        }
+
+        function showAssetDetailModalById(id) {
+            const rec = loadBlueprintHistoryList().find(r => r.id === Number(id));
+            if (rec) showAssetDetailModal(rec);
+            else toast('记录不存在', 'error');
+        }
+
+        /** 可选：若由主窗口弹出且 opener 仍可用，则同步到主窗口 */
+        function requestModifyAssetInMain(id) {
+            if (window.opener && !window.opener.closed && typeof window.opener.applyAssetRecordById === 'function') {
+                const ok = window.opener.applyAssetRecordById(id);
+                if (ok) {
+                    try { window.opener.focus(); } catch (e) { /* ignore */ }
+                    toast('已载入主工作台，请在原窗口继续修改');
+                }
+            } else {
+                toast('未检测到主工作台窗口，请使用「编辑」在本窗口打开工作台', 'error');
+            }
+        }
+
+        /** 在本窗口退出资产库 UI，载入快照进入完整 7 步工作台（可修改并再次保存） */
+        function enterPlanningWorkspaceFromAsset(recordId) {
+            const rec = loadBlueprintHistoryList().find(r => r.id === Number(recordId));
+            if (!rec || !rec.snapshot) {
+                toast('记录不存在或已失效', 'error');
+                return;
+            }
+            if (!window.confirm('将在本窗口打开完整工作台并载入该版本；当前未保存的编辑将丢失，确定吗？')) return;
+
+            applyWorkflowSnapshot(rec.snapshot);
+            currentState.activePanel = 'workflow';
+            currentState.step = STEP_TOTAL;
+
+            try {
+                history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+            } catch (e) { /* ignore */ }
+
+            document.body.classList.remove('assets-standalone');
+            const overlay = document.getElementById('assets-standalone-overlay');
+            if (overlay) overlay.remove();
+
+            const hdr = document.getElementById('app-header');
+            const main = document.getElementById('main-layout');
+            if (hdr) hdr.style.removeProperty('display');
+            if (main) main.style.removeProperty('display');
+
+            window.applyAssetRecordById = applyAssetRecordById;
+            bindHeaderResizeSync();
+            try {
+                currentState.sidebarCollapsed = localStorage.getItem('archipro-sidebar-collapsed') === '1';
+            } catch (e) {
+                currentState.sidebarCollapsed = false;
+            }
+            applySidebarCollapsed();
+            renderHeaderMethodFlow();
+            renderNav();
+            renderStepProgress();
+            renderStep();
+            updateWorkflowFooter();
+            requestAnimationFrame(() => {
+                syncHeaderOffset();
+                requestAnimationFrame(syncHeaderOffset);
+            });
+            toast('已载入该版本，可在各步骤修改后再次「保存」到资产库');
+        }
+
+        function waitForLayoutMs(ms) {
+            return new Promise(r => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => setTimeout(r, ms));
+                });
+            });
+        }
+
+        async function exportAssetPdfFromStandalone(recordId) {
+            const main = document.getElementById('main-layout');
+            const overlay = document.getElementById('assets-standalone-overlay');
+            const hdr = document.getElementById('app-header');
+            try {
+                if (overlay) overlay.classList.add('hidden');
+                if (main) main.style.removeProperty('display');
+                if (hdr) hdr.style.removeProperty('display');
+                await waitForLayoutMs(120);
+                await exportPdfFromHistoryRecord(recordId);
+            } finally {
+                if (main) main.style.display = 'none';
+                if (hdr) hdr.style.display = 'none';
+                if (overlay) overlay.classList.remove('hidden');
+            }
+        }
+
+        function renderAssetsStandaloneContent() {
+            const ov = document.getElementById('assets-standalone-overlay');
+            if (!ov) return;
+            const list = loadBlueprintHistoryList();
+            const empty = `
+                <div class="max-w-[1400px] mx-auto px-4 py-6">
+                    <div class="rounded-[14px] border border-dashed border-black/[0.12] bg-white px-6 py-12 text-center shadow-nav">
+                        <p class="text-[15px] font-semibold text-ink">暂无已保存资产</p>
+                        <p class="text-[13px] text-ink-secondary mt-2 max-w-md mx-auto leading-relaxed">在主工作台完成<strong class="text-ink">变革路标计划</strong>并点击右下角<strong class="text-ink">保存</strong>后，将在此处列出；列表按 7 步展示核心摘要。</p>
+                    </div>
+                </div>`;
+            if (!list.length) {
+                ov.innerHTML = `
+                    <div class="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-black/[0.06] bg-canvas/95 backdrop-blur px-4 py-3">
+                        <div>
+                            <h1 class="text-[16px] font-semibold text-ink tracking-tight">规划资产库</h1>
+                            <p class="text-[11px] text-ink-secondary mt-0.5">独立窗口 · 与主工作台共用本地存储</p>
+                        </div>
+                        <button type="button" onclick="window.close()" class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">关闭窗口</button>
+                    </div>
+                    ${empty}`;
+                return;
+            }
+            const headLabels = ['版本名称', '保存时间', '1画布要点', '2价值流', '3架构', '4差距', '5热力', '6举措', '7路标', '操作'];
+            const rows = list.map(rec => {
+                const sum = summarizeSnapshotForAssetsRow(rec.snapshot);
+                return `<tr class="border-b border-black/[0.06] hover:bg-canvas/50 transition-colors align-top">
+                    <td class="p-2.5 text-[12px] font-semibold text-ink max-w-[140px]">${escapeHistHtml(rec.title)}</td>
+                    <td class="p-2.5 text-[11px] text-ink-tertiary tabular-nums whitespace-nowrap">${formatHistoryTime(rec.savedAt)}</td>
+                    <td class="p-2.5 text-[11px] text-ink-secondary max-w-[min(28vw,200px)]">${escapeHistHtml(sum.s1)}</td>
+                    <td class="p-2.5 text-[11px] text-ink-secondary max-w-[min(28vw,180px)]">${escapeHistHtml(sum.s2)}</td>
+                    <td class="p-2.5 text-[11px] text-ink-secondary whitespace-nowrap">${escapeHistHtml(sum.s3)}</td>
+                    <td class="p-2.5 text-[11px] text-ink-secondary max-w-[120px]">${escapeHistHtml(sum.s4)}</td>
+                    <td class="p-2.5 text-[11px] text-ink-secondary whitespace-nowrap">${escapeHistHtml(sum.s5)}</td>
+                    <td class="p-2.5 text-[11px] text-ink-secondary max-w-[min(32vw,220px)]">${escapeHistHtml(sum.s6)}</td>
+                    <td class="p-2.5 text-[11px] text-ink-secondary whitespace-nowrap">${escapeHistHtml(sum.s7)}</td>
+                    <td class="p-2.5 whitespace-nowrap">
+                        <div class="flex flex-wrap gap-1">
+                            <button type="button" onclick="showAssetDetailModalById(${rec.id})" class="rounded-[8px] bg-white border border-black/[0.10] px-2 py-1 text-[10px] font-semibold text-ink-secondary hover:bg-canvas">查看</button>
+                            <button type="button" onclick="enterPlanningWorkspaceFromAsset(${rec.id})" class="rounded-[8px] bg-accent/12 border border-accent/25 px-2 py-1 text-[10px] font-semibold text-accent hover:bg-accent/18">编辑</button>
+                            <button type="button" onclick="exportAssetPdfFromStandalone(${rec.id})" class="rounded-[8px] bg-ink text-white px-2 py-1 text-[10px] font-semibold hover:bg-black">导出</button>
+                            <button type="button" onclick="deleteHistoryRecord(${rec.id})" class="rounded-[8px] border border-black/[0.08] px-2 py-1 text-[10px] font-semibold text-ink-tertiary hover:text-[#ff6961]" title="删除">删</button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+            ov.innerHTML = `
+                <div class="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-black/[0.06] bg-canvas/95 backdrop-blur px-4 py-3">
+                    <div>
+                        <h1 class="text-[16px] font-semibold text-ink tracking-tight">规划资产库</h1>
+                        <p class="text-[11px] text-ink-secondary mt-0.5">共 ${list.length} 条 · 与主工作台共用本地存储</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="renderAssetsStandaloneContent()" class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">刷新</button>
+                        <button type="button" onclick="window.close()" class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">关闭</button>
+                    </div>
+                </div>
+                <div class="max-w-[1600px] mx-auto px-3 py-4 overflow-x-auto">
+                    <table class="w-full min-w-[1100px] text-left border-collapse rounded-[12px] overflow-hidden border border-black/[0.06] bg-white shadow-nav">
+                        <thead>
+                            <tr class="bg-canvas/90 text-[10px] font-semibold text-ink-tertiary uppercase tracking-wide">
+                                ${headLabels.map(h => `<th class="p-2.5 border-b border-black/[0.06]">${h}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
+        }
+
+        function initAssetsStandalonePage() {
+            document.body.classList.add('assets-standalone');
+            const header = document.getElementById('app-header');
+            if (header) header.style.display = 'none';
+            const main = document.getElementById('main-layout');
+            if (main) main.style.display = 'none';
+            let ov = document.getElementById('assets-standalone-overlay');
+            if (!ov) {
+                ov = document.createElement('div');
+                ov.id = 'assets-standalone-overlay';
+                ov.className = 'fixed inset-0 z-[200] bg-canvas overflow-auto pb-8';
+                document.body.appendChild(ov);
+            }
+            renderAssetsStandaloneContent();
+        }
+
+        function renderSidebarHistoryPanel() {
+            const host = document.getElementById('sidebar-history-panel');
+            if (!host) return;
+            const n = loadBlueprintHistoryList().length;
+            host.innerHTML = `
+                <div class="sidebar-expand-only mb-1.5">
+                    <h4 class="text-[13px] font-semibold text-ink tracking-tight">资产</h4>
+                </div>
+                <button type="button" onclick="openAssetsLibraryWindow()" class="w-full inline-flex items-center justify-center gap-2 rounded-[10px] bg-ink text-white text-[12px] font-semibold py-2 px-3 hover:bg-black transition-colors">
+                    <i class="fas fa-layer-group text-[11px]" aria-hidden="true"></i>
+                    打开资产库
+                    <span class="opacity-85 font-normal tabular-nums text-[11px]">(${n})</span>
+                </button>`;
+        }
+
+        /** 工作流底部：步骤 7 显示「保存」，其余为「下一步」 */
+        function updateWorkflowFooter() {
+            const prev = document.getElementById('btn-prev');
+            const next = document.getElementById('btn-next');
+            const foot = document.getElementById('footer-nav');
+            if (!prev || !next) return;
+            if (currentState.activePanel === 'config') {
+                if (foot) foot.classList.add('hidden');
+                return;
+            }
+            if (foot) foot.classList.remove('hidden');
+            prev.onclick = () => navigate(-1);
+            prev.disabled = currentState.step <= 1;
+            if (currentState.step >= STEP_TOTAL) {
+                const canSave = currentState.initiatives.length > 0;
+                next.disabled = !canSave;
+                next.innerHTML = '保存<i class="fas fa-floppy-disk text-[10px] opacity-90 ml-1" aria-hidden="true"></i>';
+                next.onclick = () => saveBlueprintHistory();
+                next.title = canSave ? '保存为资产版本；侧栏「资产」打开库可查看、导出 PDF' : '请先完成举措与路标相关数据';
+            } else {
+                next.disabled = false;
+                next.innerHTML = '下一步<i class="fas fa-chevron-right text-[10px] opacity-90 ml-0.5" aria-hidden="true"></i>';
+                next.onclick = () => navigate(1);
+                next.title = '';
+            }
         }
 
         function toast(msg, type = 'success') {
@@ -837,10 +1350,12 @@
             if (pceEl) pceEl.innerText = vsMetrics.pce + '%';
         }
 
-        function runFrameworkGen() {
+        /** @param {{ silent?: boolean }} [opts] silent：由「价值流」页点下一步时自动生成，不单独刷新当前页、不弹 Toast */
+        function runFrameworkGen(opts) {
+            const silent = !!(opts && opts.silent);
             if (!currentState.vsStages.length) {
-                toast(`请先在「${stepLabel(2)}」生成价值流`, 'error');
-                return;
+                if (!silent) toast(`请先在「${stepLabel(2)}」生成价值流`, 'error');
+                return false;
             }
             const blocks = [];
             currentState.vsStages.forEach(st => {
@@ -873,8 +1388,11 @@
                 });
             });
             currentState.capabilityFramework.sort((a, b) => parseFloat(b.ice) - parseFloat(a.ice));
-            renderStep3();
-            toast('业务能力架构已生成');
+            if (!silent) {
+                renderStep3();
+                toast('业务能力架构已生成');
+            }
+            return true;
         }
 
         function gapFromMat(m) {
@@ -892,10 +1410,435 @@
             return 'green';
         }
 
-        function runInitiativesGen() {
-            if (!currentState.capabilityFramework.length) {
-                toast(`请先在「${stepLabel(3)}」生成业务能力架构`, 'error');
+        function escapeHtmlText(s) {
+            return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        }
+
+        function sortInitiativesByPhase(arr) {
+            const rank = { P0: 0, P1: 1, P2: 2 };
+            return [...arr].sort((a, b) => (rank[a.phase] ?? 9) - (rank[b.phase] ?? 9) || (a.id ?? 0) - (b.id ?? 0));
+        }
+
+        function ensureRoadmapTimelineDefaults() {
+            if (!currentState.roadmapStartYm || !/^\d{4}-\d{2}$/.test(currentState.roadmapStartYm)) {
+                const d = new Date();
+                currentState.roadmapStartYm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            }
+            let n = parseInt(currentState.roadmapMonths, 10);
+            if (isNaN(n)) n = 24;
+            currentState.roadmapMonths = Math.max(6, Math.min(48, n));
+            if (!currentState.roadmapExpandedIniIds || typeof currentState.roadmapExpandedIniIds !== 'object') {
+                currentState.roadmapExpandedIniIds = {};
+            }
+        }
+
+        function getRoadmapHorizon() {
+            ensureRoadmapTimelineDefaults();
+            return currentState.roadmapMonths;
+        }
+
+        function clampRoadmapSeg(start, len, horizon) {
+            const H = horizon ?? getRoadmapHorizon();
+            const s = Math.max(0, Math.min(start | 0, H - 1));
+            const l = Math.max(1, Math.min(len | 0, H - s));
+            return { start: s, len: l };
+        }
+
+        /** 甘特起始月/跨度变更后刷新当前页（步骤 6、7 与时间轴联动） */
+        function afterRoadmapTimelineChange() {
+            syncItFeaturesFromInitiatives();
+            if (currentState.step === 6) renderStep6();
+            else if (currentState.step === 7) renderStep7();
+        }
+
+        function setRoadmapStartYm(ym) {
+            if (!ym || !/^\d{4}-\d{2}$/.test(ym)) {
+                toast('请选择有效起始月份', 'error');
                 return;
+            }
+            currentState.roadmapStartYm = ym;
+            afterRoadmapTimelineChange();
+        }
+
+        /** 月份选择器部分浏览器仅 blur 才提交，保留 change + blur 双绑 */
+        function applyRoadmapStartFromEl(el) {
+            if (el && el.value) setRoadmapStartYm(el.value);
+        }
+
+        function setRoadmapMonthsFromUi(val) {
+            const n = parseInt(val, 10);
+            if (isNaN(n)) return;
+            currentState.roadmapMonths = Math.max(6, Math.min(48, n));
+            currentState.initiatives.forEach(ini => {
+                if (!ini.streams?.length) return;
+                ini.streams = ini.streams.map(st => {
+                    const seg = clampRoadmapSeg(st.start, st.len, currentState.roadmapMonths);
+                    return { ...st, start: seg.start, len: seg.len };
+                });
+            });
+            afterRoadmapTimelineChange();
+            toast(`时间轴长度：${currentState.roadmapMonths} 个月`);
+        }
+
+        /** 举措汇总条包围盒（0-based 起点、终点不含） */
+        function initiativeStreamEnvelope(streams, H) {
+            if (!streams?.length) return { minS: 0, maxE: Math.min(6, H), span: Math.min(6, H) };
+            let minS = H;
+            let maxE = 0;
+            streams.forEach(st => {
+                minS = Math.min(minS, st.start);
+                maxE = Math.max(maxE, st.start + st.len);
+            });
+            const span = Math.max(1, maxE - minS);
+            return { minS, maxE, span };
+        }
+
+        /** 按新的「整体起点 + 跨度」比例缩放平移各子路标（保持相对形状） */
+        function updateInitiativeGanttEnvelope(iniId, startFrom1Raw, spanMonthsRaw) {
+            ensureRoadmapTimelineDefaults();
+            const ini = currentState.initiatives.find(x => x.id === iniId);
+            if (!ini?.streams?.length) return;
+            const H = getRoadmapHorizon();
+            let newStart0 = parseInt(startFrom1Raw, 10);
+            if (isNaN(newStart0)) return;
+            newStart0 = Math.max(1, Math.min(H, newStart0)) - 1;
+            let newSpan = parseInt(spanMonthsRaw, 10);
+            if (isNaN(newSpan)) newSpan = 1;
+            newSpan = Math.max(1, Math.min(H - newStart0, newSpan));
+
+            const { minS, maxE } = initiativeStreamEnvelope(ini.streams, H);
+            const oldLen = Math.max(1, maxE - minS);
+
+            ini.streams = ini.streams.map(st => {
+                const normStart = (st.start - minS) / oldLen;
+                const normLen = st.len / oldLen;
+                let s = Math.round(newStart0 + normStart * newSpan);
+                let l = Math.max(1, Math.round(normLen * newSpan));
+                const seg = clampRoadmapSeg(s, l, H);
+                return { ...st, start: seg.start, len: seg.len };
+            });
+            syncItFeaturesFromInitiatives();
+            renderStep7();
+        }
+
+        function updateInitiativeGanttEnvelopeFromRow(iniId, el) {
+            const row = el.closest('[data-ini-env]');
+            if (!row) return;
+            const startEl = row.querySelector('[data-env-start]');
+            const spanEl = row.querySelector('[data-env-span]');
+            if (!startEl || !spanEl) return;
+            updateInitiativeGanttEnvelope(iniId, startEl.value, spanEl.value);
+        }
+
+        function toggleRoadmapIniExpanded(id) {
+            ensureRoadmapTimelineDefaults();
+            const key = String(id);
+            currentState.roadmapExpandedIniIds[key] = !currentState.roadmapExpandedIniIds[key];
+            renderStep7();
+        }
+
+        function updateInitiativeStreamField(iniId, streamIdx, field, raw) {
+            ensureRoadmapTimelineDefaults();
+            const ini = currentState.initiatives.find(x => x.id === iniId);
+            if (!ini?.streams?.[streamIdx]) return;
+            const H = getRoadmapHorizon();
+            const st = ini.streams[streamIdx];
+            if (field === 'label') {
+                st.label = raw;
+                syncItFeaturesFromInitiatives();
+                renderStep7();
+                return;
+            }
+            if (field === 'start') {
+                let n = parseInt(raw, 10);
+                if (isNaN(n)) n = 0;
+                n = Math.max(0, Math.min(H - 1, n));
+                const seg = clampRoadmapSeg(n, st.len, H);
+                st.start = seg.start;
+                st.len = seg.len;
+            }
+            if (field === 'len') {
+                let n = parseInt(raw, 10);
+                if (isNaN(n)) n = 1;
+                const seg = clampRoadmapSeg(st.start, n, H);
+                st.start = seg.start;
+                st.len = seg.len;
+            }
+            syncItFeaturesFromInitiatives();
+            renderStep7();
+        }
+
+        function updateStreamStartMonthFromOne(iniId, si, monthFrom1) {
+            const H = getRoadmapHorizon();
+            let m = parseInt(monthFrom1, 10);
+            if (isNaN(m)) m = 1;
+            m = Math.max(1, Math.min(H, m));
+            updateInitiativeStreamField(iniId, si, 'start', String(m - 1));
+        }
+
+        function updateStreamLenMonths(iniId, si, lenVal) {
+            updateInitiativeStreamField(iniId, si, 'len', String(parseInt(lenVal, 10) || 1));
+        }
+
+        function initiativePhaseChipClass(p) {
+            if (p === 'P0') return 'bg-[#ff6961]/14 text-[#b91c1c] ring-1 ring-[#ff6961]/22';
+            if (p === 'P1') return 'bg-accent-muted text-accent ring-1 ring-accent/22';
+            return 'bg-emerald-100/85 text-emerald-900 ring-1 ring-emerald-800/12';
+        }
+
+        /** 补齐举措上路标所需字段（优先级、技术方案、依赖、里程碑带、甘特子轨） */
+        function ensureInitiativeRoadmapFields(ini, sortedIdx, forceStreams = false) {
+            ensureRoadmapTimelineDefaults();
+            const H = getRoadmapHorizon();
+            const cap = currentState.capabilityFramework.find(c => ini.caps && ini.caps.includes(c.l3));
+            if (!ini.phase) {
+                ini.phase = sortedIdx === 0 ? 'P0' : sortedIdx <= 2 ? 'P1' : 'P2';
+            }
+            if (ini.tech == null || ini.tech === '') {
+                ini.tech = cap ? `${cap.tech} · API 集成与中台落地` : '微服务与中台能力沉淀 · 可演进架构';
+            }
+            if (ini.deps == null || ini.deps === '') {
+                ini.deps = sortedIdx === 0
+                    ? '可与企业数据盘点、范围澄清并行；无强制前置版本冻结'
+                    : '依赖：前置优先级举措关键里程碑、企业架构与安全基线发布';
+            }
+            if (!ini.milestoneBand) {
+                ini.milestoneBand = ini.phase === 'P0' ? '奠基窗口（T0–6 月）' : ini.phase === 'P1' ? '扩展窗口（6–14 月）' : '固化与优化（14–24 月）';
+            }
+            if (forceStreams || !ini.streams || !ini.streams.length) {
+                const base = Math.min(sortedIdx * 2, Math.max(0, H - 8));
+                ini.streams = [
+                    clampRoadmapSeg(base, 2, H),
+                    clampRoadmapSeg(base + 1, 3, H),
+                    clampRoadmapSeg(base + 3, 5, H),
+                    clampRoadmapSeg(base + 7, 3, H)
+                ].map((seg, i) => ({
+                    ...seg,
+                    label: ['前置：依赖与数据就绪', '方案设计与评审定型', '开发交付与联调上线', '推广运营与机制固化'][i]
+                }));
+            } else {
+                ini.streams = ini.streams.map(st => {
+                    const seg = clampRoadmapSeg(st.start, st.len, H);
+                    return { label: st.label || '子路标', start: seg.start, len: seg.len };
+                });
+            }
+        }
+
+        function syncItFeaturesFromInitiatives() {
+            currentState.itFeatures = sortInitiativesByPhase(currentState.initiatives).map(ini => ({
+                id: ini.id,
+                name: `${ini.title} — 路标包`,
+                iniId: ini.id,
+                phase: ini.phase,
+                tech: ini.tech,
+                deps: ini.deps,
+                milestone: ini.milestoneBand || ''
+            }));
+        }
+
+        function updateInitiativeField(id, field, value) {
+            const ini = currentState.initiatives.find(x => x.id === id);
+            if (ini) ini[field] = value;
+        }
+
+        function buildRoadmapMonthLabels() {
+            ensureRoadmapTimelineDefaults();
+            const H = getRoadmapHorizon();
+            const parts = currentState.roadmapStartYm.split('-');
+            const ys = parseInt(parts[0], 10);
+            const ms = parseInt(parts[1], 10);
+            const months = [];
+            for (let i = 0; i < H; i++) {
+                const d = new Date(ys, ms - 1 + i, 1);
+                months.push({
+                    i,
+                    y: d.getFullYear(),
+                    m: d.getMonth() + 1,
+                    q: Math.ceil((d.getMonth() + 1) / 3)
+                });
+            }
+            return months;
+        }
+
+        function roadmapBarStyle(start, len, horizon) {
+            const H = horizon ?? getRoadmapHorizon();
+            const { start: s, len: l } = clampRoadmapSeg(start, len, H);
+            const left = (s / H) * 100;
+            const width = (l / H) * 100;
+            return `left:${left}%;width:${Math.max(width, 100 / H * 0.85)}%;`;
+        }
+
+        function roadmapEndYmReadable() {
+            ensureRoadmapTimelineDefaults();
+            const months = buildRoadmapMonthLabels();
+            const last = months[months.length - 1];
+            return last ? `${last.y}年${last.m}月` : '—';
+        }
+
+        /** 步骤 6 / 甘特卡片内共用：起始月 + 跨度（uid 区分 DOM id） */
+        function buildRoadmapTimelineToolbarHtml(uid) {
+            ensureRoadmapTimelineDefaults();
+            const H = getRoadmapHorizon();
+            const startYm = currentState.roadmapStartYm;
+            const endReadable = roadmapEndYmReadable();
+            const spanSelectOpts = [12, 18, 24, 30, 36, 48].map(n =>
+                `<option value="${n}" ${H === n ? 'selected' : ''}>${n}</option>`).join('');
+            return `
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-2 print-hidden">
+                    <span class="text-[12px] font-semibold text-ink whitespace-nowrap">甘特时间轴</span>
+                    <label class="inline-flex items-center gap-1.5">
+                        <span class="text-[11px] text-ink-tertiary whitespace-nowrap">起始月</span>
+                        <input type="month" id="roadmap-${uid}-start" value="${startYm}"
+                            onchange="applyRoadmapStartFromEl(this)" onblur="applyRoadmapStartFromEl(this)"
+                            class="rounded-[10px] border border-black/[0.10] bg-canvas px-2 py-1.5 text-[13px] font-medium text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 w-[11.5rem]" />
+                    </label>
+                    <label class="inline-flex items-center gap-1.5">
+                        <span class="text-[11px] text-ink-tertiary whitespace-nowrap">长度</span>
+                        <select id="roadmap-${uid}-span" onchange="setRoadmapMonthsFromUi(this.value)"
+                            class="rounded-[10px] border border-black/[0.10] bg-canvas px-2.5 py-1.5 text-[13px] font-medium text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 tabular-nums">
+                            ${spanSelectOpts}
+                        </select>
+                        <span class="text-[11px] text-ink-secondary">个月</span>
+                    </label>
+                    <span class="text-[11px] text-ink-secondary">截止到 <span class="font-semibold text-ink tabular-nums">${endReadable}</span></span>
+                </div>`;
+        }
+
+        function buildRoadmapGanttHtml() {
+            ensureRoadmapTimelineDefaults();
+            const H = getRoadmapHorizon();
+            const months = buildRoadmapMonthLabels();
+            const initiatives = sortInitiativesByPhase(currentState.initiatives);
+            initiatives.forEach((ini, idx) => ensureInitiativeRoadmapFields(ini, idx));
+            const streamColors = ['bg-accent/88', 'bg-[#5856d6]/82', 'bg-[#34c759]/78', 'bg-amber-500/76'];
+            let rows = '';
+            initiatives.forEach((ini) => {
+                const expanded = !!currentState.roadmapExpandedIniIds[String(ini.id)];
+                const streams = ini.streams || [];
+                let minS = H;
+                let maxE = 0;
+                streams.forEach(st => {
+                    minS = Math.min(minS, st.start);
+                    maxE = Math.max(maxE, st.start + st.len);
+                });
+                if (!streams.length) {
+                    minS = 0;
+                    maxE = H;
+                }
+                const env = initiativeStreamEnvelope(streams, H);
+                const sumStyle = roadmapBarStyle(minS, Math.max(1, maxE - minS), H);
+                const phaseCls = initiativePhaseChipClass(ini.phase);
+                const safeTitle = escapeHtmlText(ini.title);
+                const chevron = expanded ? 'fa-chevron-down' : 'fa-chevron-right';
+                rows += `
+                <div class="flex border-b border-black/[0.07] bg-white">
+                    <div class="w-[min(42vw,280px)] shrink-0 sticky left-0 z-[16] flex gap-2 border-r border-black/[0.06] bg-white px-2 py-2.5">
+                        <button type="button" onclick="toggleRoadmapIniExpanded(${ini.id})" class="print-hidden mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-black/[0.08] bg-canvas text-ink-secondary hover:bg-white hover:text-ink transition-colors" aria-expanded="${expanded}" title="${expanded ? '收起子路标' : '展开编辑子路标'}">
+                            <i class="fas ${chevron} text-[11px]" aria-hidden="true"></i>
+                        </button>
+                        <div class="flex min-w-0 flex-1 flex-col justify-center gap-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${phaseCls}">${ini.phase}</span>
+                                <span class="text-[13px] font-semibold text-ink leading-snug">${safeTitle}</span>
+                            </div>
+                            <p class="text-[11px] text-ink-tertiary leading-snug">${escapeHtmlText(ini.milestoneBand || '')}</p>
+                            <div data-ini-env class="print-hidden flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[10px] text-ink-secondary mt-0.5">
+                                <span class="text-ink font-medium">汇总</span>
+                                <span>第</span>
+                                <input type="number" min="1" max="${H}" data-env-start title="汇总条起点（横轴第几个月）"
+                                    class="w-9 rounded-md border border-black/[0.10] bg-white px-0.5 py-0.5 text-center text-[10px] font-semibold tabular-nums text-ink"
+                                    value="${env.minS + 1}" onchange="updateInitiativeGanttEnvelopeFromRow(${ini.id},this)" />
+                                <span>月起 ·</span>
+                                <input type="number" min="1" max="${H}" data-env-span title="汇总条覆盖月数"
+                                    class="w-9 rounded-md border border-black/[0.10] bg-white px-0.5 py-0.5 text-center text-[10px] font-semibold tabular-nums text-ink"
+                                    value="${env.span}" onchange="updateInitiativeGanttEnvelopeFromRow(${ini.id},this)" />
+                                <span>个月</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0 relative roadmap-gantt-track py-3 px-0" style="--rg-months:${H}">
+                        <div class="roadmap-gantt-bar bg-black/[0.12] ring-1 ring-black/[0.06]" style="${sumStyle}" title="举措合计跨度"></div>
+                    </div>
+                </div>`;
+                if (expanded) {
+                    streams.forEach((st, si) => {
+                        const stStyle = roadmapBarStyle(st.start, st.len, H);
+                        const labVal = escapeHtmlText(st.label);
+                        rows += `
+                <div class="flex border-b border-black/[0.04] bg-canvas/40">
+                    <div class="w-[min(42vw,280px)] shrink-0 sticky left-0 z-[16] border-r border-black/[0.06] bg-canvas/40 px-3 py-2 pl-3">
+                        <div class="space-y-2">
+                            <label class="block text-[10px] font-medium text-ink-tertiary">名称</label>
+                            <input type="text" class="w-full rounded-[8px] border border-black/[0.10] bg-white px-2 py-1.5 text-[11px] text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/15" value="${labVal}" onchange="updateInitiativeStreamField(${ini.id},${si},'label',this.value)" />
+                            <div class="flex flex-wrap items-center gap-1 text-[10px] text-ink-secondary">
+                                <span>第</span>
+                                <input type="number" min="1" max="${H}" class="w-10 rounded-md border border-black/[0.10] bg-white px-1 py-1 text-center text-[11px] font-semibold tabular-nums text-ink" value="${st.start + 1}" onchange="updateStreamStartMonthFromOne(${ini.id},${si},this.value)" title="横轴第几个月（相对顶部起始月）" />
+                                <span>月起 ·</span>
+                                <input type="number" min="1" max="${H}" class="w-10 rounded-md border border-black/[0.10] bg-white px-1 py-1 text-center text-[11px] font-semibold tabular-nums text-ink" value="${st.len}" onchange="updateStreamLenMonths(${ini.id},${si},this.value)" />
+                                <span>个月</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0 relative roadmap-gantt-track py-2 px-0" style="--rg-months:${H}">
+                        <div class="roadmap-gantt-bar sm ${streamColors[si % streamColors.length]}" style="${stStyle}" title="${escapeHtmlText(st.label)} · 列 ${st.start + 1}–${st.start + st.len}"></div>
+                    </div>
+                </div>`;
+                    });
+                }
+            });
+            const headerCells = months.map(mo => {
+                const qMark = [1, 4, 7, 10].includes(mo.m) ? `<span class="text-[9px] text-accent font-semibold">Q${mo.q}</span>` : '';
+                return `<div class="flex-1 min-w-[26px] border-l border-black/[0.06] px-0.5 py-2 text-center leading-tight bg-canvas/90">
+                    ${qMark}<div class="text-[9px] font-semibold text-ink tabular-nums ${mo.m === 1 ? 'text-accent' : ''}">${mo.y}</div>
+                    <div class="text-[10px] text-ink-secondary">${mo.m}月</div>
+                </div>`;
+            }).join('');
+            return `
+            <div class="flex flex-col flex-1 min-h-0 rounded-[14px] border border-black/[0.08] bg-white shadow-nav overflow-hidden roadmap-gantt-scroll" style="--rg-months:${H}">
+                <div class="shrink-0 border-b border-black/[0.06] bg-canvas/50 px-3 py-2.5">
+                    <div class="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
+                        ${buildRoadmapTimelineToolbarHtml('card')}
+                        <button type="button" onclick="refreshRoadmapStreams()" class="print-hidden self-start rounded-[10px] px-2.5 py-1 text-[11px] font-semibold text-accent hover:bg-accent/10 transition-colors" title="按 P0→P1→P2 重新分配各条时间片">
+                            按优先级重排条块
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-ink-secondary mt-2 leading-snug">① 先设上面「起始月、长度」② 点 <span class="font-medium text-ink">▸</span> 展开改子任务 ③ 或在每行「汇总」改整体起止（子条按比例伸缩）</p>
+                </div>
+                <div class="flex-1 min-h-0 overflow-auto roadmap-gantt-scroll">
+                    <div class="min-w-[720px] lg:min-w-[920px]">
+                        <div class="flex sticky top-0 z-20 border-b border-black/[0.08] bg-white shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+                            <div class="w-[min(42vw,280px)] shrink-0 sticky left-0 z-[21] flex items-end border-r border-black/[0.06] bg-white px-3 py-2">
+                                <span class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wide">举措 / 子路标</span>
+                            </div>
+                            <div class="flex flex-1">${headerCells}</div>
+                        </div>
+                        ${rows}
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function refreshRoadmapStreams() {
+            if (!currentState.initiatives.length) {
+                toast(`请先在「${getStepMeta(6).title}」生成举措`, 'error');
+                return;
+            }
+            const sorted = sortInitiativesByPhase(currentState.initiatives);
+            sorted.forEach((ini, idx) => {
+                ini.streams = null;
+                ensureInitiativeRoadmapFields(ini, idx, true);
+            });
+            syncItFeaturesFromInitiatives();
+            renderStep7();
+            toast('已按当前举措优先级重算甘特时间轴');
+        }
+
+        /** @param {{ silent?: boolean }} [opts] silent：由「热力图」页点下一步时自动生成 */
+        function runInitiativesGen(opts) {
+            const silent = !!(opts && opts.silent);
+            if (!currentState.capabilityFramework.length) {
+                if (!silent) toast(`请先在「${stepLabel(3)}」生成业务能力架构`, 'error');
+                return false;
             }
             currentState.initiatives = [];
             currentState.capabilityFramework.forEach((c, i) => {
@@ -917,7 +1860,7 @@
                 });
             });
             if (!currentState.initiatives.length) {
-                toast('当前热力图为绿为主，暂无强制变革项（可手动补充）', 'loading');
+                if (!silent) toast('当前热力图为绿为主，暂无强制变革项（已为您插入一条巩固类举措，可再改）', 'loading');
                 currentState.initiatives.push({
                     id: 1,
                     title: '持续优化：数据与自动化巩固',
@@ -928,32 +1871,29 @@
                     cost: '低'
                 });
             }
-            renderStep6();
-            toast('已生成变革举措草案');
+            currentState.initiatives.sort((a, b) => {
+                const score = (t) => (t.startsWith('攻坚') ? 0 : t.startsWith('优化') ? 1 : 2);
+                return score(a.title) - score(b.title) || a.id - b.id;
+            });
+            currentState.initiatives.forEach((ini, idx) => {
+                ini.phase = idx === 0 ? 'P0' : idx <= 2 ? 'P1' : 'P2';
+                ini.tech = '';
+                ini.deps = '';
+                ini.milestoneBand = '';
+                ini.streams = null;
+                ensureInitiativeRoadmapFields(ini, idx, true);
+            });
+            syncItFeaturesFromInitiatives();
+            if (!silent) {
+                renderStep6();
+                toast('已生成变革举措草案（含优先级与技术/依赖及路标轨）');
+            }
+            return true;
         }
 
+        /** 兼容旧入口：与「刷新甘特」等价 */
         function runITFeaturesGen() {
-            if (!currentState.initiatives.length) {
-                toast(`请先在「${stepLabel(6)}」生成变革举措`, 'error');
-                return;
-            }
-            currentState.itFeatures = [];
-            let fid = 0;
-            currentState.initiatives.forEach((ini, idx) => {
-                const cap = currentState.capabilityFramework.find(c => ini.caps.includes(c.l3)) || currentState.capabilityFramework[0];
-                fid += 1;
-                currentState.itFeatures.push({
-                    id: fid,
-                    name: `${ini.title.replace(/^[^:]+:\s*/, '')} — 路标包`,
-                    iniId: ini.id,
-                    phase: idx === 0 ? 'P0' : idx === 1 ? 'P1' : 'P2',
-                    tech: cap ? `${cap.tech} / API 集成` : '微服务 / 中台',
-                    deps: idx > 0 ? '依赖：主数据与统一身份' : '无前置强依赖',
-                    milestone: `M${idx * 3 + 1}–M${idx * 3 + 3}`
-                });
-            });
-            renderStep7();
-            toast('变革路标规划已生成');
+            refreshRoadmapStreams();
         }
 
         function updateGap(id, dim, val) {
@@ -1040,16 +1980,8 @@
                 const cfgOn = currentState.activePanel === 'config';
                 cfgBtn.className = `print-hidden w-full flex items-center gap-2 rounded-[10px] px-3 py-2 text-left transition-all border lg:py-1.5 ${cfgOn ? 'border-accent/30 bg-accent-muted text-accent shadow-nav ring-1 ring-[rgba(0,113,227,0.18)]' : 'border-black/[0.06] bg-white shadow-nav text-ink-secondary hover:bg-canvas hover:text-ink'}`;
             }
-            const prev = document.getElementById('btn-prev');
-            const next = document.getElementById('btn-next');
-            const foot = document.getElementById('footer-nav');
-            if (currentState.activePanel === 'config') {
-                if (foot) foot.classList.add('hidden');
-                return;
-            }
-            if (foot) foot.classList.remove('hidden');
-            if (prev) prev.disabled = currentState.step === 1;
-            if (next) next.disabled = currentState.step === STEP_TOTAL;
+            renderSidebarHistoryPanel();
+            updateWorkflowFooter();
         }
 
         function renderStep() {
@@ -1058,6 +1990,7 @@
                 const el8 = document.getElementById('step-8');
                 el8.classList.add('active');
                 renderStep8();
+                updateWorkflowFooter();
                 return;
             }
             const container = document.getElementById('step-' + currentState.step);
@@ -1071,6 +2004,7 @@
                 case 6: renderStep6(); break;
                 case 7: renderStep7(); break;
             }
+            updateWorkflowFooter();
         }
 
         function renderStep1() {
@@ -1165,12 +2099,13 @@
             let matrix = '';
             let flow = '';
             if (!currentState.vsStages.length) {
-                flow = `<div class="rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-14 text-center">
+                flow = `<div class="flex flex-1 min-h-0 flex-col justify-center rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-10 text-center">
                     <p class="text-[15px] font-semibold text-ink">尚未生成价值流</p>
                     <p class="text-[14px] text-ink-secondary mt-2 max-w-md mx-auto leading-relaxed">请选择下方模板，点击「生成价值流」，表格与流程图会自动出现。</p>
                 </div>`;
             } else {
-                matrix = `<div class="overflow-auto max-h-[min(28vh,200px)] mb-3 lg:mb-2 ui-table-wrap shadow-nav">
+                matrix = `<div class="flex flex-col flex-1 min-h-0 ui-table-wrap shadow-nav">
+                    <div class="flex-1 min-h-0 overflow-auto">
                     <table class="w-full text-[13px]">
                     <thead><tr>
                         <th class="p-3 text-left font-semibold">阶段</th>
@@ -1185,9 +2120,9 @@
                             <td class="p-3 align-top"><textarea class="w-full min-h-[52px] rounded-[10px] border border-black/[0.08] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" rows="2" onchange="updateVSStage(${s.id},'components',this.value)">${s.components || ''}</textarea></td>
                             <td class="p-3 text-center align-middle">${s.type === 'wait' ? '<span class="inline-block rounded-full bg-[#ff6961]/12 text-[#c41e1e] text-[11px] font-semibold px-2 py-1">等待</span>' : '<span class="inline-block rounded-full bg-accent-muted text-accent text-[11px] font-semibold px-2 py-1">增值</span>'}</td>
                         </tr>`).join('')}
-                    </tbody></table></div>`;
+                    </tbody></table></div></div>`;
 
-                flow = `<p class="text-[12px] lg:text-[13px] font-semibold text-ink mb-2">流程简图 <span class="font-normal text-ink-tertiary">（可调整各阶段耗时小时数）</span></p>
+                flow = `<div class="shrink-0 flex flex-col gap-2"><p class="text-[12px] lg:text-[13px] font-semibold text-ink">流程简图 <span class="font-normal text-ink-tertiary">（可调整各阶段耗时小时数）</span></p>
                 <div class="overflow-x-auto pb-1"><div class="flex min-w-max gap-2 items-stretch py-1">
                     ${currentState.vsStages.map((s, i) => `
                         <div class="flex items-center gap-2">
@@ -1206,12 +2141,13 @@
                     <div class="rounded-[14px] border border-black/[0.06] bg-canvas px-4 py-3 lg:px-4 lg:py-3"><p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">总交付周期</p><p class="text-[20px] lg:text-[22px] font-semibold text-ink tabular-nums mt-0.5"><span id="metric-lt">${vsMetrics.lt}</span><span class="text-[13px] font-normal text-ink-secondary ml-1">小时</span></p></div>
                     <div class="rounded-[14px] border border-black/[0.06] bg-canvas px-4 py-3 lg:px-4 lg:py-3"><p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">增值时间</p><p class="text-[20px] lg:text-[22px] font-semibold text-accent tabular-nums mt-0.5"><span id="metric-vt">${vsMetrics.vt}</span><span class="text-[13px] font-normal text-ink-secondary ml-1">小时</span></p></div>
                     <div class="rounded-[14px] border border-black/[0.06] bg-canvas px-4 py-3 lg:px-4 lg:py-3"><p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">流程效率 PCE</p><p class="text-[20px] lg:text-[22px] font-semibold text-[#34c759] tabular-nums mt-0.5"><span id="metric-pce">${vsMetrics.pce}</span><span class="text-[13px] font-normal text-ink-secondary ml-1">%</span></p></div>
-                </div>`;
+                </div></div>`;
             }
 
             document.getElementById('step-2').innerHTML = `
+                <div class="flex flex-col flex-1 min-h-0 gap-2">
                 ${methodBlock('s2')}
-                <div class="flex items-start gap-2 sm:gap-3 mb-3 lg:mb-2 print-hidden">
+                <div class="flex items-start gap-2 sm:gap-3 shrink-0 print-hidden">
                     ${workspaceSidebarToggleHtml()}
                     <div class="flex flex-col gap-3 lg:gap-2 flex-1 min-w-0">
                         ${stepPageHeading(2)}
@@ -1231,20 +2167,21 @@
                     </div>
                     </div>
                 </div>
-                ${matrix}
-                ${flow}`;
+                <div class="flex flex-col flex-1 min-h-0 min-w-0 gap-2">${matrix}${flow}</div>
+                </div>`;
             applySidebarCollapsed();
         }
 
         function renderStep3() {
             let body = '';
             if (!currentState.capabilityFramework.length) {
-                body = `<div class="rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-12 text-center">
+                body = `<div class="flex flex-1 min-h-0 flex-col justify-center items-center rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-10 text-center">
                     <p class="text-[15px] font-semibold text-ink">还没有能力清单</p>
-                    <p class="text-[14px] text-ink-secondary mt-2 max-w-lg mx-auto leading-relaxed">请先在「${stepLabel(2)}」填写业务组件，再回到本页点击「从价值流生成」。</p>
+                    <p class="text-[14px] text-ink-secondary mt-2 max-w-lg mx-auto leading-relaxed">请先在「${stepLabel(2)}」生成价值流并填写业务组件，再点击<strong class="text-ink font-medium">下一步</strong>进入本页（将自动生成清单）。</p>
                 </div>`;
             } else {
-                body = `<div class="overflow-auto max-h-[min(28vh,220px)] ui-table-wrap shadow-nav">
+                body = `<div class="flex flex-col flex-1 min-h-0 ui-table-wrap shadow-nav">
+                    <div class="flex-1 min-h-0 overflow-auto">
                     <table class="w-full text-[13px]">
                         <thead><tr>
                             <th class="p-3 text-left font-semibold">领域 L1</th><th class="p-3 text-left font-semibold">L2</th><th class="p-3 text-left font-semibold">能力块 L3</th>
@@ -1259,23 +2196,19 @@
                                 <td class="p-3 text-center"><input type="number" min="1" max="5" title="1–5 分" class="w-12 rounded-[8px] border border-black/[0.10] py-1.5 text-center text-[13px] font-semibold focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" value="${c.tgtMat}" onchange="updateFrameworkMat(${c.id},'tgtMat',this.value)"></td>
                                 <td class="p-3 text-center font-semibold tabular-nums text-accent">${c.ice}</td>
                             </tr>`).join('')}
-                        </tbody></table></div>`;
+                        </tbody></table></div></div>`;
             }
 
             document.getElementById('step-3').innerHTML = `
+                <div class="flex flex-col flex-1 min-h-0 gap-2">
                 ${methodBlock('s3')}
-                <div class="flex items-start gap-2 sm:gap-3 mb-2 lg:mb-2 print-hidden">
+                <div class="flex items-start gap-2 sm:gap-3 shrink-0 print-hidden">
                     ${workspaceSidebarToggleHtml()}
-                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 flex-1 min-w-0">
-                        ${stepPageHeading(3, 'flex-1')}
-                        <button type="button" onclick="runFrameworkGen()" class="inline-flex shrink-0 items-center gap-2 rounded-[10px] bg-accent px-4 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors">
-                            <i class="fas fa-arrows-rotate text-xs" aria-hidden="true"></i>
-                            从价值流生成
-                        </button>
-                    </div>
+                    <div class="flex-1 min-w-0">${stepPageHeading(3, '')}</div>
                 </div>
-                <p class="text-[12px] lg:text-[13px] text-ink-secondary mb-2 leading-snug line-clamp-2" title="常见一级域包括：${L1_DOMAINS.join('、')}">常见一级域包括：${L1_DOMAINS.slice(0, 5).join('、')} 等。可在「${stepLabel(4)}」继续微调。</p>
-                ${body}`;
+                <p class="text-[12px] lg:text-[13px] text-ink-secondary shrink-0 leading-snug line-clamp-2" title="常见一级域包括：${L1_DOMAINS.join('、')}">常见一级域包括：${L1_DOMAINS.slice(0, 5).join('、')} 等。可在「${stepLabel(4)}」继续微调。</p>
+                <div class="flex flex-col flex-1 min-h-0 min-w-0">${body}</div>
+                </div>`;
             applySidebarCollapsed();
         }
 
@@ -1288,12 +2221,13 @@
         function renderStep4() {
             let body = '';
             if (!currentState.capabilityFramework.length) {
-                body = `<div class="rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-12 text-center">
+                body = `<div class="flex flex-1 min-h-0 flex-col justify-center items-center rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-10 text-center">
                     <p class="text-[15px] font-semibold text-ink">暂无能力块</p>
                     <p class="text-[14px] text-ink-secondary mt-2">请先完成「${stepLabel(3)}」。</p>
                 </div>`;
             } else {
-                body = `<div class="overflow-auto max-h-[min(28vh,220px)] ui-table-wrap shadow-nav">
+                body = `<div class="flex flex-col flex-1 min-h-0 ui-table-wrap shadow-nav">
+                    <div class="flex-1 min-h-0 overflow-auto">
                     <table class="w-full text-[13px]"><thead><tr>
                         <th class="p-3 text-left font-semibold">能力块</th>
                         <th class="p-3 text-center font-semibold">组织</th><th class="p-3 text-center font-semibold">流程</th>
@@ -1309,130 +2243,136 @@
                             <td class="p-3 text-center">${gapSelect(c.id, 'gapIt', c.gapIt)}</td>
                             <td class="p-3 text-center text-[12px] text-ink-secondary">${c.sys}</td>
                         </tr>`).join('')}
-                    </tbody></table></div>`;
+                    </tbody></table></div></div>`;
             }
 
             document.getElementById('step-4').innerHTML = `
+                <div class="flex flex-col flex-1 min-h-0 gap-2">
                 ${methodBlock('s4')}
-                <div class="flex items-start gap-2 sm:gap-3 mb-3 lg:mb-2 print-hidden">
+                <div class="flex items-start gap-2 sm:gap-3 shrink-0 print-hidden">
                     ${workspaceSidebarToggleHtml()}
                     <div class="flex-1 min-w-0">${stepPageHeading(4, '')}</div>
                 </div>
-                ${body}`;
+                <div class="flex flex-col flex-1 min-h-0 min-w-0">${body}</div>
+                </div>`;
             applySidebarCollapsed();
         }
 
         function renderStep5() {
             let body = '';
             if (!currentState.capabilityFramework.length) {
-                body = `<div class="rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-12 text-center">
+                body = `<div class="flex flex-1 min-h-0 flex-col justify-center items-center rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-10 text-center">
                     <p class="text-[15px] font-semibold text-ink">热力图暂无数据</p>
                     <p class="text-[14px] text-ink-secondary mt-2 leading-relaxed max-w-lg mx-auto">完成「${stepLabel(3)}」与「${stepLabel(4)}」后，颜色会根据差距自动计算。</p>
                 </div>`;
             } else {
-                body = `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 lg:gap-3 max-h-[min(32vh,240px)] overflow-y-auto pr-1">
+                body = `<div class="flex flex-col flex-1 min-h-0 gap-2">
+                    <div class="flex-1 min-h-0 overflow-y-auto pr-1">
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 lg:gap-3 auto-rows-fr lg:min-h-full">
                     ${currentState.capabilityFramework.map(c => {
                         const cat = heatCategory(c);
                         const cls = cat === 'red' ? 'heat-red' : cat === 'yellow' ? 'heat-yellow' : 'heat-green';
                         const badge = cat === 'red' ? '优先处理' : cat === 'yellow' ? '纳入计划' : '相对健康';
-                        return `<button type="button" onclick="setStep(4)" class="rounded-[14px] border-2 p-3 lg:p-3 text-left transition hover:shadow-card ${cls} focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                        return `<button type="button" onclick="setStep(4)" class="rounded-[14px] border-2 p-3 lg:p-3 text-left transition hover:shadow-card min-h-[7rem] lg:min-h-0 lg:h-full flex flex-col ${cls} focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                             <p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">${c.l1} · ${c.l2}</p>
                             <p class="text-[15px] lg:text-[16px] font-semibold text-ink mt-1.5 leading-snug">${c.l3}</p>
-                            <p class="text-[11px] lg:text-[12px] text-ink-secondary mt-2 leading-relaxed">组织 ${c.gapOrg} · 流程 ${c.gapProc} · 数据 ${c.gapData} · IT ${c.gapIt}</p>
-                            <p class="mt-2 lg:mt-3 inline-flex text-[11px] font-semibold px-2 py-1 rounded-full ${cat === 'red' ? 'bg-[#ff6961]/15 text-[#b91c1c]' : cat === 'yellow' ? 'bg-amber-100/80 text-amber-900' : 'bg-emerald-100/80 text-emerald-900'}">${badge}</p>
+                            <p class="text-[11px] lg:text-[12px] text-ink-secondary mt-2 leading-relaxed flex-1">组织 ${c.gapOrg} · 流程 ${c.gapProc} · 数据 ${c.gapData} · IT ${c.gapIt}</p>
+                            <p class="mt-2 lg:mt-3 inline-flex text-[11px] font-semibold px-2 py-1 rounded-full shrink-0 ${cat === 'red' ? 'bg-[#ff6961]/15 text-[#b91c1c]' : cat === 'yellow' ? 'bg-amber-100/80 text-amber-900' : 'bg-emerald-100/80 text-emerald-900'}">${badge}</p>
                         </button>`;
                     }).join('')}
-                </div>
-                <p class="text-[12px] lg:text-[13px] text-ink-secondary mt-2 lg:mt-3">点击卡片可跳到差距分析步骤修改评分。</p>`;
+                    </div></div>
+                    <p class="shrink-0 text-[12px] lg:text-[13px] text-ink-secondary">点击卡片可跳到差距分析步骤修改评分。</p>
+                </div>`;
             }
 
             document.getElementById('step-5').innerHTML = `
+                <div class="flex flex-col flex-1 min-h-0 gap-2">
                 ${methodBlock('s5')}
-                <div class="flex items-start gap-2 sm:gap-3 mb-3 lg:mb-2 print-hidden">
+                <div class="flex items-start gap-2 sm:gap-3 shrink-0 print-hidden">
                     ${workspaceSidebarToggleHtml()}
                     <div class="flex-1 min-w-0">${stepPageHeading(5, '')}</div>
                 </div>
-                ${body}`;
+                <div class="flex flex-col flex-1 min-h-0 min-w-0">${body}</div>
+                </div>`;
             applySidebarCollapsed();
         }
 
         function renderStep6() {
             let body = '';
             if (!currentState.initiatives.length) {
-                body = `<div class="rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-12 text-center">
+                body = `<div class="flex flex-1 min-h-0 flex-col justify-center items-center rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-10 text-center">
                     <p class="text-[15px] font-semibold text-ink">尚未生成变革举措</p>
-                    <p class="text-[14px] text-ink-secondary mt-2 max-w-md mx-auto leading-relaxed">系统会读取「${getStepMeta(5).title}」中的红黄区域，自动生成草案，也可事后手工调整。</p>
+                    <p class="text-[14px] text-ink-secondary mt-2 max-w-md mx-auto leading-relaxed">在「${getStepMeta(5).title}」点击<strong class="text-ink font-medium">下一步</strong>时，会根据红黄区域自动生成草案；也可在本页继续手工编辑。</p>
                 </div>`;
             } else {
-                body = `<div class="flex flex-col gap-2 lg:max-h-[min(40vh,340px)] lg:overflow-y-auto pr-1">` + currentState.initiatives.map(ini => `
-                    <div class="rounded-[14px] border border-black/[0.06] bg-white p-4 sm:p-4 shadow-nav">
-                        <div class="flex flex-wrap justify-between gap-2 items-start">
-                            <h3 class="text-[15px] lg:text-[16px] font-semibold text-ink leading-snug">${ini.title}</h3>
-                            <span class="text-[11px] font-semibold uppercase tracking-wider text-ink-secondary bg-canvas px-2.5 py-0.5 rounded-full">${ini.window}</span>
+                const sortedIni = sortInitiativesByPhase(currentState.initiatives);
+                sortedIni.forEach((ini, idx) => ensureInitiativeRoadmapFields(ini, idx));
+                syncItFeaturesFromInitiatives();
+                body = `<div class="flex flex-col flex-1 min-h-0 gap-2 overflow-y-auto pr-1">` + sortedIni.map(ini => {
+                    const phCls = initiativePhaseChipClass(ini.phase || 'P2');
+                    return `
+                    <div class="rounded-[14px] border border-black/[0.06] bg-white p-4 shadow-nav shrink-0 ring-1 ring-black/[0.03]">
+                        <div class="flex flex-wrap items-start gap-2 justify-between">
+                            <div class="flex flex-wrap items-center gap-2 min-w-0">
+                                <span class="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide shrink-0 ${phCls}">${ini.phase || 'P2'}</span>
+                                <h3 class="text-[15px] lg:text-[16px] font-semibold text-ink leading-snug">${escapeHtmlText(ini.title)}</h3>
+                            </div>
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-ink-secondary bg-canvas px-2.5 py-0.5 rounded-full shrink-0">${escapeHtmlText(ini.window)}</span>
                         </div>
+                        <p class="text-[11px] text-accent mt-1.5 font-medium">${escapeHtmlText(ini.milestoneBand || '')}</p>
                         <div class="mt-2 grid gap-1.5 text-[13px] text-ink-secondary leading-relaxed">
-                            <p><span class="text-ink font-medium">能力块：</span>${ini.caps.join('、')}</p>
-                            <p><span class="text-ink font-medium">重点补齐：</span>${ini.gaps.join('、')}</p>
+                            <p><span class="text-ink font-medium">能力块：</span>${escapeHtmlText((ini.caps || []).join('、'))}</p>
+                            <p><span class="text-ink font-medium">重点补齐：</span>${escapeHtmlText((ini.gaps || []).join('、'))}</p>
+                        </div>
+                        <div class="mt-3 grid gap-2 border-t border-black/[0.06] pt-3">
+                            <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wide">技术方案与交付形态</label>
+                            <textarea class="w-full min-h-[52px] rounded-[10px] border border-black/[0.10] bg-canvas/50 px-3 py-2 text-[13px] text-ink leading-relaxed focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" rows="2" onchange="updateInitiativeField(${ini.id},'tech',this.value);syncItFeaturesFromInitiatives();">${escapeHtmlText(ini.tech)}</textarea>
+                            <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wide">关键依赖与前置条件</label>
+                            <textarea class="w-full min-h-[52px] rounded-[10px] border border-black/[0.10] bg-canvas/50 px-3 py-2 text-[13px] text-ink leading-relaxed focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" rows="2" onchange="updateInitiativeField(${ini.id},'deps',this.value);syncItFeaturesFromInitiatives();">${escapeHtmlText(ini.deps)}</textarea>
                         </div>
                         <div class="mt-3 grid sm:grid-cols-2 gap-3 text-[13px] border-t border-black/[0.06] pt-3">
-                            <p><span class="text-ink-tertiary text-[12px]">预期收益</span><br><span class="text-ink">${ini.benefit}</span></p>
-                            <p><span class="text-ink-tertiary text-[12px]">成本量级</span><br><span class="text-ink">${ini.cost}</span></p>
+                            <p><span class="text-ink-tertiary text-[12px]">预期收益</span><br><span class="text-ink">${escapeHtmlText(ini.benefit)}</span></p>
+                            <p><span class="text-ink-tertiary text-[12px]">成本量级</span><br><span class="text-ink">${escapeHtmlText(ini.cost)}</span></p>
                         </div>
-                    </div>`).join('') + `</div>`;
+                    </div>`;
+                }).join('') + `</div>`;
             }
 
             document.getElementById('step-6').innerHTML = `
+                <div class="flex flex-col flex-1 min-h-0 gap-2">
                 ${methodBlock('s6')}
-                <div class="flex items-start gap-2 sm:gap-3 mb-3 lg:mb-2 print-hidden">
+                <div class="flex items-start gap-2 sm:gap-3 shrink-0 print-hidden">
                     ${workspaceSidebarToggleHtml()}
-                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 flex-1 min-w-0">
-                        ${stepPageHeading(6, 'flex-1')}
-                        <button type="button" onclick="runInitiativesGen()" class="inline-flex shrink-0 items-center gap-2 rounded-[10px] bg-accent px-4 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors">
-                            <i class="fas fa-wand-magic-sparkles text-xs" aria-hidden="true"></i>
-                            根据热力图生成
-                        </button>
-                    </div>
+                    <div class="flex-1 min-w-0">${stepPageHeading(6, '')}</div>
                 </div>
-                ${body}`;
+                ${currentState.initiatives.length ? `<div class="shrink-0 rounded-[12px] border border-black/[0.06] bg-white px-3 py-2.5 shadow-nav print-hidden">${buildRoadmapTimelineToolbarHtml('s6')}</div>` : ''}
+                <div class="flex flex-col flex-1 min-h-0 min-w-0">${body}</div>
+                </div>`;
             applySidebarCollapsed();
         }
 
         function renderStep7() {
             let body = '';
-            if (!currentState.itFeatures.length) {
-                body = `<div class="rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-12 text-center">
-                    <p class="text-[15px] font-semibold text-ink">尚未生成变革路标</p>
-                    <p class="text-[14px] text-ink-secondary mt-2 max-w-md mx-auto leading-relaxed">请先在「${stepLabel(6)}」生成举措清单，再回到本页一键生成变革路标与里程碑。</p>
+            if (!currentState.initiatives.length) {
+                body = `<div class="flex flex-1 min-h-0 flex-col justify-center items-center rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-10 text-center">
+                    <p class="text-[15px] font-semibold text-ink">暂无甘特数据</p>
+                    <p class="text-[14px] text-ink-secondary mt-2 max-w-md mx-auto leading-relaxed">请先在「${getStepMeta(5).title}」点击<strong class="text-ink font-medium">下一步</strong>生成举措，再进入本页；时间轴将按 <span class="font-semibold text-ink">P0→P1→P2</span> 排序。</p>
                 </div>`;
             } else {
-                body = `<div class="space-y-2 lg:space-y-3 max-w-4xl lg:max-h-[min(42vh,380px)] lg:overflow-y-auto pr-1">
-                    ${currentState.itFeatures.map(f => `
-                        <div class="flex gap-3 items-stretch">
-                            <div class="w-12 shrink-0 flex flex-col items-center justify-center rounded-[12px] border border-black/[0.06] bg-canvas text-[12px] font-bold ${f.phase === 'P0' ? 'text-[#c41e1e]' : f.phase === 'P1' ? 'text-accent' : 'text-[#1e7e34]'}">${f.phase}</div>
-                            <div class="flex-1 rounded-[14px] border border-black/[0.06] bg-white p-4 shadow-nav relative overflow-hidden">
-                                <div class="absolute left-0 top-0 bottom-0 w-[3px] ${f.phase === 'P0' ? 'bg-[#ff6961]' : f.phase === 'P1' ? 'bg-accent' : 'bg-[#34c759]'}"></div>
-                                <p class="text-[15px] font-semibold text-ink pl-2">${f.name}</p>
-                                <p class="text-[13px] text-ink-secondary mt-1.5 pl-2 leading-relaxed">技术方案：${f.tech}</p>
-                                <p class="text-[12px] text-ink-tertiary mt-1.5 pl-2">${f.deps}</p>
-                                <span class="mt-2 ml-2 inline-flex text-[11px] font-semibold px-2 py-0.5 rounded-[8px] bg-canvas text-ink-secondary">${f.milestone}</span>
-                            </div>
-                        </div>`).join('')}
-                </div>`;
+                sortInitiativesByPhase(currentState.initiatives).forEach((ini, idx) => ensureInitiativeRoadmapFields(ini, idx));
+                syncItFeaturesFromInitiatives();
+                body = buildRoadmapGanttHtml();
             }
 
             document.getElementById('step-7').innerHTML = `
+                <div class="flex flex-col flex-1 min-h-0 gap-2">
                 ${methodBlock('s7')}
-                <div class="flex items-start gap-2 sm:gap-3 mb-3 lg:mb-2 print-hidden">
+                <div class="flex items-start gap-2 sm:gap-3 shrink-0 print-hidden">
                     ${workspaceSidebarToggleHtml()}
-                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 flex-1 min-w-0">
-                        ${stepPageHeading(7, 'flex-1')}
-                        <button type="button" onclick="runITFeaturesGen()" class="inline-flex shrink-0 items-center gap-2 rounded-[10px] bg-accent px-4 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors">
-                            <i class="fas fa-route text-xs" aria-hidden="true"></i>
-                            生成变革路标
-                        </button>
-                    </div>
+                    <div class="flex-1 min-w-0">${stepPageHeading(7, '')}</div>
                 </div>
-                ${body}`;
+                <div class="flex flex-col flex-1 min-h-0 min-w-0">${body}</div>
+                </div>`;
             applySidebarCollapsed();
         }
 
@@ -1526,47 +2466,99 @@
                 </div>`).join('') || '<p class="text-[12px] text-ink-tertiary italic py-2">尚未添加阶段</p>';
         }
 
-        async function handleExportPDF() {
+        /** 导出前刷新各步 DOM，避免仅当前步骤内容与快照一致 */
+        function refreshAllStepsDomForPdf() {
+            renderStep1();
+            renderStep2();
+            renderStep3();
+            renderStep4();
+            renderStep5();
+            renderStep6();
+            renderStep7();
+            renderStep8();
+        }
+
+        function resolveJsPdfConstructor() {
+            if (window.jspdf && typeof window.jspdf.jsPDF === 'function') return window.jspdf.jsPDF;
+            if (typeof window.jsPDF === 'function') return window.jsPDF;
+            return null;
+        }
+
+        /** @param {string} [filename] 下载文件名 */
+        async function runPdfExportCore(filename) {
+            const JsPDF = resolveJsPdfConstructor();
+            if (!JsPDF || typeof html2canvas !== 'function') {
+                toast('PDF 组件未加载（jspdf / html2canvas），请检查网络后重试', 'error');
+                return false;
+            }
+
             toast('正在生成 PDF…', 'loading');
-            document.body.classList.add('pdf-exporting');
             const workspace = document.getElementById('workspace');
             const sidebar = document.getElementById('sidebar');
-            const header = document.querySelector('header');
+            const hdr = document.getElementById('app-header');
             const footer = document.getElementById('footer-nav');
+            if (!workspace) {
+                toast('页面结构异常，无法导出', 'error');
+                return false;
+            }
             const originalClass = workspace.className;
-            sidebar.style.display = 'none';
-            header.style.display = 'none';
-            footer.style.display = 'none';
+            if (sidebar) sidebar.style.display = 'none';
+            if (hdr) hdr.style.display = 'none';
+            if (footer) footer.style.display = 'none';
             workspace.classList.add('w-[210mm]', 'mx-auto', 'shadow-none', 'border-0');
 
+            /** 须先于 refreshAllStepsDomForPdf：否则 grid/flex 仍为一屏模式，子步骤高度塌成 0 */
+            document.body.classList.add('pdf-exporting');
+
+            refreshAllStepsDomForPdf();
             document.querySelectorAll('.step-wrapper').forEach(el => el.classList.add('active'));
 
+            const wsScroll = document.getElementById('workspace-scroll');
+            if (wsScroll) wsScroll.scrollTop = 0;
+
+            void workspace.offsetHeight;
+            void document.getElementById('main-layout')?.offsetHeight;
+            await waitForLayoutMs(120);
+
             try {
-                const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+                const pdf = new JsPDF('p', 'mm', 'a4');
                 const contentIds = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5', 'step-6', 'step-7', 'step-8'];
                 for (let i = 0; i < contentIds.length; i++) {
                     const el = document.getElementById(contentIds[i]);
+                    if (!el) throw new Error(`缺少节点 ${contentIds[i]}`);
                     if (i > 0) pdf.addPage();
-                    const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+                    const canvas = await html2canvas(el, {
+                        scale: 2,
+                        useCORS: true,
+                        allowTaint: true,
+                        logging: false,
+                        backgroundColor: '#ffffff'
+                    });
+                    if (!canvas.width || !canvas.height) {
+                        throw new Error(`${contentIds[i]} 截图尺寸为 0，请确认工作台已展开可见`);
+                    }
                     const imgData = canvas.toDataURL('image/png');
                     const imgWidth = 190;
-                    const imgHeight = canvas.height * imgWidth / canvas.width;
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    if (!Number.isFinite(imgHeight) || imgHeight <= 0) {
+                        throw new Error(`${contentIds[i]} 截图尺寸计算异常`);
+                    }
                     pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
                 }
-                pdf.save('BA_Transformation_Blueprint.pdf');
+                pdf.save(filename || 'BA_Transformation_Blueprint.pdf');
                 toast('PDF 已保存');
+                return true;
             } catch (e) {
                 console.error(e);
-                toast('导出失败', 'error');
+                toast(`导出失败：${e && e.message ? e.message : '请查看控制台'}`, 'error');
+                return false;
             } finally {
                 document.body.classList.remove('pdf-exporting');
-                sidebar.style.display = '';
-                header.style.display = '';
-                footer.style.display = '';
+                if (sidebar) sidebar.style.display = '';
+                if (hdr) hdr.style.display = '';
+                if (footer) footer.style.display = '';
                 workspace.className = originalClass;
-                renderNav();
-                renderStepProgress();
-                renderStep();
+                document.querySelectorAll('.step-wrapper').forEach(el => el.classList.remove('active'));
             }
         }
     </script>
