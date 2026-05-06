@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>【问道】企业数字化转型规划 · Power by Mcyo</title>
+    <title>【问道】企业数智化转型规划 · AI赋能的顶级商业认知，洞见趋势，重塑增长</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -115,10 +115,53 @@
         body.pdf-exporting.app-shell > header {
             flex-shrink: 0 !important;
         }
+        body.pdf-exporting .ai-assistant-root { display: none !important; }
+        .ai-assistant-float-btn {
+            position: fixed;
+            right: max(16px, env(safe-area-inset-right));
+            bottom: max(92px, calc(env(safe-area-inset-bottom) + 76px));
+            z-index: 210;
+            width: 52px;
+            height: 52px;
+            border-radius: 9999px;
+            border: 1px solid rgba(0, 113, 227, 0.35);
+            background: linear-gradient(145deg, #0071e3 0%, #005bbf 100%);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(0, 113, 227, 0.35);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+        .ai-assistant-float-btn:hover { transform: scale(1.05); box-shadow: 0 6px 24px rgba(0, 113, 227, 0.42); }
+        .ai-assistant-drawer {
+            position: fixed;
+            right: max(12px, env(safe-area-inset-right));
+            bottom: max(84px, env(safe-area-inset-bottom));
+            z-index: 209;
+            width: min(432px, calc(100vw - 20px));
+            max-height: min(70vh, 540px);
+            display: flex;
+            flex-direction: column;
+            border-radius: 16px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            background: #fff;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+        }
+        .ai-assistant-drawer.hidden { display: none !important; }
+        #ai-output { font-size: 13px; line-height: 1.55; color: #1d1d1f; }
+
         body.pdf-exporting.app-shell > #main-layout {
             flex: 1 1 auto !important;
             min-height: calc(100vh - 80px) !important;
             max-height: none !important;
+            /* 侧栏脚本隐藏后若仍为双列网格，工作区只占右列会变窄，PDF 内中文挤压、重影似乱码 */
+            grid-template-columns: minmax(0, 1fr) !important;
+        }
+        body.pdf-exporting #main-layout > aside {
+            display: none !important;
         }
         body.pdf-exporting #workspace-scroll {
             display: flex !important;
@@ -126,9 +169,30 @@
             align-items: stretch !important;
             min-height: calc(100vh - 140px) !important;
         }
+        /* 桌面网格下 workspace 仍有 max-height:100%，导出时必须放开否则长步骤被压扁导致截图错位、裁切 */
+        body.pdf-exporting #main-layout > #workspace {
+            max-height: none !important;
+            min-height: 0 !important;
+            align-self: stretch !important;
+        }
+        body.pdf-exporting .step-wrapper {
+            animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+        }
         body.pdf-exporting .step-wrapper.active {
             flex: 0 0 auto !important;
             min-height: auto !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            overflow: visible !important;
+            box-sizing: border-box !important;
+            -webkit-font-smoothing: antialiased !important;
+        }
+        body.pdf-exporting .ui-table-wrap,
+        body.pdf-exporting .ui-table-wrap table {
+            overflow: visible !important;
         }
         /* PDF 截图时解除 flex 收缩，避免画布高度塌成一条 */
         body.pdf-exporting .bmc-nine {
@@ -264,12 +328,9 @@
                     <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-accent text-white shadow-nav">
                         <i class="fas fa-gem text-[13px] opacity-95" aria-hidden="true"></i>
                     </div>
-                    <div class="min-w-0 flex-1 leading-tight">
-                        <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                            <h1 class="text-[14px] sm:text-[15px] font-semibold text-ink tracking-tight leading-snug">【问道】企业数字化转型规划 · Power by Mcyo</h1>
-                            <span class="text-[10px] font-medium text-ink-tertiary uppercase tracking-wider hidden sm:inline leading-none">华为 4A 实战</span>
-                        </div>
-                        <p class="text-[11px] text-ink-secondary mt-0.5 lg:mt-0.5 leading-[1.3] max-w-3xl line-clamp-2 lg:line-clamp-1" title="从商业画布到变革蓝图，让每一份战略都掷地有声；华为4A架构实战方法论，一键沉淀为企业专属数字化转型规划资产。">从商业画布到变革蓝图，让每一份战略都掷地有声；华为4A架构实战方法论，一键沉淀为企业专属数字化转型规划资产。</p>
+                    <div class="min-w-0 flex-1 leading-tight space-y-0.5">
+                        <h1 class="text-[13px] sm:text-[15px] font-semibold text-ink tracking-tight leading-snug max-w-4xl"><span class="text-accent">【问道】企业数智化转型规划</span><span class="text-ink"> · AI赋能的顶级商业认知，洞见趋势，重塑增长</span></h1>
+                        <p class="text-[11px] text-ink-secondary mt-1 leading-[1.35] max-w-4xl line-clamp-4 sm:line-clamp-none" title="沉淀近20年全球顶尖科技企业商业模式，整合电子、汽车、家电、电商、会员运营等多领域核心思维体系，赋能企业拥抱变革">沉淀近20年全球顶尖科技企业商业模式，整合电子、汽车、家电、电商、会员运营等多领域核心思维体系，赋能企业拥抱变革</p>
                     </div>
                 </div>
                 <div class="flex shrink-0 flex-col gap-1.5 sm:flex-row sm:items-center lg:gap-3 lg:pl-1 lg:pt-0.5">
@@ -329,81 +390,88 @@
     <div id="pdf-container" class="hidden"></div>
 
     <script>
-        // ========== 方法论说明（与 BA方法论.md 对齐；主流程为「步骤 N/7」，数字化资产配置单独见侧栏） ==========
+        // ========== 方法论说明（与当前 7 步主流程 + 数字化资产配置交互一致；步骤标题见 STEPS） ==========
         const METHODOLOGY = {
             s1: {
                 bullets: [
-                    '客户细分：谁是你的目标客户（内部/外部）？',
-                    '价值主张：数字化的核心价值（降本、体验、新收入）？',
-                    '渠道通路：如何触达客户（APP、门户、门店等）？',
-                    '客户关系：如何建立并维护关系？',
-                    '收入来源：订阅、交易抽成、数据变现等？',
-                    '核心资源：数据、平台、人才、生态？',
-                    '关键业务：核心系统、供应链、营销等？',
-                    '重要伙伴：云厂商、ISV、设备商等？',
-                    '成本结构：研发、运维、基础设施？'
+                    '商业画布九要素与页面九宫格一致：客户细分、价值主张、渠道、客户关系、收入来源、核心资源、关键业务、重要伙伴、成本结构。',
+                    '可使用「导出 Excel / 导入 Excel」线下协作或批量回填；填写后点击「运行诊断」，按规则库汇总得分并列出需关注项与建议。',
+                    '诊断规则在侧栏「数字化资产配置 → 画布诊断规则」中维护（主字段关键词、可选联动字段、扣分与提示文案）。'
                 ],
-                output: '产出：一张商业模式图，作为后续架构工作的战略输入。'
+                output: '产出：结构化商业画布内容；可选的诊断报告（综合得分、预警项、改进建议），作为后续价值流与架构分析的战略输入。'
             },
             s2: {
                 bullets: [
-                    '价值流阶段：端到端为客户创造价值，通常 3～5 个主要阶段。',
-                    '场景因子：每阶段下的业务场景；区分频次、时效、合规、数据复杂度。',
-                    '业务组件：场景映射到企业内功能组件（能力块），形成阶段-场景-组件矩阵。'
+                    '选择「行业模板」并「套用模板」，或「空白开始」自建。① 流程简图从左到右为端到端顺序；点击某一阶段卡片后，下方仅编辑该阶段。',
+                    '② 对选中阶段勾选五类维度（效率、质量、成本、风险/合规、客户体验，可少于五项）：每类填写综合分 1～5（驱动简图色条、阶段健康度与底部汇总），并在维度下自定义多条 KPI（指标名称、现状值、目标值）。',
+                    '③ 「整体价值流概览」汇总 LT/VT/PCE 及各维度跨阶段均值。各阶段「业务组件」请用逗号分隔填写，进入下一步时将据此自动生成业务能力清单。'
                 ],
-                output: '产出：价值流阶段-场景-业务组件映射矩阵。'
+                output: '产出：可视化价值流；按阶段切换的五维综合分与自定义 KPI（现状/目标）；整体时间与多维概览；业务组件字段供架构步骤引用。'
             },
             s3: {
                 bullets: [
-                    '一级能力：战略管理、产品研发、市场营销、销售、服务交付、客户支持、供应链、财务、人力资源、IT（示例域）。',
-                    '二级能力：一级细化；三级能力块为最细粒度单元。',
-                    '全景清单：领域 L1 / L2 / 能力块 L3 / 描述 / 关联价值流 / 当前与目标成熟度（1～5）。'
+                    '从「价值流设计」点击「下一步」进入本页时，系统会按各阶段填写的业务组件自动生成清单；清单为空时也可在本页「手工新增能力块」从零维护。',
+                    '列表从左到右为：价值流阶段、业务能力 L3、描述、领域 L1、类型 L2、当前/目标成熟度（1～5 分）、ICE（新建行按默认模板计算）；均可直接编辑价值流阶段与 L3 名称。',
+                    '工具栏「新增能力块」追加一行；行末「删除」可移除该项（删至为空时步骤 4/5 暂无数据）。下一步「能力差距分析」维护四维差距，热力图沿用此处的 L1/L2 分层。',
+                    '「导出 Excel」生成与清单字段一致的表（含四维差距、参考系统与技术栈列便于往返）；「导入 Excel」整表替换当前清单并刷新步骤 4/5；详见文件中「使用说明」表。'
                 ],
-                output: '产出：业务能力架构清单（类 Excel / JSON 结构）。'
+                output: '产出：可增删改、支持 Excel 离线编辑的业务能力清单（价值流阶段、L3、描述、L1/L2、成熟度、ICE 及差距参考列）。'
             },
             s4: {
                 bullets: [
-                    '组织差距：角色缺位、技能不足、决策权不清。',
-                    '流程差距：未数字化、断点、手工多、缺乏 KPI。',
-                    '数据差距：标准不统一、孤岛、主数据缺失、质量低。',
-                    'IT 差距：系统老旧、未云化、API 复用不足、自动化低。',
-                    '对照目标成熟度（4～5），标注差距程度：缺失 / 弱 / 中 / 强（无显著差距）。'
+                    '对每个能力块，从组织、流程、数据、IT 四个维度用下拉框标注差距程度：缺失、弱、中、强（与页面矩阵列一致）。',
+                    '最右「系统」列为该能力关联的参考系统名称，由生成逻辑带出，便于对照，不参与四维打分。',
+                    '修改本页后，「能力热力图标注」的红黄绿色块会联动更新；也可从热力图卡片跳回本页修订。'
                 ],
-                output: '产出：每个能力块的四项差距评估矩阵。'
+                output: '产出：能力块 ×（组织、流程、数据、IT）四维差距矩阵，带系统参考列。'
             },
             s5: {
                 bullets: [
-                    '红色：能力差距大，必须优先改进。',
-                    '黄色：差距中等，计划优化。',
-                    '绿色：已达标，保持或持续优化。'
+                    '着色规则由四维差距自动计算：出现「缺失」或至少两项为「缺失/弱」时倾向红色（优先处理）；仅一项偏弱为黄色（纳入计划）；其余为绿色（相对健康）。',
+                    '页面按架构清单中的 L1 → L2 归类分层展示能力块（L3）卡片；顶部「热力分布汇总」提供按 L1、按 L2 的红/黄/绿计数、小计与绿色占比，便于快速看懂热力分布结构。',
+                    '点击能力块卡片可跳转至「能力差距分析」修改下拉评分；从本页「下一步」进入举措页时，系统会为红/黄能力块生成变革举措草案（多为绿时插入巩固类草案）。'
                 ],
-                output: '产出：基于差距着色的能力热力图标注（可下钻详情）。'
+                output: '产出：按 L1/L2 分层的着色热力视图 + 分层汇总统计，并作为变革举措自动生成的输入。'
             },
             s6: {
                 bullets: [
-                    '针对红/黄能力块识别变革专题：专题名称、目标能力块、差距维度、收益/成本、时间窗口。',
-                    '同步沉淀优先级（P0/P1/P2）、技术方案与交付形态、关键依赖与前置条件，供路标甘特直接引用。'
+                    '举措清单由热力图结果自动生成草案：攻坚/优化类标题、关联能力块、待补齐维度（组织/流程/数据/IT）、预期收益、成本量级与时间窗口；并按顺序默认标注 P0/P1/P2。',
+                    '在本页填写「技术方案与交付形态」「关键依赖与前置条件」，供步骤 7 甘特与子路标引用。可与页面顶部时间轴工具条设置规划起始月与跨度（与路标页共用，默认约 24 个月并可调整范围）。',
+                    '生成后可持续手工增删改每条举措，再进入路标页查看甘特排布。'
                 ],
-                output: '产出：变革举措清单（含优先级与技术/依赖说明），与能力块关联。'
+                output: '产出：变革举措清单（含优先级、技术/依赖说明及路标时间轴字段），与能力块关联。'
             },
             s7: {
                 bullets: [
-                    '按举措优先级（P0→P1→P2）横向排布年/月时间轴，对标咨询公司变革蓝图「里程碑 + 甘特」交付。',
-                    '每条举措展开子路标：依赖就绪、方案设计、开发联调、上线固化等，可与技术方案、依赖条款对照。',
-                    '支持一键按当前举措顺序重算时间轴；颗粒度以月为主，表头同步展示年份与季度分界。'
+                    '以横向年/月时间轴展示各举措及其子路标条（如依赖就绪、方案设计、开发联调、上线固化等），举措顺序遵循 P0→P1→P2。',
+                    '支持「刷新甘特 / 重算时间轴」：按当前举措顺序与已设规划跨度重新铺排；表头展示年份与季度分界。',
+                    '起始月份、规划跨度（月）在步骤 6 或 7 的时间轴控件中配置，改动后两页展示保持一致。'
                 ],
-                output: '产出：变革路标计划（横轴时间 × 举措与子工作包）。'
+                output: '产出：变革路标甘特（时间轴 × 举措与子工作包），用于里程碑型交付对齐。'
             },
             s8: {
                 bullets: [
-                    '画布诊断规则：为商业画布各字段配置关键词与联动条件，运行诊断时自动扣分并给出提示。',
-                    '价值流模板库：维护端到端阶段、场景因子与业务组件，供「价值流设计」步骤选用与快速生成。'
+                    '画布诊断规则：为画布各字段配置触发关键词、可选第二字段联动与扣分；步骤 1「运行诊断」时累计扣分并输出提示列表。',
+                    '价值流模板库：维护端到端阶段、场景与业务组件；保存后在「价值流设计」中套用，再按阶段补充五维综合分、KPI 现状/目标及价值描述等。',
+                    '右上角「导出 Excel」可下载含「画布诊断规则」「价值流模板」两个工作表的模板（含当前内容）；手工填写后「导入 Excel」按表合并刷新本页及步骤 2 下拉模板；详见文件中「使用说明」表。'
                 ],
-                output: '产出：可复用的画布诊断规则集与价值流模板资产（数字化配置）。'
+                output: '产出：可复用的诊断规则与价值流模板资产；支持 Excel 模板离线编辑后与页面双向同步（随工作流快照保存）。'
             }
         };
 
         const GAP_LEVELS = ['缺失', '弱', '中', '强'];
+
+        /** 价值流五维健康度（见《价值流完善.md》：精益+BSC+4A，不止耗时/PCE） */
+        const VS_DIM_KEYS = ['dEff', 'dQual', 'dCost', 'dRisk', 'dCx'];
+        const VS_DIM_LABELS = { dEff: '效率', dQual: '质量', dCost: '成本', dRisk: '风险/合规', dCx: '客户体验' };
+        const VS_DIM_WEIGHT_DEFAULTS = { dEff: 0.2, dQual: 0.2, dCost: 0.2, dRisk: 0.2, dCx: 0.2 };
+        const VS_DIM_ADVICE = {
+            dEff: '缩短周期：规则自动化、并行审批、异步握手',
+            dQual: '提升一次通过率：防错、校验自动化、AI 辅助审查',
+            dCost: '降低单位成本：共享中心、自服务、流程瘦身',
+            dRisk: '合规与连续性：管控嵌入、审计留痕、最小权限',
+            dCx: '体验与留存：进度可视、主动通知、降低客户费力度'
+        };
 
         const FIELD_MAP = {
             customerSegments: '客户细分',
@@ -418,8 +486,6 @@
         };
 
         const FIELD_ORDER = Object.keys(FIELD_MAP);
-
-        const L1_DOMAINS = ['战略管理', '产品研发', '市场营销', '销售', '服务交付', '客户支持', '供应链', '财务', '人力资源', 'IT'];
 
         function inferL1L2FromComponent(name) {
             const n = name.toLowerCase();
@@ -444,16 +510,60 @@
         let currentState = {
             step: 1,
             activePanel: 'workflow',
+            /** 预置内容严格对齐《商业画布参考.md》：华为终端「1+8」产品销售 */
             bmc: {
-                keyPartners: '云厂商, ISV, 设备商',
-                keyActivities: '核心系统运营, 供应链协同, 数字营销',
-                keyResources: '数据资产, 业务中台, 关键人才',
-                valuePropositions: '一站式数字化转型规划，缩短规划周期并降低落地风险',
-                customerRelationships: '自助服务 + 专家顾问',
-                channels: 'SaaS 平台, 合作伙伴, 行业活动',
-                customerSegments: '中大企业 CIO / 数字化负责人',
-                costStructure: '研发与运维, 云与基础设施',
-                revenueStreams: '订阅费, 咨询与实施'
+                customerSegments: `核心细分：追求科技体验、品质生活的中高端消费者（以25~45岁职场人士为主）
+次级细分：
+  - 华为品牌忠实用户（鸿蒙生态用户）
+  - 商务人士（手机+笔记本+平板协同）
+  - 科技发烧友（穿戴+智慧屏+耳机联动）
+  - 家庭用户（智慧屏+路由+音箱全屋智能）
+场景细分：移动办公、智能家居、运动健康、影音娱乐`,
+                valuePropositions: `全场景智慧生活：通过1（手机）与8（平板、PC、穿戴、智慧屏、音箱、耳机、路由、车机）的无缝协同，提供硬件+软件+云服务一体化的体验。
+核心差异：
+  - 鸿蒙分布式能力（设备间任务流转、超级终端）
+  - 高端品牌溢价（影像、设计、安全）
+  - 生态粘性（应用内跨设备同步、统一账户）
+客户价值：效率提升（多屏协同）、健康管理（穿戴+运动健康App）、影音沉浸（智慧屏+音箱+耳机）`,
+                channels: `线上：华为商城（Vmall）、京东/天猫旗舰店、抖音/小红书种草+直播
+线下：
+  - 华为旗舰店（品牌体验）
+  - 授权体验店（分级城市覆盖）
+  - 运营商渠道（合约套餐）
+  - 企业团购/政务采购
+触达方式：门店体验→线上优惠领券→到店提货/快递，线上线下价格统一`,
+                customerRelationships: `获取：广告投放（品牌广告+效果广告）、KOL测评、Mate/P系列发布会
+留存：
+  - 鸿蒙生态内持续推送云空间/花瓣支付等增值服务
+  - 会员体系（华为会员积分、VIP服务）
+  - 社区运营（花粉俱乐部、用户参与内测）
+激活：旧机换新补贴、捆绑销售8件套折扣
+推荐：NPS调研+口碑裂变（推荐购机赠积分）`,
+                revenueStreams: `硬件销售：手机(60%~70%营收)、8件套(30%~40%)
+软件服务：华为应用市场、云空间、音乐/视频等付费订阅
+生态分成：应用内购分成、花瓣支付手续费
+配件与耗材：充电器、保护壳、耳机等
+企业服务：政企定制手机+平板解决方案`,
+                keyResources: `品牌：高端科技品牌形象（自研芯片、影像技术）
+技术：麒麟芯片（若可供应）、鸿蒙OS、HiCar、华为云
+供应链：与台积电/中芯、京东方、韦尔等深度合作
+渠道：超过10万家线下店铺（含授权店+专卖店）
+用户基础：全球数亿鸿蒙用户，账户体系与云空间绑定`,
+                keyActivities: `产品规划与研发：1+8产品线迭代（Mate/P系列旗舰、穿戴健康传感器、智慧屏画质）
+营销与服务：全球发布会、体验店运营、售后服务网络
+生态建设：HMS推广、鸿蒙开发者激励、HiLink智能家居合作
+供应链管理：全球采购、库存周转、预测与调配`,
+                keyPartners: `芯片/零部件供应商：高通（可选）、京东方（屏幕）、舜宇光学（镜头）
+软件开发者：华为生态应用开发者、鸿蒙原生应用开发团队
+渠道伙伴：京东、天猫、运营商、苏宁/国美
+技术联盟：HUAWEI HiCar（车厂）、AITO问界（车机互联）
+内容服务商：酷狗音乐、优酷视频、华为视频内容合作`,
+                costStructure: `研发费用：芯片/OS/影像等高投入（年超千亿）
+营销费用：发布会、全球广告、明星代言（每年百亿级）
+渠道费用：线下店面租金/装修/人员、线上平台佣金
+供应链成本：元器件采购、库存持有、物流配送
+售后服务：全国维修网点、备件库、客服中心
+软件生态：开发者分成、内容版权采购`
             },
             bmcReport: null,
             rules: [
@@ -461,11 +571,62 @@
                 { id: 2, field: 'keyActivities', keyword: '研发', compareField: 'customerSegments', compareKeyword: '小微', message: '重研发与客户画像（小微/价格敏感）可能存在错配。', score: 15 },
                 { id: 3, field: 'keyResources', keyword: '外包', compareField: 'none', compareKeyword: '', message: '关键资源依赖外包，需供应商治理机制。', score: 10 }
             ],
-            valueStreamName: '端到端订单履约',
+            valueStreamName: '',
+            /** 五维权重（自动归一化为合计 1），医疗等可加重 risk，零售可加重 dEff */
+            vsDimWeights: { dEff: 0.2, dQual: 0.2, dCost: 0.2, dRisk: 0.2, dCx: 0.2 },
+            /** 价值流设计：当前在 ② 中编辑的阶段 id（与 ① 卡片联动） */
+            vsSelectedStageId: null,
             vsStages: [],
+            /** 下拉与模板库列表顺序：研发 → GTM → MKT → 电商 → 零售 → 服务 → 渠道 → 车/MSS（对象键序即展示序） */
             templates: {
+                hwcb_ipd: {
+                    name: '3C行业+研发+IPD',
+                    stages: [
+                        { id: 1, name: '需求与Charter', type: 'process', defaultTime: 160, scenarios: '用户研究, 竞品对标, 路线图(Roadmap)', components: '需求管理(RM), Charter与投资组合' },
+                        { id: 2, name: '概念与设计', type: 'process', defaultTime: 200, scenarios: '系统工程方案, 造型与UX, 可制造性', components: '系统架构(SysEng), ID/UX, 成本与DFM' },
+                        { id: 3, name: '详细开发与迭代', type: 'process', defaultTime: 960, scenarios: '软硬件迭代, 敏捷与基线', components: '开发交付, TR技术评审, CI/CD与缺陷管理' },
+                        { id: 4, name: '验证与认证', type: 'process', defaultTime: 320, scenarios: '可靠性/EMC/射频, 软件Beta, 区域合规', components: '测试工程, 认证与合规, 用户体验试用' },
+                        { id: 5, name: '发布移交与生命周期', type: 'wait', defaultTime: 96, scenarios: 'PDCP/ADCP关口, 移交制造与服务', components: '版本发布, 资料移交, EOL与维护策略' }
+                    ]
+                },
+                /** GTM(IPMS)：DCP1/2/3 为决策关口，简图中以「等待」类型呈现 */
+                hwcb_ipms: {
+                    name: '3C行业+GTM+IPMS',
+                    stages: [
+                        { id: 1, name: '规划与立项', type: 'process', defaultTime: 160, scenarios: '细分市场与定位, Charter与商业论证, 投资组合对齐', components: '市场洞察, Charter包, 损益与目标毛利' },
+                        { id: 2, name: '拓展准备', type: 'process', defaultTime: 200, scenarios: '渠道/伙伴拓展蓝图, 区域准入与合规清单, 拓展资源与节奏', components: '渠道规划, 伙伴与SI体系, 拓展项目群管理' },
+                        { id: 3, name: 'DCP1', type: 'wait', defaultTime: 48, scenarios: '拓展准备收敛评审, 投入与风险闸门', components: 'DCP1评审纪要, 决策项与承诺闭环' },
+                        { id: 4, name: '市场拓展', type: 'process', defaultTime: 240, scenarios: '预热蓄水, 标杆试点, 区域复制', components: '拓展执行, 作战地图, 拓展仪表盘' },
+                        { id: 5, name: '上市准备', type: 'process', defaultTime: 280, scenarios: '定价与套装, 渠道政策, 营销物料与培训样机', components: 'GTM包, 渠道赋能, 营销节奏表' },
+                        { id: 6, name: 'DCP2', type: 'wait', defaultTime: 48, scenarios: '上市放行评审, 可获得性与营销就绪', components: 'DCP2评审纪要, 供应与营销联合签字' },
+                        { id: 7, name: '上市销售', type: 'process', defaultTime: 168, scenarios: '首销作战, 产能爬坡, Sell-in/Sell-out', components: '上市作战室, 分货与价盘监控, 终端激活' },
+                        { id: 8, name: '稳定销售', type: 'process', defaultTime: 720, scenarios: '稳态运营, 促销与调价, 渠道健康度', components: '销售运营, 价盘与市场秩序协同, 生命周期经营' },
+                        { id: 9, name: 'DCP3', type: 'wait', defaultTime: 48, scenarios: '稳态经营复盘, 迭代/换代/收缩决策', components: 'DCP3评审纪要, 下一周期Charter输入' },
+                        { id: 10, name: '退市操盘', type: 'process', defaultTime: 120, scenarios: 'EOL公告, 库存消化, 服务与备件衔接', components: '退市计划, 渠道清库, 客服与备件策略' }
+                    ]
+                },
+                industry_marketing: {
+                    name: '3C行业+MKT+营销流',
+                    stages: [
+                        { id: 1, name: '洞察与目标', type: 'process', defaultTime: 72, scenarios: '人群画像, 竞品与舆情, 经营目标拆解', components: '市场洞察, 目标与预算, 受众分层' },
+                        { id: 2, name: '策略制定', type: 'process', defaultTime: 96, scenarios: '定位与卖点, 渠道与战役组合, 风险与合规', components: '传播策略, 渠道策略, 审批与合规清单' },
+                        { id: 3, name: '内容管理', type: 'process', defaultTime: 120, scenarios: '素材生产, 版本与版权, 多语言多终端适配', components: '内容中台, DAM, 创意与模板库' },
+                        { id: 4, name: '活动执行', type: 'process', defaultTime: 168, scenarios: '投放与运营, 直播与大促, 区域联动', components: 'Campaign执行, 媒介采买, 现场与社群运营' },
+                        { id: 5, name: '效果评估', type: 'process', defaultTime: 48, scenarios: 'ROI/转化复盘, 品牌与效果双维度', components: '数据看板, 归因分析, 滚动优化建议' }
+                    ]
+                },
+                hwcb_5a: {
+                    name: '3C行业+电商+5A增长链路',
+                    stages: [
+                        { id: 1, name: 'Awareness 认知', type: 'process', defaultTime: 8, scenarios: '信息流/搜索曝光, 品牌Campaign, KOL预热', components: '媒介投放, 品牌创意, 素材与达人管理' },
+                        { id: 2, name: 'Appeal 吸引', type: 'process', defaultTime: 12, scenarios: '种草内容, 直播间心智, 对比评测', components: '内容营销, 直播运营, 达人种草管理' },
+                        { id: 3, name: 'Ask 问询', type: 'wait', defaultTime: 24, scenarios: '客服咨询, 门店体验预约, 对比下单犹豫', components: '智能客服, 导购知识库, 线索分配' },
+                        { id: 4, name: 'Act 行动', type: 'process', defaultTime: 6, scenarios: '电商大促下单, O2O到店核销, 分期与以旧换新', components: '电商平台订单, 支付与风控, 库存与履约' },
+                        { id: 5, name: 'Advocate 拥护', type: 'process', defaultTime: 72, scenarios: '会员复购, UGC评价, 推荐裂变', components: '会员运营, 售后体验, NPS与社群运营' }
+                    ]
+                },
                 retail: {
-                    name: '新零售：预测到交付',
+                    name: '3C行业+零售+预测到交付',
                     stages: [
                         { id: 1, name: '需求预测', type: 'process', defaultTime: 2, scenarios: '常态预测, 促销高峰', components: '需求预测, 数据汇总' },
                         { id: 2, name: '库存与审批', type: 'wait', defaultTime: 48, scenarios: '标准审批, 加急通道', components: '库存审批, 信用审核' },
@@ -473,13 +634,48 @@
                         { id: 4, name: '在途与入库', type: 'wait', defaultTime: 72, scenarios: '陆运, 空运加急', components: '物流调度, 入库上架' },
                         { id: 5, name: '全渠道交付', type: 'process', defaultTime: 24, scenarios: '门店自提, 快递到家', components: '全渠道交付, OMS' }
                     ]
+                },
+                hwcb_itr: {
+                    name: '3C行业+服务+ITR',
+                    stages: [
+                        { id: 1, name: '服务请求', type: 'process', defaultTime: 1, scenarios: '热线/在线/自助报障, App与IoT远程上报', components: '全渠道入口, 身份校验, 请求分类标签' },
+                        { id: 2, name: '服务受理', type: 'process', defaultTime: 4, scenarios: 'SLA定级, 派单与预约, 跨渠道协同', components: '工单系统, 知识库推荐, 调度与座席' },
+                        { id: 3, name: '服务交付', type: 'process', defaultTime: 16, scenarios: '远程解决, 到店/寄修, 换机与软件修复', components: '维修工具链, 备件与物流, 变更与版本发布' },
+                        { id: 4, name: 'NSS评估', type: 'wait', defaultTime: 8, scenarios: '服务结束回访, 满意度与痛点采集', components: 'NSS调研, 差评预警, VOC回流产品' },
+                        { id: 5, name: '持续改进', type: 'process', defaultTime: 40, scenarios: 'TOP问题复盘, 流程与知识优化', components: '质量回溯, 知识沉淀, 产品与运营改进项' }
+                    ]
+                },
+                industry_trade: {
+                    name: '3C行业+渠道+交易流',
+                    stages: [
+                        { id: 1, name: '计划', type: 'process', defaultTime: 72, scenarios: '销售与供应计划, 需求波动与版本节奏', components: 'S&OP, 要货计划, 预测校验' },
+                        { id: 2, name: '交付', type: 'process', defaultTime: 96, scenarios: '订单履约, 物流与签收, 逆向与异常', components: 'OMS, WMS/TMS, 异常升级' },
+                        { id: 3, name: '市场秩序', type: 'wait', defaultTime: 24, scenarios: '价盘巡查, 窜货与违规处置', components: '市场秩序规则, 稽查与申诉闭环' },
+                        { id: 4, name: '分货', type: 'process', defaultTime: 48, scenarios: '分货策略, 紧俏品分配, 区域平衡', components: '分货引擎, 渠道等级与权重, 分货看板' },
+                        { id: 5, name: '销售', type: 'process', defaultTime: 120, scenarios: 'Sell-through, 促销执行, 终端激励对接', components: 'POS/经销商系统, 销售日报, 促销核销' },
+                        { id: 6, name: '开票激励', type: 'process', defaultTime: 72, scenarios: '对账开票, 返利与台阶激励结算', components: '结算中心, 税务与合规, 激励政策引擎' }
+                    ]
+                },
+                /** 汽车流通/MSS 平台典型端到端：获客 → 线索 → 商机 → 成交 → 交车 → 售后 */
+                auto_mss_mhc: {
+                    name: '车行业+MSS+卖好车',
+                    stages: [
+                        { id: 1, name: '营销获客', type: 'process', defaultTime: 72, scenarios: '品牌招商活动, 垂媒/信息流投放, 经销商集客', components: '营销投放, 线索采集与清洗, 渠道与线索运营看板' },
+                        { id: 2, name: '线索跟进', type: 'process', defaultTime: 48, scenarios: '首次触达, 意向分级, 超时预警与再分配', components: 'CRM/SCRM, 外呼与企微, 线索评分与分配引擎' },
+                        { id: 3, name: '商机转化', type: 'process', defaultTime: 96, scenarios: '到店试驾预约, 方案与报价, 竞品对比', components: '商机漏斗, 报价与审批, 试驾与库存可视化' },
+                        { id: 4, name: '交易下单', type: 'wait', defaultTime: 36, scenarios: '定金与合同签署, 按揭/融资租赁审批, 限购与合规校验', components: '电子合同, 支付与风控, 金融机构对接, 订单中心' },
+                        { id: 5, name: '车辆交付', type: 'process', defaultTime: 72, scenarios: '配车与PDI, 物流到店/到家, 上牌与保险衔接', components: '库存与物流, PDI质检, 交付预约, 车联网激活' },
+                        { id: 6, name: '售后服务', type: 'process', defaultTime: 168, scenarios: '保养维修, 质保索赔, 二手车置换回流', components: '维修工单, 配件与索赔, 客户关怀与满意度, 回购线索回流' }
+                    ]
                 }
             },
-            selectedTemplateId: 'retail',
+            selectedTemplateId: 'hwcb_ipms',
             capabilityFramework: [],
             initiatives: [],
             itFeatures: [],
             newTplSteps: [],
+            /** 配置页正在编辑的模板 key（内置/自定义均可）；null 表示新建模式 */
+            editingTemplateKey: null,
             sidebarCollapsed: false,
             /** 配置页 Tab：rules | templates */
             configTab: 'rules',
@@ -491,13 +687,13 @@
 
         /** 主流程 7 步（左侧序号与右侧步骤编号一致）；数字化资产配置不在此数组 */
         const STEPS = [
-            { id: 1, nodeShort: '画布', title: '商业画布蓝图', icon: 'fa-cubes', key: 's1', guide: '用九个格子把「卖给谁、卖什么、怎么盈利」写清楚，后面所有分析都从这里出发。' },
-            { id: 2, nodeShort: '价值流', title: '价值流设计', icon: 'fa-stream', key: 's2', guide: '把业务从头到尾盘成几条阶段，再写上典型场景和用到的能力，形成一张对齐表。' },
-            { id: 3, nodeShort: '架构', title: '业务能力架构', icon: 'fa-sitemap', key: 's3', guide: '把价值流里出现的「能力块」整理成分层的清单，并标注现状与目标成熟度。' },
-            { id: 4, nodeShort: '差距', title: '能力差距分析', icon: 'fa-table-cells', key: 's4', guide: '对照目标，看看人在组织、做事流程、数据和系统四类上差在哪里，用下拉框标程度即可。' },
-            { id: 5, nodeShort: '热力图', title: '能力热力图标注', icon: 'fa-fire', key: 's5', guide: '红黄绿一眼看懂优先级：红色优先改，黄色计划优化，绿色表示相对达标。' },
-            { id: 6, nodeShort: '举措', title: '变革举措与方案', icon: 'fa-lightbulb', key: 's6', guide: '汇总热力图重点任务，标注 P0/P1/P2、技术方案与依赖说明，作为路标甘特的输入基线。' },
-            { id: 7, nodeShort: '路标', title: '变革路标计划', icon: 'fa-bars-staggered', key: 's7', guide: '按年月横向展开变革蓝图：举措优先排序，下设方案/依赖类子路标条，对标 PMO 级里程碑计划。' }
+            { id: 1, nodeShort: '画布', title: '商业画布蓝图', icon: 'fa-cubes', key: 's1', guide: '九宫格填写战略要素；可导出/导入 Excel，「运行诊断」用配置侧的规则库做一致性检查。' },
+            { id: 2, nodeShort: '价值流', title: '价值流设计', icon: 'fa-stream', key: 's2', guide: '选模板 → 点击简图卡片选中阶段 → 填该阶段五维综合分与具体指标（现状/目标）→ 看底部整体概览。' },
+            { id: 3, nodeShort: '架构', title: '业务能力架构', icon: 'fa-sitemap', key: 's3', guide: '自动生成或手工维护；支持导出/导入 Excel；含差距列便于与步骤 4 对齐。' },
+            { id: 4, nodeShort: '差距', title: '能力差距分析', icon: 'fa-table-cells', key: 's4', guide: '对每个能力块在组织、流程、数据、IT 四维下拉标注缺失/弱/中/强；右侧系统列为参考信息。' },
+            { id: 5, nodeShort: '热力图', title: '能力热力图标注', icon: 'fa-fire', key: 's5', guide: '顶部按 L1/L2 汇总红黄牌分布；下方按领域分层看各能力块热力；点卡片回差距页改分。' },
+            { id: 6, nodeShort: '举措', title: '变革举措与方案', icon: 'fa-lightbulb', key: 's6', guide: '热力图下一步自动生成草案；补充技术方案与依赖，设置路标起始月/跨度，供甘特页使用。' },
+            { id: 7, nodeShort: '路标', title: '变革路标计划', icon: 'fa-bars-staggered', key: 's7', guide: 'P0→P1→P2 横向排布子路标甘特；可重算时间轴，起始月与规划跨度与举措页一致。' }
         ];
 
         const STEP_TOTAL = 7;
@@ -506,7 +702,7 @@
         /** 侧栏「配置」面板：画布规则与价值流模板，不计入 7 步 */
         const CONFIG_PANEL = {
             title: '数字化资产配置',
-            guide: '使用顶部 Tab 在「画布诊断规则」与「价值流模板库」之间切换，分别维护诊断规则与模板；不影响上方 7 步主流程的数据录入顺序。',
+            guide: '顶部 Tab 切换规则与模板；可用导出/导入 Excel 批量维护。右下角「AI 规划助手」可做配置类启发式问答。不影响主流程 7 步的录入顺序。',
             icon: 'fa-sliders'
         };
 
@@ -527,8 +723,7 @@
             if (!s) return '';
             const blockClass = extraClass ? ` ${extraClass}` : '';
             return `<div class="step-page-head min-w-0 shrink-0${blockClass}">
-                <p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider leading-none">步骤 ${stepId}/${STEP_TOTAL}</p>
-                <h2 class="text-[17px] sm:text-[18px] lg:text-[17px] font-semibold text-ink tracking-tight mt-0.5 leading-tight">${s.title}</h2>
+                <h2 class="text-[17px] sm:text-[18px] lg:text-[17px] font-semibold text-ink tracking-tight leading-tight">${s.title}</h2>
                 <p class="text-[12px] text-ink-secondary mt-1 leading-snug line-clamp-2 lg:line-clamp-1 lg:text-[12px]" title="${s.guide}">${s.guide}</p>
             </div>`;
         }
@@ -571,7 +766,227 @@
             }).join('');
         }
 
-        let vsMetrics = { lt: 0, vt: 0, pce: 0 };
+        let vsMetrics = {
+            lt: 0, vt: 0, pce: '0', healthE2e: 0, worstStageName: '—', worstPct: null,
+            fmtAvgEff: '—', fmtAvgQual: '—', fmtAvgCost: '—', fmtAvgRisk: '—', fmtAvgCx: '—'
+        };
+
+        function defaultVsStageExtra() {
+            const dimActive = {};
+            const dimKpiRows = {};
+            VS_DIM_KEYS.forEach(k => {
+                dimActive[k] = true;
+                dimKpiRows[k] = [];
+            });
+            return {
+                valDesc: '',
+                dimActive,
+                dimKpiRows,
+                dEff: 3, dQual: 3, dCost: 3, dRisk: 3, dCx: 3,
+                freq: 'mid',
+                compliance: 'normal',
+                autoPot: 3
+            };
+        }
+
+        function ensureDimKpiRowsShape(s) {
+            if (!s.dimKpiRows || typeof s.dimKpiRows !== 'object') {
+                s.dimKpiRows = {};
+                VS_DIM_KEYS.forEach(k => { s.dimKpiRows[k] = []; });
+            }
+            VS_DIM_KEYS.forEach(k => {
+                if (!Array.isArray(s.dimKpiRows[k])) s.dimKpiRows[k] = [];
+                s.dimKpiRows[k].forEach((row, i) => {
+                    if (!row || typeof row !== 'object') return;
+                    if (row.id == null || row.id === '') row.id = Date.now() + i;
+                    if (row.name == null) row.name = '';
+                    if (row.current == null) row.current = '';
+                    if (row.target == null) row.target = '';
+                });
+            });
+        }
+
+        function ensureVsStageShape(s) {
+            if (!s || typeof s !== 'object') return;
+            const ex = defaultVsStageExtra();
+            if (s.valDesc === undefined || s.valDesc === null) s.valDesc = '';
+            if (!s.dimActive || typeof s.dimActive !== 'object') s.dimActive = { ...ex.dimActive };
+            VS_DIM_KEYS.forEach(k => {
+                if (typeof s.dimActive[k] !== 'boolean') s.dimActive[k] = true;
+            });
+            if (!VS_DIM_KEYS.some(k => s.dimActive[k])) s.dimActive.dEff = true;
+            ensureDimKpiRowsShape(s);
+            VS_DIM_KEYS.forEach(k => {
+                let n = parseInt(s[k], 10);
+                if (isNaN(n)) n = ex[k];
+                s[k] = Math.max(1, Math.min(5, n));
+            });
+            let ap = parseInt(s.autoPot, 10);
+            if (isNaN(ap)) ap = ex.autoPot;
+            s.autoPot = Math.max(1, Math.min(5, ap));
+            if (!['high', 'mid', 'low'].includes(s.freq)) s.freq = 'mid';
+            if (!['low', 'normal', 'high'].includes(s.compliance)) s.compliance = 'normal';
+        }
+
+        function syncVsSelectedStage() {
+            const arr = currentState.vsStages || [];
+            if (!arr.length) {
+                currentState.vsSelectedStageId = null;
+                return;
+            }
+            const sid = currentState.vsSelectedStageId;
+            if (sid == null || !arr.some(st => st.id === sid)) {
+                currentState.vsSelectedStageId = arr[0].id;
+            }
+        }
+
+        function selectVsStage(id) {
+            if (!currentState.vsStages.some(s => s.id === id)) return;
+            currentState.vsSelectedStageId = id;
+            renderStep2();
+        }
+
+        function addVsDimKpiRow(stageId, dimKey) {
+            const s = currentState.vsStages.find(x => x.id === stageId);
+            if (!s || !VS_DIM_KEYS.includes(dimKey)) return;
+            ensureDimKpiRowsShape(s);
+            s.dimKpiRows[dimKey].push({ id: Date.now() + Math.floor(Math.random() * 999), name: '', current: '', target: '' });
+            renderStep2();
+        }
+
+        function removeVsDimKpiRow(stageId, dimKey, rowId) {
+            const s = currentState.vsStages.find(x => x.id === stageId);
+            if (!s || !VS_DIM_KEYS.includes(dimKey) || !s.dimKpiRows || !s.dimKpiRows[dimKey]) return;
+            const rid = typeof rowId === 'number' ? rowId : parseInt(rowId, 10);
+            s.dimKpiRows[dimKey] = s.dimKpiRows[dimKey].filter(r => r.id !== rid);
+            renderStep2();
+        }
+
+        function updateVsDimKpiRow(stageId, dimKey, rowId, field, value) {
+            const s = currentState.vsStages.find(x => x.id === stageId);
+            if (!s || !VS_DIM_KEYS.includes(dimKey) || !['name', 'current', 'target'].includes(field)) return;
+            ensureDimKpiRowsShape(s);
+            const rid = typeof rowId === 'number' ? rowId : parseInt(rowId, 10);
+            const row = s.dimKpiRows[dimKey].find(r => r.id === rid);
+            if (!row) return;
+            row[field] = value;
+            renderStep2();
+        }
+
+        function normalizeVsDimWeightsInPlace() {
+            const w = currentState.vsDimWeights;
+            if (!w || typeof w !== 'object') {
+                currentState.vsDimWeights = { ...VS_DIM_WEIGHT_DEFAULTS };
+                return;
+            }
+            let sum = VS_DIM_KEYS.reduce((a, k) => a + (parseFloat(w[k]) || 0), 0);
+            if (sum <= 0) {
+                VS_DIM_KEYS.forEach(k => { w[k] = VS_DIM_WEIGHT_DEFAULTS[k]; });
+                return;
+            }
+            VS_DIM_KEYS.forEach(k => { w[k] = (parseFloat(w[k]) || 0) / sum; });
+        }
+
+        function ensureAllVsStagesShape() {
+            if (!currentState.vsDimWeights || typeof currentState.vsDimWeights !== 'object') {
+                currentState.vsDimWeights = { ...VS_DIM_WEIGHT_DEFAULTS };
+            }
+            VS_DIM_KEYS.forEach(k => {
+                if (currentState.vsDimWeights[k] == null || isNaN(parseFloat(currentState.vsDimWeights[k]))) {
+                    currentState.vsDimWeights[k] = VS_DIM_WEIGHT_DEFAULTS[k];
+                }
+            });
+            normalizeVsDimWeightsInPlace();
+            (currentState.vsStages || []).forEach(ensureVsStageShape);
+        }
+
+        function computeStageHealthPct(s) {
+            let sum = 0;
+            let n = 0;
+            VS_DIM_KEYS.forEach(k => {
+                if (!s.dimActive || !s.dimActive[k]) return;
+                sum += parseInt(s[k], 10) || 3;
+                n++;
+            });
+            if (!n) return null;
+            return Math.round((sum / n / 5) * 1000) / 10;
+        }
+
+        function vsStageWeakestDim(s) {
+            let minK = null;
+            let minSc = 99;
+            VS_DIM_KEYS.forEach(k => {
+                if (!s.dimActive || !s.dimActive[k]) return;
+                const sc = parseInt(s[k], 10) || 3;
+                if (sc < minSc) {
+                    minSc = sc;
+                    minK = k;
+                }
+            });
+            if (!minK) return null;
+            return { key: minK, score: minSc, label: VS_DIM_LABELS[minK] };
+        }
+
+        function vsStageDiagnosisLine(s) {
+            const w = vsStageWeakestDim(s);
+            if (!w) return '请勾选至少一项维度';
+            if (w.score >= 4) return '已选维度整体尚可';
+            return `${w.label}偏弱 · ${VS_DIM_ADVICE[w.key]}`;
+        }
+
+        function avgDimAcrossStages(dimKey) {
+            let sum = 0;
+            let n = 0;
+            (currentState.vsStages || []).forEach(s => {
+                if (!s.dimActive || !s.dimActive[dimKey]) return;
+                sum += parseInt(s[dimKey], 10) || 3;
+                n++;
+            });
+            if (!n) return null;
+            return Math.round((sum / n) * 10) / 10;
+        }
+
+        function toggleVsStageDim(id, dimKey, checked) {
+            const s = currentState.vsStages.find(x => x.id === id);
+            if (!s || !VS_DIM_KEYS.includes(dimKey)) return;
+            if (!s.dimActive) s.dimActive = {};
+            s.dimActive[dimKey] = !!checked;
+            if (!VS_DIM_KEYS.some(k => s.dimActive[k])) {
+                s.dimActive[dimKey] = true;
+                toast('每个阶段至少保留一个维度', 'error');
+            }
+            if (checked) {
+                ensureDimKpiRowsShape(s);
+                if (!s.dimKpiRows[dimKey].length) {
+                    s.dimKpiRows[dimKey].push({ id: Date.now(), name: '', current: '', target: '' });
+                }
+            }
+            calcVSMetrics();
+            renderStep2();
+        }
+
+        function healthHeatClass(pct) {
+            if (pct >= 75) return 'text-[#34c759]';
+            if (pct >= 55) return 'text-[#d97706]';
+            return 'text-[#c41e1e]';
+        }
+
+        function updateVsDimWeight(dimKey, rawVal) {
+            if (!VS_DIM_KEYS.includes(dimKey)) return;
+            currentState.vsDimWeights[dimKey] = parseFloat(rawVal);
+            if (isNaN(currentState.vsDimWeights[dimKey])) currentState.vsDimWeights[dimKey] = 0;
+            normalizeVsDimWeightsInPlace();
+            calcVSMetrics();
+            renderStep2();
+        }
+
+        function resetVsDimWeightsDefault() {
+            currentState.vsDimWeights = { ...VS_DIM_WEIGHT_DEFAULTS };
+            normalizeVsDimWeightsInPlace();
+            calcVSMetrics();
+            renderStep2();
+            toast('已恢复五维均等权重');
+        }
 
         function applySidebarCollapsed() {
             const sidebar = document.getElementById('sidebar');
@@ -631,6 +1046,757 @@
             }
         }
 
+        /** ========== AI 规划助手（参见《AI升级.md》：演示启发式 + 可选 OpenAI 兼容 API） ========== */
+        const AI_CONFIG_LS = 'archipro-ai-assistant-v1';
+        let aiDrawerVisible = false;
+
+        function loadAiConfig() {
+            try {
+                const raw = localStorage.getItem(AI_CONFIG_LS);
+                if (!raw) return { endpoint: '', apiKey: '', model: 'gpt-4o-mini' };
+                const o = JSON.parse(raw);
+                return {
+                    endpoint: String(o.endpoint || '').trim(),
+                    apiKey: String(o.apiKey || ''),
+                    model: String(o.model || 'gpt-4o-mini').trim() || 'gpt-4o-mini'
+                };
+            } catch (e) {
+                return { endpoint: '', apiKey: '', model: 'gpt-4o-mini' };
+            }
+        }
+
+        function saveAiConfigFromForm() {
+            const endpoint = document.getElementById('ai-cfg-endpoint')?.value?.trim() || '';
+            const apiKey = document.getElementById('ai-cfg-apikey')?.value || '';
+            const model = document.getElementById('ai-cfg-model')?.value?.trim() || 'gpt-4o-mini';
+            try {
+                localStorage.setItem(AI_CONFIG_LS, JSON.stringify({ endpoint, apiKey, model }));
+                toast('AI 连接配置已保存（密钥仅存本机浏览器）');
+            } catch (e) {
+                toast('保存失败', 'error');
+            }
+            refreshAiAssistantUi();
+        }
+
+        /** OpenAI 兼容地址多为 …/v1/chat/completions；DeepSeek 官方为 https://api.deepseek.com/chat/completions（无 v1） */
+        function resolveAiChatCompletionsUrl(endpoint) {
+            let base = String(endpoint || '').trim().replace(/\/+$/, '');
+            if (!base) throw new Error('未配置 API 地址');
+            if (/\/chat\/completions$/i.test(base)) return base;
+            const low = base.toLowerCase();
+            if (low.includes('api.deepseek.com')) {
+                let root = base.replace(/\/v1$/i, '');
+                return root + '/chat/completions';
+            }
+            return base + '/v1/chat/completions';
+        }
+
+        function applyDeepSeekPreset() {
+            const ep = document.getElementById('ai-cfg-endpoint');
+            const md = document.getElementById('ai-cfg-model');
+            if (ep) ep.value = 'https://api.deepseek.com';
+            if (md) md.value = 'deepseek-v4-flash';
+            toast('已填入 DeepSeek 官方接口与推荐模型，请填写 API Key 后点保存');
+        }
+
+        function applyLocalAiProxyPreset() {
+            const ep = document.getElementById('ai-cfg-endpoint');
+            const md = document.getElementById('ai-cfg-model');
+            if (ep) ep.value = 'http://127.0.0.1:3847';
+            if (md) md.value = 'deepseek-v4-flash';
+            toast('已填入本机代理（需先在本仓库执行 npm run ai-proxy），填写 Key 后保存');
+        }
+
+        function getAiStepId() {
+            return currentState.activePanel === 'config' ? 8 : currentState.step;
+        }
+
+        function buildAiContextSnapshot() {
+            const stepId = getAiStepId();
+            const meta = stepId === 8 ? null : getStepMeta(stepId);
+            const snap = {
+                stepId,
+                stepTitle: stepId === 8 ? CONFIG_PANEL.title : (meta ? meta.title : ''),
+                valueStreamName: currentState.valueStreamName || '',
+                rulesCount: (currentState.rules || []).length,
+                templateKeys: Object.keys(currentState.templates || {}),
+                selectedTemplateId: currentState.selectedTemplateId
+            };
+            if (stepId === 1) snap.bmc = { ...currentState.bmc };
+            if (stepId >= 2) snap.vsStages = (currentState.vsStages || []).map(s => ({ name: s.name, type: s.type, components: s.components }));
+            if (stepId >= 3) {
+                snap.capabilities = (currentState.capabilityFramework || []).map(c => ({
+                    l3: c.l3, l1: c.l1, l2: c.l2, curMat: c.curMat, tgtMat: c.tgtMat, linkedVs: c.linkedVs
+                }));
+            }
+            if (stepId >= 5 && (currentState.capabilityFramework || []).length) {
+                snap.heatSummary = {
+                    red: (currentState.capabilityFramework || []).filter(c => heatCategory(c) === 'red').map(c => c.l3),
+                    yellow: (currentState.capabilityFramework || []).filter(c => heatCategory(c) === 'yellow').map(c => c.l3)
+                };
+            }
+            if (stepId >= 6) {
+                snap.initiatives = (currentState.initiatives || []).slice(0, 12).map(i => ({ title: i.title, phase: i.phase, gaps: i.gaps }));
+            }
+            if (stepId >= 7) snap.roadmapMonths = currentState.roadmapMonths;
+            return snap;
+        }
+
+        function aiApplyHeuristicBmcDraft(desc) {
+            const t = String(desc || '').trim();
+            if (t.length < 6) {
+                toast('请在助手输入框用至少一句话描述业务', 'error');
+                return false;
+            }
+            const short = t.slice(0, 400);
+            if (!String(currentState.bmc.customerSegments || '').trim()) {
+                currentState.bmc.customerSegments = `【AI草案】目标客户与场景（请修订）：\n${short}`;
+            }
+            if (!String(currentState.bmc.valuePropositions || '').trim()) {
+                currentState.bmc.valuePropositions = `【AI草案】价值主张（请修订）：\n围绕上述客群提供可感知的产品/服务价值与差异化。\n业务摘要：${short}`;
+            }
+            if (!String(currentState.bmc.channels || '').trim()) {
+                currentState.bmc.channels = '【AI草案】线上官网/商城、线下渠道与合作伙伴（请按实际修订）';
+            }
+            if (!String(currentState.bmc.customerRelationships || '').trim()) {
+                currentState.bmc.customerRelationships = '【AI草案】获客、留存与增值服务体系（请修订）';
+            }
+            if (!String(currentState.bmc.revenueStreams || '').trim()) {
+                currentState.bmc.revenueStreams = '【AI草案】订阅、交易抽成、服务费等到收入结构（请修订）';
+            }
+            if (!String(currentState.bmc.keyResources || '').trim()) {
+                currentState.bmc.keyResources = '【AI草案】数据、平台、人才与生态资源（请修订）';
+            }
+            if (!String(currentState.bmc.keyActivities || '').trim()) {
+                currentState.bmc.keyActivities = '【AI草案】产品研发、运营交付与数字化运营等关键业务（请修订）';
+            }
+            if (!String(currentState.bmc.keyPartners || '').trim()) {
+                currentState.bmc.keyPartners = '【AI草案】云厂商、ISV、渠道与供应链伙伴（请修订）';
+            }
+            if (!String(currentState.bmc.costStructure || '').trim()) {
+                currentState.bmc.costStructure = '【AI草案】研发、营销、基础设施与人力成本（请修订）';
+            }
+            currentState.bmcReport = null;
+            renderStep1();
+            toast('已写入九宫格演示草案（「AI草案」前缀可检索修订）');
+            return true;
+        }
+
+        function aiApplyCapabilityInferL1L2() {
+            const fw = currentState.capabilityFramework || [];
+            if (!fw.length) {
+                toast('暂无能力清单', 'error');
+                return;
+            }
+            let n = 0;
+            fw.forEach(c => {
+                const inf = inferL1L2FromComponent(c.l3 || '');
+                if (!(c.l1 && String(c.l1).trim())) {
+                    c.l1 = inf.l1;
+                    n++;
+                }
+                if (!(c.l2 && String(c.l2).trim())) {
+                    c.l2 = inf.l2;
+                    n++;
+                }
+            });
+            renderStep3();
+            renderStep4();
+            renderStep5();
+            toast(n ? `已按组件名演示补齐 ${n} 处空的 L1/L2` : 'L1/L2 均已填写');
+        }
+
+        function generateDemoAiReply(actionId, userMsg, ctx) {
+            const msg = String(userMsg || '').trim();
+            const lines = [];
+            lines.push('【演示模式】以下为本地启发式生成；在连接设置中配置 DeepSeek 或其它 OpenAI 兼容 API 即可真实调用（参见《AI升级.md》）。');
+            lines.push('');
+            if (actionId === 'free_chat' || actionId === 'chat') {
+                lines.push(`当前步骤：${ctx.stepTitle || '—'}`);
+                lines.push(`您说：${msg || '（空）'}`);
+                lines.push(`建议：结合左侧表单逐项完善数据；配置 DeepSeek/OpenAI 兼容 API 后我可基于完整上下文做语义诊断与对标分析。`);
+                return lines.join('\n');
+            }
+            if (actionId === 'bmc_insight') {
+                const empty = FIELD_ORDER.filter(k => !(String(currentState.bmc[k] || '').trim()));
+                lines.push('画布要点（演示）：');
+                if (empty.length) lines.push(`· 尚未填写的格子：${empty.map(k => FIELD_MAP[k]).join('、')}`);
+                const cost = String(currentState.bmc.costStructure || '');
+                const rev = String(currentState.bmc.revenueStreams || '');
+                if (cost.includes('高') && rev.includes('低')) lines.push('· 语义风险提示：成本偏高且收入偏弱 — 建议校验盈利模式与成本结构是否匹配。');
+                lines.push(`· 当前规则库 ${currentState.rules.length} 条；点击「运行诊断」可与规则联动。`);
+                return lines.join('\n');
+            }
+            if (actionId === 'vs_template') {
+                const vp = String(currentState.bmc?.valuePropositions || '');
+                let hint = 'hwcb_ipms';
+                if (/研发|IPD|Charter|TR/i.test(vp)) hint = 'hwcb_ipd';
+                else if (/营销|MKT|campaign|传播/i.test(vp)) hint = 'industry_marketing';
+                const tpl = currentState.templates[hint];
+                lines.push('模板推荐（演示）：');
+                lines.push(`· 结合画布用语，可优先查看「${tpl ? tpl.name : hint}」(${hint})`);
+                lines.push('· 配置 API 后可按商机画像做更细匹配与多模板融合建议。');
+                return lines.join('\n');
+            }
+            if (actionId === 'vs_health') {
+                calcVSMetrics();
+                lines.push(`端到端健康（演示）：${vsMetrics.healthE2e}%`);
+                lines.push(`相对薄弱阶段：${vsMetrics.worstStageName}（${vsMetrics.worstPct != null ? vsMetrics.worstPct + '%' : '—'}）`);
+                lines.push('· 点击弱阶段卡片，在 KPI 与综合分上逐项改进；可接入 AI 解释「为何弱」。');
+                return lines.join('\n');
+            }
+            if (actionId === 'cap_check') {
+                const n = (currentState.capabilityFramework || []).length;
+                lines.push(`能力块 ${n} 个（演示完整性）：`);
+                lines.push('· 核对价值流各阶段「业务组件」是否覆盖端到端；缺失环节常在采购/交付/数据。');
+                lines.push('· 可用「一键校准 L1/L2」基于组件名演示归类。');
+                return lines.join('\n');
+            }
+            if (actionId === 'gap_suggest') {
+                lines.push('四维差距参考（演示，非替代步骤4下拉）：');
+                (currentState.capabilityFramework || []).slice(0, 15).forEach(c => {
+                    const hint = c.curMat <= 2 ? '整体倾向偏弱维（建议审视缺失/弱）' : c.curMat === 3 ? '中等水平（可关注流程与数据）' : '相对成熟（保持或精细化）';
+                    lines.push(`· ${c.l3}（成熟度 ${c.curMat}）：${hint}`);
+                });
+                return lines.join('\n');
+            }
+            if (actionId === 'heat_insight') {
+                const reds = (currentState.capabilityFramework || []).filter(c => heatCategory(c) === 'red');
+                const yels = (currentState.capabilityFramework || []).filter(c => heatCategory(c) === 'yellow');
+                lines.push(`热力解读（演示）：优先 ${reds.length} · 计划 ${yels.length}`);
+                if (reds.length) lines.push('重点优先：' + reds.map(c => c.l3).join('、'));
+                lines.push('· 红色多为多维差距叠加或存在「缺失」类维度；详见卡片四维摘要。');
+                return lines.join('\n');
+            }
+            if (actionId === 'ini_deep') {
+                lines.push(`变革举措 ${(currentState.initiatives || []).length} 条（演示）：`);
+                lines.push('· 可逐项补充技术方案、依赖与 ROI 假设；接入 AI 后可生成路径依赖与预算量级草案。');
+                return lines.join('\n');
+            }
+            if (actionId === 'roadmap_ai') {
+                lines.push('路标排程（演示）：');
+                lines.push(`· 当前规划跨度 ${currentState.roadmapMonths} 个月；建议 P0 举措条形不要太密集以避免资源冲突。`);
+                lines.push('· 接入 AI 后可做依赖关键路径与资源冲突提示（见《AI升级.md》机会点7）。');
+                return lines.join('\n');
+            }
+            if (actionId === 'config_ai') {
+                lines.push('资产配置（演示）：');
+                lines.push(`· 规则 ${currentState.rules.length} 条；模板 ${Object.keys(currentState.templates || {}).length} 个`);
+                lines.push('· 长期可由 AI 从诊断历史学习新规则、归纳高频模板改动（机会点8）。');
+                return lines.join('\n');
+            }
+            lines.push('暂不支持该动作的演示输出，请使用自由提问或配置 API。');
+            return lines.join('\n');
+        }
+
+        async function callOpenAiCompatibleChat(systemText, userText) {
+            const cfg = loadAiConfig();
+            if (!cfg.endpoint) throw new Error('未配置 API 地址');
+            const url = resolveAiChatCompletionsUrl(cfg.endpoint);
+            const model = cfg.model || 'gpt-4o-mini';
+            const body = {
+                model,
+                messages: [
+                    { role: 'system', content: systemText },
+                    { role: 'user', content: userText }
+                ],
+                temperature: 0.45
+            };
+            const ml = String(model).toLowerCase();
+            if (ml.startsWith('deepseek')) {
+                if (ml.includes('reasoner')) {
+                    body.thinking = { type: 'enabled' };
+                    body.reasoning_effort = 'high';
+                } else {
+                    body.thinking = { type: 'disabled' };
+                }
+            }
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(cfg.apiKey ? { Authorization: 'Bearer ' + cfg.apiKey } : {})
+                },
+                body: JSON.stringify(body)
+            });
+            if (!res.ok) {
+                const t = await res.text();
+                throw new Error(t.slice(0, 200) || res.statusText);
+            }
+            const data = await res.json();
+            const msg = data.choices && data.choices[0] && data.choices[0].message;
+            let txt = msg && msg.content != null ? String(msg.content).trim() : '';
+            const reason = msg && msg.reasoning_content != null ? String(msg.reasoning_content).trim() : '';
+            if (!txt && reason) txt = reason;
+            else if (reason) txt = txt + '\n\n——\n【推理过程】\n' + reason;
+            return txt || '（模型返回为空）';
+        }
+
+        const AI_GAP_LEVELS = ['缺失', '弱', '中', '强'];
+
+        function buildAiWorkflowPatchSystemSuffix() {
+            return `\n\n【结构化回填】在给出中文解读后，必须追加一个 Markdown 代码块（语言标记为 json），内含唯一对象，格式示例：
+\`\`\`json
+{"workflowPatch":{"version":1,"bmc":{},"valueStreamName":"","stages":[],"capabilities":[],"capabilityGaps":[],"initiatives":[],"roadmap":{}}}
+\`\`\`
+约定（仅输出用户明确要求写入、或你确信应写入的字段；未涉及的键请省略或留空数组，不要编造业务细节）：\n` +
+                `· workflowPatch.bmc：键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串，与九宫格对应。\n` +
+                `· workflowPatch.valueStreamName：价值流名称（可选）。\n` +
+                `· workflowPatch.stages：价值流阶段数组；每项含 name、type(process|wait)、scenarios、components（逗号分隔组件）、actualTime（小时数，数字），可选 dEff,dQual,dCost,dRisk,dCx（1-5）。提供 stages 时会替换当前价值流阶段列表（与左侧手工/模板互斥于数据层，用户仍可再改）。\n` +
+                `· workflowPatch.capabilities：业务能力清单；非空则整体替换当前清单。每项含 l3，可选 l1,l2,desc,linkedVs,curMat,tgtMat(1-5),gapOrg,gapProc,gapData,gapIt（取值：缺失/弱/中/强）,sys,tech,ice。\n` +
+                `· workflowPatch.capabilityGaps：仅按 l3 匹配更新四维差距；每项含 l3 及 gapOrg/gapProc/gapData/gapIt 中需要改的字段。\n` +
+                `· workflowPatch.initiatives：变革举措；非空则整体替换。每项含 title，可选 caps(数组),gaps,window,benefit,cost,phase(P0|P1|P2),tech,deps,milestoneBand，streams 为子路标数组（start 为从 0 起的月索引，len 为持续月数）。\n` +
+                `· workflowPatch.roadmap：可选 startYm(YYYY-MM)、months(6-48)。\n` +
+                `当前用户步骤若与补丁无关，仍可给出补丁以便其切换步骤后已有数据；但不要无故清空未提及的模块。`;
+        }
+
+        function normalizeGapDim(v, fallback) {
+            if (v == null || v === '') return fallback;
+            const s = String(v).trim();
+            if (AI_GAP_LEVELS.includes(s)) return s;
+            const low = s.toLowerCase();
+            if (low === 'missing' || low === 'none') return '缺失';
+            if (low === 'weak' || low === 'low') return '弱';
+            if (low === 'medium' || low === 'mid') return '中';
+            if (low === 'strong' || low === 'high') return '强';
+            return fallback;
+        }
+
+        function extractWorkflowPatchFromText(text) {
+            if (!text || typeof text !== 'string') return null;
+            const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+            const tryObj = (raw) => {
+                try {
+                    const o = JSON.parse(raw);
+                    if (o && typeof o.workflowPatch === 'object' && o.workflowPatch !== null) return o.workflowPatch;
+                } catch (e) { /* ignore */ }
+                return null;
+            };
+            if (fence) {
+                const wp = tryObj(fence[1].trim());
+                if (wp) return wp;
+            }
+            const keyIdx = text.indexOf('"workflowPatch"');
+            if (keyIdx !== -1) {
+                const colon = text.indexOf(':', keyIdx);
+                const open = colon !== -1 ? text.indexOf('{', colon) : -1;
+                if (open !== -1) {
+                    let depth = 0;
+                    for (let i = open; i < text.length; i++) {
+                        const ch = text[i];
+                        if (ch === '{') depth++;
+                        else if (ch === '}') {
+                            depth--;
+                            if (depth === 0) {
+                                const inner = text.slice(open, i + 1);
+                                const wp = tryObj('{"workflowPatch":' + inner + '}');
+                                if (wp) return wp;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        function applyStagesFromAiPatch(stages, valueStreamName) {
+            if (!Array.isArray(stages) || !stages.length) return;
+            if (valueStreamName != null && valueStreamName !== '') {
+                currentState.valueStreamName = String(valueStreamName).trim();
+            }
+            currentState.vsStages = stages.map((s, idx) => {
+                const t = s.type === 'wait' ? 'wait' : 'process';
+                const at = parseInt(s.actualTime != null ? s.actualTime : s.defaultTime, 10);
+                const row = {
+                    id: idx + 1,
+                    name: String(s.name || `阶段 ${idx + 1}`).trim(),
+                    type: t,
+                    defaultTime: !isNaN(at) && at > 0 ? at : 1,
+                    actualTime: !isNaN(at) && at > 0 ? at : 1,
+                    scenarios: String(s.scenarios || ''),
+                    components: String(s.components || ''),
+                    ...defaultVsStageExtra()
+                };
+                VS_DIM_KEYS.forEach(k => {
+                    if (s[k] != null && s[k] !== '') {
+                        const n = parseInt(s[k], 10);
+                        if (!isNaN(n)) row[k] = Math.max(1, Math.min(5, n));
+                    }
+                });
+                return row;
+            });
+            currentState.vsStages.forEach(ensureVsStageShape);
+            syncVsSelectedStage();
+            calcVSMetrics();
+        }
+
+        function applyCapabilitiesFromAiPatch(rows) {
+            if (!Array.isArray(rows) || !rows.length) return;
+            currentState.capabilityFramework = rows.map((raw, idx) => {
+                const l3 = String(raw.l3 || '').trim() || `能力块 ${idx + 1}`;
+                const def = CAPABILITY_DB[l3] || CAPABILITY_DB.default;
+                const inferred = inferL1L2FromComponent(l3);
+                const l1 = String(raw.l1 != null && String(raw.l1).trim() ? raw.l1 : inferred.l1).trim();
+                const l2 = String(raw.l2 != null && String(raw.l2).trim() ? raw.l2 : inferred.l2).trim();
+                const curMat = Math.max(1, Math.min(5, parseInt(raw.curMat, 10) || Math.round((def.mat.o + def.mat.p + def.mat.d + def.mat.i) / 4)));
+                const tgtMat = Math.max(1, Math.min(5, parseInt(raw.tgtMat, 10) || Math.min(5, curMat + 2)));
+                const gapOrg = normalizeGapDim(raw.gapOrg, gapFromMat(def.mat.o));
+                const gapProc = normalizeGapDim(raw.gapProc, gapFromMat(def.mat.p));
+                const gapData = normalizeGapDim(raw.gapData, gapFromMat(def.mat.d));
+                const gapIt = normalizeGapDim(raw.gapIt, gapFromMat(def.mat.i));
+                let ice = raw.ice != null && String(raw.ice).trim() !== '' ? String(raw.ice) : (def.pri.v * 0.4 + def.pri.u * 0.4 + def.pri.f * 0.2).toFixed(1);
+                return {
+                    id: idx + 1,
+                    l1,
+                    l2,
+                    l3,
+                    desc: String(raw.desc != null ? raw.desc : '').trim() || `支撑价值流：${String(raw.linkedVs || '').trim() || l3}`,
+                    linkedVs: String(raw.linkedVs != null ? raw.linkedVs : '').trim(),
+                    curMat,
+                    tgtMat,
+                    gapOrg,
+                    gapProc,
+                    gapData,
+                    gapIt,
+                    sys: String(raw.sys != null && String(raw.sys).trim() ? raw.sys : def.sys),
+                    tech: String(raw.tech != null && String(raw.tech).trim() ? raw.tech : def.tech),
+                    ice
+                };
+            });
+            currentState.capabilityFramework.sort((a, b) => parseFloat(b.ice) - parseFloat(a.ice));
+        }
+
+        function mergeCapabilityGapsFromAiPatch(updates) {
+            if (!Array.isArray(updates)) return;
+            updates.forEach(u => {
+                const q = String(u.l3 || u.matchL3 || '').trim();
+                if (!q) return;
+                const c = currentState.capabilityFramework.find(x => x.l3 === q)
+                    || currentState.capabilityFramework.find(x => (x.l3 && (x.l3.includes(q) || q.includes(x.l3))));
+                if (!c) return;
+                ['gapOrg', 'gapProc', 'gapData', 'gapIt'].forEach(k => {
+                    if (u[k] != null && u[k] !== '') c[k] = normalizeGapDim(u[k], c[k]);
+                });
+            });
+        }
+
+        function applyInitiativesFromAiPatch(list) {
+            if (!Array.isArray(list) || !list.length) return;
+            ensureRoadmapTimelineDefaults();
+            const H = getRoadmapHorizon();
+            currentState.initiatives = list.map((raw, idx) => {
+                const ini = {
+                    id: idx + 1,
+                    title: String(raw.title || `举措 ${idx + 1}`).trim(),
+                    caps: Array.isArray(raw.caps) ? raw.caps.map(x => String(x)) : [],
+                    gaps: Array.isArray(raw.gaps) ? raw.gaps.map(x => String(x)) : [],
+                    window: raw.window != null ? String(raw.window) : '',
+                    benefit: raw.benefit != null ? String(raw.benefit) : '',
+                    cost: raw.cost != null ? String(raw.cost) : '',
+                    phase: ['P0', 'P1', 'P2'].includes(raw.phase) ? raw.phase : (idx === 0 ? 'P0' : idx <= 2 ? 'P1' : 'P2'),
+                    tech: raw.tech != null ? String(raw.tech) : '',
+                    deps: raw.deps != null ? String(raw.deps) : '',
+                    milestoneBand: raw.milestoneBand != null ? String(raw.milestoneBand) : '',
+                    streams: null
+                };
+                if (Array.isArray(raw.streams) && raw.streams.length) {
+                    ini.streams = raw.streams.map(st => {
+                        const seg = clampRoadmapSeg(parseInt(st.start, 10) || 0, parseInt(st.len, 10) || 1, H);
+                        return { label: String(st.label != null ? st.label : '子路标'), start: seg.start, len: seg.len };
+                    });
+                }
+                ensureInitiativeRoadmapFields(ini, idx, !ini.streams || !ini.streams.length);
+                return ini;
+            });
+            syncItFeaturesFromInitiatives();
+        }
+
+        function applyRoadmapFromAiPatch(r) {
+            if (!r || typeof r !== 'object') return;
+            if (r.startYm && /^\d{4}-\d{2}$/.test(String(r.startYm))) {
+                currentState.roadmapStartYm = String(r.startYm);
+            }
+            if (r.months != null) {
+                const n = parseInt(r.months, 10);
+                if (!isNaN(n)) currentState.roadmapMonths = Math.max(6, Math.min(48, n));
+            }
+        }
+
+        function refreshUiAfterWorkflowPatch(touched) {
+            if (touched.bmc) renderStep1();
+            if (touched.vs) renderStep2();
+            if (touched.cap) {
+                renderStep3();
+                renderStep4();
+                renderStep5();
+            }
+            if (touched.ini) {
+                renderStep6();
+                renderStep7();
+            } else if (touched.roadmap) {
+                afterRoadmapTimelineChange();
+            }
+        }
+
+        /** @returns {{ ok: boolean, summary?: string }} */
+        function applyWorkflowPatchObject(wp) {
+            if (!wp || typeof wp !== 'object') return { ok: false };
+            const touched = { bmc: false, vs: false, cap: false, ini: false, roadmap: false };
+            const parts = [];
+            if (wp.roadmap && typeof wp.roadmap === 'object') {
+                applyRoadmapFromAiPatch(wp.roadmap);
+                touched.roadmap = true;
+                parts.push('路标时间轴');
+            }
+            if (wp.bmc && typeof wp.bmc === 'object') {
+                FIELD_ORDER.forEach(k => {
+                    if (wp.bmc[k] != null && wp.bmc[k] !== '') currentState.bmc[k] = String(wp.bmc[k]);
+                });
+                currentState.bmcReport = null;
+                touched.bmc = true;
+                parts.push('商业画布');
+            }
+            if (wp.valueStreamName != null && String(wp.valueStreamName).trim() !== '' && (!wp.stages || !wp.stages.length)) {
+                currentState.valueStreamName = String(wp.valueStreamName).trim();
+                touched.vs = true;
+                parts.push('价值流名称');
+            }
+            if (wp.stages && wp.stages.length) {
+                applyStagesFromAiPatch(wp.stages, wp.valueStreamName);
+                touched.vs = true;
+                parts.push('价值流阶段');
+            }
+            if (wp.capabilities && wp.capabilities.length) {
+                applyCapabilitiesFromAiPatch(wp.capabilities);
+                touched.cap = true;
+                parts.push('能力架构');
+            }
+            if (wp.capabilityGaps && wp.capabilityGaps.length) {
+                mergeCapabilityGapsFromAiPatch(wp.capabilityGaps);
+                touched.cap = true;
+                parts.push('差距四维');
+            }
+            if (wp.initiatives && wp.initiatives.length) {
+                applyInitiativesFromAiPatch(wp.initiatives);
+                touched.ini = true;
+                parts.push('变革举措');
+            }
+            const did = touched.bmc || touched.vs || touched.cap || touched.ini || touched.roadmap;
+            if (did) refreshUiAfterWorkflowPatch(touched);
+            return { ok: did, summary: parts.join('、') };
+        }
+
+        function applyAiWorkflowPatchFromOutput() {
+            const out = document.getElementById('ai-output');
+            if (!out) return;
+            const wp = extractWorkflowPatchFromText(out.textContent || '');
+            if (!wp) {
+                toast('未找到 workflowPatch：请确认模型回复末尾含 ```json 代码块', 'error');
+                return;
+            }
+            try {
+                const r = applyWorkflowPatchObject(wp);
+                if (r.ok) toast('已写入：' + (r.summary || '工作流数据') + '。模板生成与手工编辑仍可直接使用。');
+                else toast('补丁为空：未包含可写入字段', 'error');
+            } catch (e) {
+                console.error(e);
+                toast('应用失败：' + (e && e.message ? e.message : e), 'error');
+            }
+        }
+
+        async function runAiQuickAction(actionId) {
+            const out = document.getElementById('ai-output');
+            const inputEl = document.getElementById('ai-user-input');
+            const userMsg = inputEl ? inputEl.value.trim() : '';
+            const ctx = buildAiContextSnapshot();
+            const cfg = loadAiConfig();
+
+            if (actionId === 'bmc_fill') {
+                const seed = userMsg || currentState.bmc.valuePropositions || currentState.bmc.customerSegments;
+                if (cfg.endpoint && out) {
+                    out.textContent = '生成中…';
+                    const systemText = '你是商业画布顾问。根据用户业务描述生成九宫格专业化草案（简体中文）。' + buildAiWorkflowPatchSystemSuffix();
+                    const userText = `请基于下列描述填写 workflowPatch.bmc 各字段（允许精炼改写）；上下文：\n${JSON.stringify(ctx, null, 2)}\n业务描述：\n${String(seed || '').slice(0, 2500)}`;
+                    try {
+                        out.textContent = await callOpenAiCompatibleChat(systemText, userText);
+                    } catch (e) {
+                        console.error(e);
+                        const ok = aiApplyHeuristicBmcDraft(seed);
+                        if (ok && out) {
+                            out.textContent = '云端生成失败，已回退本地草案。\n\n' + generateDemoAiReply('bmc_insight', userMsg, ctx) + '\n\n——\n' + (e && e.message ? e.message : e);
+                        }
+                    }
+                    return;
+                }
+                const ok = aiApplyHeuristicBmcDraft(seed);
+                if (ok && out) out.textContent = generateDemoAiReply('bmc_insight', userMsg, ctx);
+                return;
+            }
+            if (actionId === 'cap_infer') {
+                aiApplyCapabilityInferL1L2();
+                if (out) out.textContent = generateDemoAiReply('cap_check', userMsg, ctx);
+                return;
+            }
+
+            if (!out) return;
+            out.textContent = '生成中…';
+
+            let systemText = '你是企业数字化转型与架构规划顾问，熟悉商业画布、价值流与能力架构。请用简体中文、分点作答，务实可执行。';
+            if (cfg.endpoint) systemText += buildAiWorkflowPatchSystemSuffix();
+            const ctxJson = JSON.stringify(ctx, null, 2);
+            const actionLabel = {
+                bmc_insight: '画布语义洞察与风险提示',
+                vs_template: '价值流模板推荐',
+                vs_health: '价值流健康度解读',
+                cap_check: '能力架构完整性检查',
+                gap_suggest: '差距分析对标建议',
+                heat_insight: '热力图解读与行动优先级',
+                ini_deep: '变革举措深化建议',
+                roadmap_ai: '路标甘特排程建议',
+                config_ai: '规则与模板优化思路'
+            }[actionId] || actionId;
+
+            try {
+                if (cfg.endpoint) {
+                    const userText = `任务：${actionLabel}\n上下文(JSON)：\n${ctxJson}\n用户补充说明：${userMsg || '无'}\n若任务涉及某一工作流模块的可落地内容，请在 workflowPatch 中给出对应结构化字段。`;
+                    out.textContent = await callOpenAiCompatibleChat(systemText, userText);
+                } else {
+                    out.textContent = generateDemoAiReply(actionId, userMsg, ctx);
+                }
+            } catch (e) {
+                console.error(e);
+                out.textContent = '云端调用失败，已显示本地演示输出（可能是跨域 CORS，需后端代理）：\n\n' + generateDemoAiReply(actionId, userMsg, ctx) + '\n\n——\n错误：' + (e && e.message ? e.message : e);
+            }
+        }
+
+        async function sendAiFreeMessage() {
+            const inputEl = document.getElementById('ai-user-input');
+            const out = document.getElementById('ai-output');
+            const userMsg = inputEl ? inputEl.value.trim() : '';
+            if (!userMsg) {
+                toast('请输入问题或业务描述', 'error');
+                return;
+            }
+            const ctx = buildAiContextSnapshot();
+            if (!out) return;
+            out.textContent = '生成中…';
+            const cfg = loadAiConfig();
+            let systemText = '你是企业数字化转型顾问。结合用户当前步骤与上下文 JSON 回答问题，简体中文，条理清晰。';
+            if (cfg.endpoint) systemText += buildAiWorkflowPatchSystemSuffix();
+            try {
+                if (cfg.endpoint) {
+                    out.textContent = await callOpenAiCompatibleChat(systemText, `步骤：${ctx.stepTitle}\n上下文：\n${JSON.stringify(ctx, null, 2)}\n用户问题：${userMsg}\n如用户要求写入表单或你给出了可落地的清单，请在 workflowPatch 中输出对应字段。`);
+                } else {
+                    out.textContent = generateDemoAiReply('free_chat', userMsg, ctx);
+                }
+            } catch (e) {
+                out.textContent = generateDemoAiReply('free_chat', userMsg, ctx) + '\n\n——\n调用失败：' + (e && e.message ? e.message : e);
+            }
+        }
+
+        function toggleAiDrawer() {
+            aiDrawerVisible = !aiDrawerVisible;
+            const d = document.getElementById('ai-assistant-drawer');
+            if (d) d.classList.toggle('hidden', !aiDrawerVisible);
+            if (aiDrawerVisible) refreshAiAssistantUi();
+        }
+
+        function toggleAiSettings() {
+            const p = document.getElementById('ai-settings-panel');
+            if (p) p.classList.toggle('hidden');
+        }
+
+        function refreshAiAssistantUi() {
+            const cfg = loadAiConfig();
+            const badge = document.getElementById('ai-mode-badge');
+            if (badge) {
+                badge.textContent = cfg.endpoint ? 'API：' + cfg.endpoint.slice(0, 28) + (cfg.endpoint.length > 28 ? '…' : '') : '演示模式（未配置 API）';
+            }
+            const ep = document.getElementById('ai-cfg-endpoint');
+            const ak = document.getElementById('ai-cfg-apikey');
+            const md = document.getElementById('ai-cfg-model');
+            if (ep) ep.value = cfg.endpoint;
+            if (ak) ak.value = cfg.apiKey;
+            if (md) md.value = cfg.model;
+
+            const qa = document.getElementById('ai-quick-actions');
+            if (!qa) return;
+            const sid = getAiStepId();
+            const presets = {
+                1: [
+                    { id: 'bmc_fill', label: '智能填充草案' },
+                    { id: 'bmc_insight', label: '画布洞察' }
+                ],
+                2: [
+                    { id: 'vs_template', label: '模板推荐' },
+                    { id: 'vs_health', label: '健康度解读' }
+                ],
+                3: [
+                    { id: 'cap_check', label: '完整性检查' },
+                    { id: 'cap_infer', label: '校准 L1/L2' }
+                ],
+                4: [{ id: 'gap_suggest', label: '差距建议' }],
+                5: [{ id: 'heat_insight', label: '热力解读' }],
+                6: [{ id: 'ini_deep', label: '举措深化' }],
+                7: [{ id: 'roadmap_ai', label: '排程建议' }],
+                8: [{ id: 'config_ai', label: '配置思路' }]
+            };
+            const list = presets[sid] || [];
+            qa.innerHTML = list.map(p => `<button type="button" onclick="runAiQuickAction('${p.id}')" class="rounded-[8px] border border-black/[0.10] bg-canvas px-2 py-1 text-[11px] font-semibold text-ink-secondary hover:bg-white hover:text-accent transition-colors">${p.label}</button>`).join('');
+        }
+
+        function initAiAssistant() {
+            if (document.getElementById('ai-assistant-root')) return;
+            const root = document.createElement('div');
+            root.id = 'ai-assistant-root';
+            root.className = 'ai-assistant-root print-hidden';
+            root.innerHTML = `
+                <button type="button" id="ai-float-toggle" class="ai-assistant-float-btn print-hidden" title="AI 规划助手" aria-expanded="false" aria-controls="ai-assistant-drawer">
+                    <i class="fas fa-wand-magic-sparkles text-[18px]" aria-hidden="true"></i>
+                </button>
+                <div id="ai-assistant-drawer" class="ai-assistant-drawer hidden print-hidden" role="dialog" aria-label="AI 规划助手">
+                    <div class="flex items-center justify-between gap-2 px-3 py-2 border-b border-black/[0.06] bg-canvas/90 shrink-0">
+                        <div class="min-w-0">
+                            <p class="text-[13px] font-semibold text-ink leading-tight">AI 规划助手</p>
+                            <p id="ai-mode-badge" class="text-[10px] text-ink-tertiary truncate mt-0.5">演示模式</p>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button type="button" onclick="toggleAiSettings()" class="p-2 rounded-[8px] text-ink-secondary hover:bg-white" title="连接设置"><i class="fas fa-cog text-[13px]" aria-hidden="true"></i></button>
+                            <button type="button" onclick="toggleAiDrawer()" class="p-2 rounded-[8px] text-ink-secondary hover:bg-white" title="关闭"><i class="fas fa-times text-[14px]" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                    <div id="ai-settings-panel" class="hidden border-b border-black/[0.06] px-3 py-2 space-y-2 bg-white shrink-0">
+                        <p class="text-[11px] text-ink-secondary leading-snug">支持 <strong class="text-ink">DeepSeek</strong>（OpenAI 兼容）与其它兼容接口。直连浏览器访问官方域名可能因 <strong class="text-ink">CORS</strong> 失败，真实演示请用本仓库 <code class="text-[10px] bg-canvas px-1 rounded">npm run ai-proxy</code> 后点「本机代理」预设。</p>
+                        <div class="flex flex-wrap gap-1.5">
+                            <button type="button" onclick="applyDeepSeekPreset()" class="rounded-[8px] border border-black/[0.10] bg-canvas px-2 py-1 text-[11px] font-semibold text-ink-secondary hover:bg-white">DeepSeek 预设</button>
+                            <button type="button" onclick="applyLocalAiProxyPreset()" class="rounded-[8px] border border-black/[0.10] bg-canvas px-2 py-1 text-[11px] font-semibold text-ink-secondary hover:bg-white">本机代理</button>
+                        </div>
+                        <input id="ai-cfg-endpoint" type="url" placeholder="根地址：DeepSeek 填 https://api.deepseek.com；OpenAI 填 https://api.openai.com/v1" class="w-full rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[12px]" />
+                        <input id="ai-cfg-apikey" type="password" autocomplete="off" placeholder="API Key（DeepSeek / OpenAI 的 Bearer Token）" class="w-full rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[12px]" />
+                        <input id="ai-cfg-model" type="text" placeholder="如 deepseek-v4-flash、deepseek-v4-pro、gpt-4o-mini" class="w-full rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[12px]" />
+                        <button type="button" onclick="saveAiConfigFromForm()" class="w-full rounded-[8px] bg-ink py-1.5 text-[12px] font-semibold text-white">保存配置</button>
+                    </div>
+                    <div class="px-3 py-2 shrink-0 border-b border-black/[0.04]">
+                        <p class="text-[11px] font-semibold text-ink-tertiary mb-1.5">快捷动作</p>
+                        <div id="ai-quick-actions" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+                    <div class="px-3 py-2 flex-1 min-h-0 flex flex-col gap-2">
+                        <textarea id="ai-user-input" rows="3" placeholder="描述业务背景，或向 AI 提问…" class="w-full rounded-[10px] border border-black/[0.10] px-2 py-1.5 text-[12px] resize-none focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"></textarea>
+                        <button type="button" onclick="sendAiFreeMessage()" class="w-full rounded-[10px] bg-accent py-2 text-[12px] font-semibold text-white shadow-nav hover:bg-accent-hover">发送提问</button>
+                        <div id="ai-output" class="flex-1 min-h-[120px] max-h-[220px] overflow-y-auto rounded-[10px] border border-black/[0.06] bg-canvas/50 px-2 py-2 whitespace-pre-wrap"></div>
+                        <button type="button" onclick="applyAiWorkflowPatchFromOutput()" class="w-full shrink-0 rounded-[10px] border border-accent/35 bg-accent-muted py-2 text-[12px] font-semibold text-accent hover:bg-white transition-colors">应用到工作流</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(root);
+            document.getElementById('ai-float-toggle').onclick = () => {
+                toggleAiDrawer();
+                const btn = document.getElementById('ai-float-toggle');
+                if (btn) btn.setAttribute('aria-expanded', aiDrawerVisible ? 'true' : 'false');
+            };
+            refreshAiAssistantUi();
+        }
+
         function initApp() {
             if (isAssetsStandaloneMode()) {
                 initAssetsStandalonePage();
@@ -651,6 +1817,7 @@
             renderHeaderMethodFlow();
             renderNav();
             renderStepProgress();
+            initAiAssistant();
             renderStep();
         }
 
@@ -690,7 +1857,7 @@
 
         const BLUEPRINT_HISTORY_LS = 'archipro-blueprint-history-v1';
         const BLUEPRINT_HISTORY_MAX = 40;
-        const WORKFLOW_SNAPSHOT_KEYS = ['bmc', 'bmcReport', 'rules', 'valueStreamName', 'vsStages', 'templates', 'selectedTemplateId', 'capabilityFramework', 'initiatives', 'itFeatures', 'newTplSteps', 'configTab', 'roadmapStartYm', 'roadmapMonths', 'roadmapExpandedIniIds'];
+        const WORKFLOW_SNAPSHOT_KEYS = ['bmc', 'bmcReport', 'rules', 'valueStreamName', 'vsDimWeights', 'vsSelectedStageId', 'vsStages', 'templates', 'selectedTemplateId', 'capabilityFramework', 'initiatives', 'itFeatures', 'newTplSteps', 'configTab', 'roadmapStartYm', 'roadmapMonths', 'roadmapExpandedIniIds'];
 
         function loadBlueprintHistoryList() {
             try {
@@ -792,7 +1959,7 @@
                 toast('请先完成前面的步骤并生成举措与路标数据后再保存', 'error');
                 return;
             }
-            const defaultTitle = `${currentState.valueStreamName || '数字化转型规划'} · ${new Date().toLocaleString('zh-CN', { hour12: false })}`;
+            const defaultTitle = `${currentState.valueStreamName || '数智化转型规划'} · ${new Date().toLocaleString('zh-CN', { hour12: false })}`;
             const input = window.prompt('为该保存版本命名（留空则使用默认名称）', defaultTitle);
             if (input === null) return;
             const title = (input || '').trim() || defaultTitle;
@@ -1252,6 +2419,399 @@
             reader.readAsArrayBuffer(file);
         }
 
+        /** 画布字段：Excel 单元格可为英文键或中文名 */
+        function normalizeBmcFieldKeyFromCell(val) {
+            const s = String(val ?? '').trim();
+            if (!s) return '';
+            if (FIELD_ORDER.includes(s)) return s;
+            const hit = Object.entries(FIELD_MAP).find(([, zh]) => zh === s);
+            return hit ? hit[0] : '';
+        }
+
+        /** 数字化资产配置：规则 + 价值流模板 导出 / 导入（SheetJS） */
+        function exportConfigExcel() {
+            if (typeof XLSX === 'undefined') {
+                toast('未加载表格库，请检查网络后重试', 'error');
+                return;
+            }
+            const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+            const wb = XLSX.utils.book_new();
+
+            const ruleHead = ['field键（英文键，导入据此匹配）', '字段中文名（参考）', '触发关键词', 'compareField键（无联动填none）', '联动字段中文（参考）', '联动关键词', '扣分', '提示文案'];
+            const ruleRows = currentState.rules.map(r => [
+                r.field,
+                FIELD_MAP[r.field] || '',
+                r.keyword,
+                !r.compareField || r.compareField === 'none' ? 'none' : r.compareField,
+                r.compareField && r.compareField !== 'none' ? (FIELD_MAP[r.compareField] || '') : '',
+                r.compareKeyword || '',
+                r.score,
+                r.message
+            ]);
+            const wsRules = XLSX.utils.aoa_to_sheet([ruleHead, ...ruleRows]);
+            wsRules['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 18 }, { wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 6 }, { wch: 48 }];
+            XLSX.utils.book_append_sheet(wb, wsRules, '画布诊断规则');
+
+            const tplHead = ['模板键（合并依据）', '模板显示名称', '阶段序号', '阶段名称', '类型(process或wait)', '默认耗时小时', '场景', '业务组件'];
+            const tplRows = [];
+            Object.entries(currentState.templates).forEach(([key, t]) => {
+                (t.stages || []).forEach((s, idx) => {
+                    tplRows.push([
+                        key,
+                        t.name,
+                        idx + 1,
+                        s.name || '',
+                        s.type === 'wait' ? 'wait' : 'process',
+                        s.defaultTime != null ? s.defaultTime : (parseInt(s.actualTime, 10) || 1),
+                        s.scenarios || '',
+                        s.components || ''
+                    ]);
+                });
+            });
+            const wsTpl = XLSX.utils.aoa_to_sheet([tplHead, ...tplRows]);
+            wsTpl['!cols'] = [{ wch: 26 }, { wch: 22 }, { wch: 8 }, { wch: 28 }, { wch: 18 }, { wch: 12 }, { wch: 36 }, { wch: 36 }];
+            XLSX.utils.book_append_sheet(wb, wsTpl, '价值流模板');
+
+            const readme = [
+                ['数字化资产配置 · Excel 说明'],
+                [''],
+                ['画布诊断规则'],
+                ['1. 建议保留「field键」列为英文键；也可用「字段中文名」替代第一列导入（须与画布九宫格名称完全一致）。'],
+                ['2. compareField键：无联动填 none；有联动时填另一字段英文键，并填写「联动关键词」。'],
+                ['3. 导入时若存在有效数据行，将整表替换当前页面的规则列表。'],
+                [''],
+                ['价值流模板'],
+                ['1. 同一「模板键」的多行组成一个模板；「模板显示名称」可与各行保持一致。'],
+                ['2. 模板键与现有内置键一致时会覆盖该条模板；新键将并入模板库（建议 custom_ 前缀）。'],
+                ['3. 类型仅支持 process 或 wait；文件中未出现的模板不会被删除（按模板键合并写入）。']
+            ];
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(readme), '使用说明');
+            XLSX.writeFile(wb, `数字化资产配置_${stamp}.xlsx`);
+            toast('已下载配置 Excel（规则 + 模板），编辑后可导入刷新');
+        }
+
+        function pickConfigWorksheet(wb, candidates) {
+            const names = wb.SheetNames || [];
+            for (const c of candidates) {
+                const hit = names.find(n => n === c || String(n).replace(/\s/g, '') === String(c).replace(/\s/g, ''));
+                if (hit) return wb.Sheets[hit];
+            }
+            return null;
+        }
+
+        function parseRulesFromConfigMatrix(matrix) {
+            const rules = [];
+            let baseId = Date.now();
+            for (let i = 0; i < matrix.length; i++) {
+                const row = matrix[i];
+                if (!row || row.length === 0) continue;
+                const c0 = String(row[0] ?? '').trim();
+                const c1 = String(row[1] ?? '').trim();
+                if (i === 0 && (c0.includes('field') || c0.includes('字段') || c0.includes('键'))) continue;
+                let field = normalizeBmcFieldKeyFromCell(c0);
+                if (!field && c1) field = normalizeBmcFieldKeyFromCell(c1);
+                const keyword = String(row[2] ?? '').trim();
+                let compareFieldRaw = String(row[3] ?? '').trim();
+                const compareZh = String(row[4] ?? '').trim();
+                const compareKeyword = String(row[5] ?? '').trim();
+                const scoreRaw = row[6];
+                const message = String(row[7] ?? '').trim();
+                if (!field || !keyword || !message) continue;
+                let compareField = compareFieldRaw;
+                if (!compareField || compareField === '无' || compareField === '-' || /^none$/i.test(compareField)) {
+                    compareField = 'none';
+                } else {
+                    compareField = normalizeBmcFieldKeyFromCell(compareField) || normalizeBmcFieldKeyFromCell(compareZh) || 'none';
+                }
+                if (compareField !== 'none' && !compareKeyword) compareField = 'none';
+                const score = parseInt(scoreRaw, 10);
+                rules.push({
+                    id: baseId++,
+                    field,
+                    keyword,
+                    compareField,
+                    compareKeyword: compareField === 'none' ? '' : compareKeyword,
+                    message,
+                    score: isNaN(score) ? 10 : Math.max(0, Math.min(100, score))
+                });
+            }
+            return rules;
+        }
+
+        function parseTemplatesFromConfigMatrix(matrix) {
+            const groups = new Map();
+            let currentKey = null;
+            for (let i = 0; i < matrix.length; i++) {
+                const row = matrix[i];
+                if (!row || row.length === 0) continue;
+                const keyCell = String(row[0] ?? '').trim();
+                const nameCell = String(row[1] ?? '').trim();
+                const stageName = String(row[3] ?? '').trim();
+                const typeRaw = String(row[4] ?? '').trim().toLowerCase();
+                const defaultTime = parseInt(row[5], 10);
+                const scenarios = String(row[6] ?? '');
+                const components = String(row[7] ?? '');
+                if (i === 0 && (keyCell.includes('模板键') || keyCell.includes('模板'))) continue;
+                if (keyCell) {
+                    currentKey = keyCell;
+                    if (!groups.has(currentKey)) {
+                        groups.set(currentKey, { name: nameCell || currentKey, stages: [] });
+                    } else if (nameCell) {
+                        groups.get(currentKey).name = nameCell;
+                    }
+                }
+                if (!currentKey || !stageName) continue;
+                if (!groups.has(currentKey)) {
+                    groups.set(currentKey, { name: nameCell || currentKey, stages: [] });
+                }
+                const g = groups.get(currentKey);
+                if (nameCell) g.name = nameCell;
+                const type = typeRaw === 'wait' ? 'wait' : 'process';
+                const dt = isNaN(defaultTime) ? 1 : Math.max(0, defaultTime);
+                g.stages.push({
+                    id: g.stages.length + 1,
+                    name: stageName,
+                    type,
+                    defaultTime: dt,
+                    scenarios: scenarios.trim(),
+                    components: components.trim()
+                });
+            }
+            const out = {};
+            groups.forEach((v, k) => {
+                if (!v.stages.length) return;
+                v.stages.forEach((s, idx) => { s.id = idx + 1; });
+                out[k] = { name: v.name || k, stages: v.stages };
+            });
+            return out;
+        }
+
+        function ensureSelectedTemplateAfterConfigImport() {
+            const ids = Object.keys(currentState.templates);
+            if (!ids.length) return;
+            if (!currentState.selectedTemplateId || !ids.includes(currentState.selectedTemplateId)) {
+                currentState.selectedTemplateId = ids[0];
+            }
+        }
+
+        function importConfigExcel(ev) {
+            const input = ev.target;
+            const file = input.files && input.files[0];
+            input.value = '';
+            if (!file) return;
+            if (typeof XLSX === 'undefined') {
+                toast('未加载表格库，请检查网络后重试', 'error');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const buf = new Uint8Array(e.target.result);
+                    const wb = XLSX.read(buf, { type: 'array' });
+                    let rulesUpdated = 0;
+                    let tplUpdated = 0;
+                    const wsRules = pickConfigWorksheet(wb, ['画布诊断规则', '诊断规则']);
+                    const wsTpl = pickConfigWorksheet(wb, ['价值流模板', '模板库']);
+                    if (!wsRules && !wsTpl) {
+                        toast('未找到「画布诊断规则」或「价值流模板」工作表', 'error');
+                        return;
+                    }
+                    if (wsRules) {
+                        const matrix = XLSX.utils.sheet_to_json(wsRules, { header: 1, defval: '', raw: false });
+                        const parsed = parseRulesFromConfigMatrix(matrix);
+                        if (parsed.length) {
+                            currentState.rules = parsed;
+                            rulesUpdated = parsed.length;
+                        }
+                    }
+                    if (wsTpl) {
+                        const matrix = XLSX.utils.sheet_to_json(wsTpl, { header: 1, defval: '', raw: false });
+                        const parsedTpl = parseTemplatesFromConfigMatrix(matrix);
+                        const keys = Object.keys(parsedTpl);
+                        if (keys.length) {
+                            keys.forEach(k => {
+                                currentState.templates[k] = parsedTpl[k];
+                            });
+                            tplUpdated = keys.length;
+                        }
+                    }
+                    if (!rulesUpdated && !tplUpdated) {
+                        toast('未解析到有效规则或模板行', 'error');
+                        return;
+                    }
+                    ensureSelectedTemplateAfterConfigImport();
+                    currentState.editingTemplateKey = null;
+                    currentState.newTplSteps = [];
+                    calcVSMetrics();
+                    renderStep8();
+                    renderStep2();
+                    toast(`已导入：规则 ${rulesUpdated} 条，模板 ${tplUpdated} 个（按模板键合并）`);
+                } catch (err) {
+                    console.error(err);
+                    toast('导入失败：请使用本页导出的 xlsx 或核对工作表列结构', 'error');
+                }
+            };
+            reader.onerror = () => toast('读取文件失败', 'error');
+            reader.readAsArrayBuffer(file);
+        }
+
+        /** 业务能力架构（步骤 3）：Excel 导出 / 导入 */
+        function exportCapabilityFrameworkExcel() {
+            if (typeof XLSX === 'undefined') {
+                toast('未加载表格库，请检查网络后重试', 'error');
+                return;
+            }
+            const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+            const wb = XLSX.utils.book_new();
+            const head = ['价值流阶段', '业务能力L3', '描述', '领域L1', '类型L2', '当前成熟度(1-5)', '目标成熟度(1-5)', 'ICE', '组织差距', '流程差距', '数据差距', 'IT差距', '参考系统', '技术栈参考'];
+            const dataRows = (currentState.capabilityFramework || []).map(c => [
+                c.linkedVs || '',
+                c.l3 || '',
+                c.desc || '',
+                c.l1 || '',
+                c.l2 || '',
+                c.curMat,
+                c.tgtMat,
+                c.ice != null ? String(c.ice) : '',
+                c.gapOrg || '',
+                c.gapProc || '',
+                c.gapData || '',
+                c.gapIt || '',
+                c.sys || '',
+                c.tech || ''
+            ]);
+            const ws = XLSX.utils.aoa_to_sheet([head, ...dataRows]);
+            ws['!cols'] = [{ wch: 28 }, { wch: 22 }, { wch: 36 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 8 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 20 }];
+            XLSX.utils.book_append_sheet(wb, ws, '业务能力架构');
+            const readme = [
+                ['业务能力架构 · Excel 说明'],
+                [''],
+                ['1. 「业务能力L3」为必填；其余列可空，导入时对缺失的四维差距与 ICE 等将按内置组件库或默认值补齐。'],
+                ['2. 差距列须为：缺失 / 弱 / 中 / 强（与步骤 4 一致）；留空则自动推断。'],
+                ['3. 导入时将按表格顺序整体替换当前清单（步骤 4、5、举措引用名称时请自行核对）。'],
+                ['4. 清单为空时导出仅含表头，可作空白模板。']
+            ];
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(readme), '使用说明');
+            XLSX.writeFile(wb, `业务能力架构_${stamp}.xlsx`);
+            toast('已下载业务能力架构 Excel（含当前内容或使用说明）');
+        }
+
+        function pickCapabilityFrameworkSheet(wb) {
+            const names = wb.SheetNames || [];
+            const candidates = ['业务能力架构', '能力架构', '业务能力清单'];
+            for (const c of candidates) {
+                const hit = names.find(n => n === c || String(n).replace(/\s/g, '') === c.replace(/\s/g, ''));
+                if (hit) return wb.Sheets[hit];
+            }
+            const skip = new Set(['使用说明', 'README', '说明']);
+            const other = names.find(n => !skip.has(n));
+            return other ? wb.Sheets[other] : null;
+        }
+
+        function normalizeImportedGapLevel(val, fallback) {
+            const s = String(val ?? '').trim();
+            if (GAP_LEVELS.includes(s)) return s;
+            return fallback;
+        }
+
+        function parseCapabilityFrameworkFromMatrix(matrix) {
+            const out = [];
+            for (let i = 0; i < matrix.length; i++) {
+                const row = matrix[i];
+                if (!row || row.length === 0) continue;
+                const c0 = String(row[0] ?? '').trim();
+                if (i === 0 && (c0.includes('价值流') || c0.includes('业务能力') || c0.includes('L3'))) continue;
+                const l3 = String(row[1] ?? '').trim();
+                if (!l3) continue;
+                const linkedVs = String(row[0] ?? '').trim();
+                const desc = row[2] != null ? String(row[2]) : '';
+                const l1 = String(row[3] ?? '').trim();
+                const l2 = String(row[4] ?? '').trim();
+                let curMat = parseInt(row[5], 10);
+                let tgtMat = parseInt(row[6], 10);
+                if (isNaN(curMat)) curMat = 3;
+                if (isNaN(tgtMat)) tgtMat = Math.min(5, curMat + 2);
+                curMat = Math.max(1, Math.min(5, curMat));
+                tgtMat = Math.max(1, Math.min(5, tgtMat));
+                const def = CAPABILITY_DB[l3] || CAPABILITY_DB.default;
+                const hasGapCols = row.length >= 12;
+                const gapOrg = normalizeImportedGapLevel(hasGapCols ? row[8] : '', gapFromMat(def.mat.o));
+                const gapProc = normalizeImportedGapLevel(hasGapCols ? row[9] : '', gapFromMat(def.mat.p));
+                const gapData = normalizeImportedGapLevel(hasGapCols ? row[10] : '', gapFromMat(def.mat.d));
+                const gapIt = normalizeImportedGapLevel(hasGapCols ? row[11] : '', gapFromMat(def.mat.i));
+                let iceStr = '';
+                const iceRaw = row[7];
+                if (iceRaw != null && String(iceRaw).trim() !== '') {
+                    const x = parseFloat(iceRaw);
+                    iceStr = isNaN(x) ? (def.pri.v * 0.4 + def.pri.u * 0.4 + def.pri.f * 0.2).toFixed(1) : parseFloat(x).toFixed(1);
+                } else {
+                    iceStr = (def.pri.v * 0.4 + def.pri.u * 0.4 + def.pri.f * 0.2).toFixed(1);
+                }
+                const sys = row.length >= 13 && String(row[12] ?? '').trim() ? String(row[12]).trim() : def.sys;
+                const tech = row.length >= 14 && String(row[13] ?? '').trim() ? String(row[13]).trim() : def.tech;
+                out.push({
+                    linkedVs,
+                    l3,
+                    desc,
+                    l1,
+                    l2,
+                    curMat,
+                    tgtMat,
+                    ice: iceStr,
+                    gapOrg,
+                    gapProc,
+                    gapData,
+                    gapIt,
+                    sys,
+                    tech
+                });
+            }
+            out.sort((a, b) => parseFloat(b.ice) - parseFloat(a.ice));
+            return out;
+        }
+
+        function importCapabilityFrameworkExcel(ev) {
+            const input = ev.target;
+            const file = input.files && input.files[0];
+            input.value = '';
+            if (!file) return;
+            if (typeof XLSX === 'undefined') {
+                toast('未加载表格库，请检查网络后重试', 'error');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const buf = new Uint8Array(e.target.result);
+                    const wb = XLSX.read(buf, { type: 'array' });
+                    const ws = pickCapabilityFrameworkSheet(wb);
+                    if (!ws) {
+                        toast('未找到「业务能力架构」工作表', 'error');
+                        return;
+                    }
+                    const matrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+                    const parsed = parseCapabilityFrameworkFromMatrix(matrix);
+                    if (!parsed.length) {
+                        toast('未解析到有效行：请确认「业务能力L3」列有内容', 'error');
+                        return;
+                    }
+                    currentState.capabilityFramework = parsed.map((c, idx) => ({
+                        id: idx + 1,
+                        ...c
+                    }));
+                    renderStep3();
+                    renderStep4();
+                    renderStep5();
+                    toast(`已导入 ${parsed.length} 条能力块`);
+                } catch (err) {
+                    console.error(err);
+                    toast('导入失败：请使用本页导出的 xlsx 或核对列结构', 'error');
+                }
+            };
+            reader.onerror = () => toast('读取文件失败', 'error');
+            reader.readAsArrayBuffer(file);
+        }
+
         function methodBlock(key) {
             const m = METHODOLOGY[key];
             if (!m) return '';
@@ -1259,7 +2819,7 @@
                 return `
                 <details class="method-panel mb-2 shrink-0 group">
                     <summary class="cursor-pointer list-none flex items-center justify-between gap-2 px-3 py-2 text-[12px] font-semibold text-ink select-none [&::-webkit-details-marker]:hidden rounded-[10px] hover:bg-black/[0.02]">
-                        <span class="min-w-0"><i class="fas fa-book-open text-ink-tertiary mr-2 text-[11px]" aria-hidden="true"></i>方法论参考 · 数字化资产配置<span class="font-normal text-ink-secondary">（点击展开）</span></span>
+                        <span class="min-w-0"><i class="fas fa-book-open text-ink-tertiary mr-2 text-[11px]" aria-hidden="true"></i>步骤说明 · 数字化资产配置<span class="font-normal text-ink-secondary">（点击展开）</span></span>
                         <i class="fas fa-chevron-down text-ink-tertiary text-[10px] transition-transform group-open:rotate-180 shrink-0" aria-hidden="true"></i>
                     </summary>
                     <div class="px-3 pb-2 pt-0 border-t border-black/[0.04] max-h-[min(28vh,220px)] overflow-y-auto">
@@ -1275,7 +2835,7 @@
             return `
             <details class="method-panel mb-2 shrink-0 group">
                 <summary class="cursor-pointer list-none flex items-center justify-between gap-2 px-3 py-2 text-[12px] font-semibold text-ink select-none [&::-webkit-details-marker]:hidden rounded-[10px] hover:bg-black/[0.02]">
-                    <span class="min-w-0"><i class="fas fa-book-open text-ink-tertiary mr-2 text-[11px]" aria-hidden="true"></i>步骤 ${stepId}/${STEP_TOTAL} · 方法论参考<span class="font-normal text-ink-secondary">（点击展开）</span></span>
+                    <span class="min-w-0"><i class="fas fa-book-open text-ink-tertiary mr-2 text-[11px]" aria-hidden="true"></i>步骤说明<span class="font-normal text-ink-secondary">（点击展开）</span></span>
                     <i class="fas fa-chevron-down text-ink-tertiary text-[10px] transition-transform group-open:rotate-180 shrink-0" aria-hidden="true"></i>
                 </summary>
                 <div class="px-3 pb-2 pt-0 border-t border-black/[0.04] max-h-[min(28vh,220px)] overflow-y-auto">
@@ -1312,11 +2872,49 @@
         }
 
         function calcVSMetrics() {
+            ensureAllVsStagesShape();
             const stages = currentState.vsStages;
             const lt = stages.reduce((a, s) => a + (parseInt(s.actualTime, 10) || 0), 0);
             const vt = stages.filter(s => s.type === 'process').reduce((a, s) => a + (parseInt(s.actualTime, 10) || 0), 0);
             const pce = lt > 0 ? ((vt / lt) * 100).toFixed(1) : '0';
-            vsMetrics = { lt, vt, pce };
+            const healthList = [];
+            let worstStage = null;
+            let worstPct = 101;
+            stages.forEach(s => {
+                const hp = computeStageHealthPct(s);
+                if (hp != null) {
+                    healthList.push(hp);
+                    if (hp < worstPct) {
+                        worstPct = hp;
+                        worstStage = s;
+                    }
+                }
+            });
+            const healthE2e = healthList.length ? Math.round((healthList.reduce((a, b) => a + b, 0) / healthList.length) * 10) / 10 : 0;
+            const fmtAvg = (v) => (v == null ? '—' : `${v}/5`);
+            const aE = avgDimAcrossStages('dEff');
+            const aQ = avgDimAcrossStages('dQual');
+            const aC = avgDimAcrossStages('dCost');
+            const aR = avgDimAcrossStages('dRisk');
+            const aX = avgDimAcrossStages('dCx');
+            vsMetrics = {
+                lt,
+                vt,
+                pce,
+                healthE2e,
+                worstStageName: worstStage ? worstStage.name : '—',
+                worstPct: worstStage ? worstPct : null,
+                avgEff: aE,
+                avgQual: aQ,
+                avgCost: aC,
+                avgRisk: aR,
+                avgCx: aX,
+                fmtAvgEff: fmtAvg(aE),
+                fmtAvgQual: fmtAvg(aQ),
+                fmtAvgCost: fmtAvg(aC),
+                fmtAvgRisk: fmtAvg(aR),
+                fmtAvgCx: fmtAvg(aX)
+            };
         }
 
         function runVSGen() {
@@ -1325,16 +2923,22 @@
                 toast('模板无效', 'error');
                 return;
             }
-            currentState.vsStages = tpl.stages.map((s, idx) => ({
-                ...s,
-                id: idx + 1,
-                actualTime: s.defaultTime,
-                scenarios: s.scenarios || '',
-                components: s.components || ''
-            }));
+            currentState.vsStages = tpl.stages.map((s, idx) => {
+                const base = { ...defaultVsStageExtra(), ...s };
+                return {
+                    ...base,
+                    id: idx + 1,
+                    actualTime: s.defaultTime != null ? s.defaultTime : (parseInt(s.actualTime, 10) || 1),
+                    scenarios: s.scenarios || '',
+                    components: s.components || '',
+                    valDesc: s.valDesc || ''
+                };
+            });
+            currentState.vsStages.forEach(ensureVsStageShape);
+            currentState.vsSelectedStageId = currentState.vsStages[0] ? currentState.vsStages[0].id : null;
             calcVSMetrics();
             renderStep2();
-            toast('已套用模板初稿，可在下方表格改名称、类型并增删阶段；流程简图会同步变化');
+            toast('已套用模板：点击①中卡片切换②编辑该阶段指标');
         }
 
         function nextVSStageId() {
@@ -1344,15 +2948,18 @@
 
         /** 手工新增价值流阶段（与流程简图联动） */
         function addVSStage() {
+            const nid = nextVSStageId();
             currentState.vsStages.push({
-                id: nextVSStageId(),
+                id: nid,
                 name: `阶段 ${currentState.vsStages.length + 1}`,
                 type: 'process',
                 defaultTime: 1,
                 actualTime: 1,
                 scenarios: '',
-                components: ''
+                components: '',
+                ...defaultVsStageExtra()
             });
+            currentState.vsSelectedStageId = nid;
             calcVSMetrics();
             renderStep2();
             toast('已新增阶段');
@@ -1367,8 +2974,10 @@
                 defaultTime: 1,
                 actualTime: 1,
                 scenarios: '',
-                components: ''
+                components: '',
+                ...defaultVsStageExtra()
             }];
+            currentState.vsSelectedStageId = 1;
             calcVSMetrics();
             renderStep2();
             toast('已创建空白阶段，可继续新增或套用模板覆盖');
@@ -1403,18 +3012,14 @@
             if (field === 'actualTime') s.actualTime = parseInt(value, 10) || 0;
             else if (field === 'type') s.type = value === 'wait' ? 'wait' : 'process';
             else if (field === 'name') s.name = value;
+            else if (VS_DIM_KEYS.includes(field)) s[field] = Math.max(1, Math.min(5, parseInt(value, 10) || 3));
+            else if (field === 'autoPot') s.autoPot = Math.max(1, Math.min(5, parseInt(value, 10) || 3));
+            else if (field === 'freq') s.freq = ['high', 'mid', 'low'].includes(value) ? value : 'mid';
+            else if (field === 'compliance') s.compliance = ['low', 'normal', 'high'].includes(value) ? value : 'normal';
+            else if (field === 'valDesc') s.valDesc = value;
             else s[field] = value;
             calcVSMetrics();
-            if (field === 'name' || field === 'type') {
-                renderStep2();
-                return;
-            }
-            const ltEl = document.getElementById('metric-lt');
-            const vtEl = document.getElementById('metric-vt');
-            const pceEl = document.getElementById('metric-pce');
-            if (ltEl) ltEl.innerText = vsMetrics.lt + ' h';
-            if (vtEl) vtEl.innerText = vsMetrics.vt + ' h';
-            if (pceEl) pceEl.innerText = vsMetrics.pce + '%';
+            renderStep2();
         }
 
         /** @param {{ silent?: boolean }} [opts] silent：由「价值流」页点下一步时自动生成，不单独刷新当前页、不弹 Toast */
@@ -1445,7 +3050,7 @@
                     id: idx,
                     l1, l2, l3: b.name,
                     desc: `支撑价值流阶段「${b.stage}」的业务组件`,
-                    linkedVs: `${currentState.valueStreamName} → ${b.stage}`,
+                    linkedVs: `${currentState.valueStreamName || '价值流'} → ${b.stage}`,
                     curMat: cur, tgtMat: tgt,
                     gapOrg: gapFromMat(def.mat.o),
                     gapProc: gapFromMat(def.mat.p),
@@ -1475,6 +3080,73 @@
             if (bad >= 2 || gaps.includes('缺失')) return 'red';
             if (bad === 1 || gaps.includes('弱')) return 'yellow';
             return 'green';
+        }
+
+        /** 统计一组能力块的红/黄/绿数量 */
+        function countHeatStats(blocks) {
+            let red = 0;
+            let yellow = 0;
+            let green = 0;
+            blocks.forEach(c => {
+                const k = heatCategory(c);
+                if (k === 'red') red++;
+                else if (k === 'yellow') yellow++;
+                else green++;
+            });
+            return { red, yellow, green, total: blocks.length };
+        }
+
+        /** 按业务能力架构出现顺序构建 L1 → L2 → 能力块列表 */
+        function buildHeatmapL1L2Tree(framework) {
+            const l1Order = [];
+            const tree = {};
+            framework.forEach(c => {
+                const l1 = (c.l1 && String(c.l1).trim()) || '未分类';
+                const l2 = (c.l2 && String(c.l2).trim()) || '未分类';
+                if (tree[l1] === undefined) {
+                    tree[l1] = { l2Order: [], byL2: {}, seenL2: {} };
+                    l1Order.push(l1);
+                }
+                const node = tree[l1];
+                if (!node.seenL2[l2]) {
+                    node.seenL2[l2] = true;
+                    node.l2Order.push(l2);
+                    node.byL2[l2] = [];
+                }
+                node.byL2[l2].push(c);
+            });
+            return { l1Order, tree };
+        }
+
+        /** 全局 + 按 L1 + 按 L2 的热力分布汇总 */
+        function heatmapDistributionSummary(framework) {
+            const { l1Order, tree } = buildHeatmapL1L2Tree(framework);
+            const overall = countHeatStats(framework);
+            const byL1 = l1Order.map(l1 => {
+                const node = tree[l1];
+                const blocks = node.l2Order.flatMap(l2 => node.byL2[l2]);
+                return { l1, ...countHeatStats(blocks) };
+            });
+            const byL2 = [];
+            l1Order.forEach(l1 => {
+                const node = tree[l1];
+                node.l2Order.forEach(l2 => {
+                    const blocks = node.byL2[l2];
+                    byL2.push({ l1, l2, ...countHeatStats(blocks) });
+                });
+            });
+            return { overall, byL1, byL2 };
+        }
+
+        function heatmapCapabilityCardHtml(c) {
+            const cat = heatCategory(c);
+            const cls = cat === 'red' ? 'heat-red' : cat === 'yellow' ? 'heat-yellow' : 'heat-green';
+            const badge = cat === 'red' ? '优先处理' : cat === 'yellow' ? '纳入计划' : '相对健康';
+            return `<button type="button" onclick="setStep(4)" class="rounded-[14px] border-2 p-3 lg:p-3 text-left transition hover:shadow-card min-h-[7rem] lg:min-h-0 flex flex-col ${cls} focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                            <p class="text-[15px] lg:text-[16px] font-semibold text-ink leading-snug">${escapeHtmlText(c.l3)}</p>
+                            <p class="text-[11px] lg:text-[12px] text-ink-secondary mt-2 leading-relaxed flex-1">组织 ${escapeHtmlText(c.gapOrg)} · 流程 ${escapeHtmlText(c.gapProc)} · 数据 ${escapeHtmlText(c.gapData)} · IT ${escapeHtmlText(c.gapIt)}</p>
+                            <p class="mt-2 lg:mt-3 inline-flex text-[11px] font-semibold px-2 py-1 rounded-full shrink-0 ${cat === 'red' ? 'bg-[#ff6961]/15 text-[#b91c1c]' : cat === 'yellow' ? 'bg-amber-100/80 text-amber-900' : 'bg-emerald-100/80 text-emerald-900'}">${badge}</p>
+                        </button>`;
         }
 
         function escapeHtmlText(s) {
@@ -1976,9 +3648,74 @@
             const c = currentState.capabilityFramework.find(x => x.id === id);
             if (!c) return;
             const n = parseInt(val, 10);
-            if (field === 'curMat') c.curMat = n;
-            if (field === 'tgtMat') c.tgtMat = n;
+            if (field === 'curMat') c.curMat = Math.max(1, Math.min(5, isNaN(n) ? c.curMat : n));
+            if (field === 'tgtMat') c.tgtMat = Math.max(1, Math.min(5, isNaN(n) ? c.tgtMat : n));
             renderStep3();
+        }
+
+        /** 业务能力架构：可编辑文本字段（价值流阶段、L3、描述、L1、L2） */
+        function updateFrameworkField(id, field, val) {
+            const c = currentState.capabilityFramework.find(x => x.id === id);
+            if (!c || !['l1', 'l2', 'desc', 'l3', 'linkedVs'].includes(field)) return;
+            const s = String(val ?? '');
+            if (field === 'l1') c.l1 = s.trim();
+            else if (field === 'l2') c.l2 = s.trim();
+            else if (field === 'desc') c.desc = s;
+            else if (field === 'l3') {
+                const t = s.trim();
+                c.l3 = t || '未命名能力块';
+            } else c.linkedVs = s.trim();
+            renderStep3();
+            renderStep4();
+            renderStep5();
+        }
+
+        function nextCapabilityFrameworkId() {
+            const ids = currentState.capabilityFramework.map(c => c.id);
+            return ids.length ? Math.max(...ids) + 1 : 1;
+        }
+
+        /** 手工新增一行能力块（默认成熟度/差距来自内置模板，ICE 随模板计算） */
+        function addCapabilityFrameworkRow() {
+            const def = CAPABILITY_DB.default;
+            const cur = Math.round((def.mat.o + def.mat.p + def.mat.d + def.mat.i) / 4);
+            const tgt = Math.min(5, cur + 2);
+            const ice = (def.pri.v * 0.4 + def.pri.u * 0.4 + def.pri.f * 0.2).toFixed(1);
+            currentState.capabilityFramework.push({
+                id: nextCapabilityFrameworkId(),
+                l1: '',
+                l2: '',
+                l3: '新能力块',
+                desc: '',
+                linkedVs: '手工录入',
+                curMat: cur,
+                tgtMat: tgt,
+                gapOrg: gapFromMat(def.mat.o),
+                gapProc: gapFromMat(def.mat.p),
+                gapData: gapFromMat(def.mat.d),
+                gapIt: gapFromMat(def.mat.i),
+                sys: def.sys,
+                tech: def.tech,
+                ice
+            });
+            renderStep3();
+            renderStep4();
+            renderStep5();
+            toast('已新增能力块，请按需修改各列');
+        }
+
+        function removeCapabilityFrameworkRow(id) {
+            const n = currentState.capabilityFramework.length;
+            if (n <= 1) {
+                if (!window.confirm('删除后能力清单为空，后续差距与热力图将暂无数据。确定删除？')) return;
+            } else if (!window.confirm('确定删除该能力块？')) {
+                return;
+            }
+            currentState.capabilityFramework = currentState.capabilityFramework.filter(c => c.id !== id);
+            renderStep3();
+            renderStep4();
+            renderStep5();
+            toast('已删除该能力块');
         }
 
         function addRule() {
@@ -2005,7 +3742,7 @@
             const coEl = document.getElementById('tmp-step-components');
             const scenarios = scEl ? scEl.value.trim() : '';
             const components = coEl ? coEl.value.trim() : '';
-            currentState.newTplSteps.push({ id: Date.now(), name, type, defaultTime: time, scenarios, components });
+            currentState.newTplSteps.push({ id: Date.now() + Math.floor(Math.random() * 1000), name, type, defaultTime: time, scenarios, components });
             renderTempStepsList();
             document.getElementById('tmp-step-name').value = '';
         }
@@ -2015,16 +3752,61 @@
             renderTempStepsList();
         }
 
+        /** 将模板阶段载入上方编辑器（内置与自定义均可修改后保存） */
+        function beginEditTemplate(key) {
+            const t = currentState.templates[key];
+            if (!t || !t.stages || !t.stages.length) {
+                toast('模板无效', 'error');
+                return;
+            }
+            currentState.editingTemplateKey = key;
+            currentState.newTplSteps = t.stages.map((s, i) => ({
+                id: Date.now() + i,
+                name: s.name || `阶段 ${i + 1}`,
+                type: s.type === 'wait' ? 'wait' : 'process',
+                defaultTime: s.defaultTime != null ? parseInt(s.defaultTime, 10) || 1 : (parseInt(s.actualTime, 10) || 1),
+                scenarios: s.scenarios || '',
+                components: s.components || ''
+            }));
+            renderStep8();
+            toast('已载入模板，可在上方修改名称与阶段后保存');
+        }
+
+        function cancelTemplateEdit() {
+            currentState.editingTemplateKey = null;
+            currentState.newTplSteps = [];
+            renderStep8();
+        }
+
         function saveTemplate() {
             const name = document.getElementById('tpl-name').value.trim();
             if (!name || !currentState.newTplSteps.length) {
                 toast('请输入模板名并添加阶段', 'error');
                 return;
             }
+            const stages = currentState.newTplSteps.map((s, idx) => ({
+                id: idx + 1,
+                name: s.name,
+                type: s.type === 'wait' ? 'wait' : 'process',
+                defaultTime: parseInt(s.defaultTime, 10) || 1,
+                scenarios: s.scenarios || '',
+                components: s.components || ''
+            }));
+            const editKey = currentState.editingTemplateKey;
+            if (editKey && currentState.templates[editKey]) {
+                currentState.templates[editKey] = { name, stages };
+                currentState.editingTemplateKey = null;
+                currentState.newTplSteps = [];
+                renderStep8();
+                renderStep2();
+                toast('模板已更新（含行业预置模板）');
+                return;
+            }
             const key = 'custom_' + Date.now();
-            currentState.templates[key] = { name, stages: currentState.newTplSteps.map(s => ({ ...s })) };
+            currentState.templates[key] = { name, stages };
             currentState.newTplSteps = [];
             renderStep8();
+            renderStep2();
             toast(`模板已保存，可在「${stepLabel(2)}」选用该模板`);
         }
 
@@ -2058,6 +3840,7 @@
                 el8.classList.add('active');
                 renderStep8();
                 updateWorkflowFooter();
+                refreshAiAssistantUi();
                 return;
             }
             const container = document.getElementById('step-' + currentState.step);
@@ -2072,6 +3855,7 @@
                 case 7: renderStep7(); break;
             }
             updateWorkflowFooter();
+            refreshAiAssistantUi();
         }
 
         function renderStep1() {
@@ -2161,6 +3945,7 @@
 
         function renderStep2() {
             calcVSMetrics();
+            syncVsSelectedStage();
             const options = Object.entries(currentState.templates).map(([k, t]) =>
                 `<option value="${k}" ${k === currentState.selectedTemplateId ? 'selected' : ''}>${t.name}</option>`).join('');
             let matrix = '';
@@ -2168,11 +3953,11 @@
             if (!currentState.vsStages.length) {
                 flow = `<div class="flex flex-1 min-h-0 flex-col justify-center rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-10 text-center gap-3">
                     <p class="text-[15px] font-semibold text-ink">尚未配置价值流阶段</p>
-                    <p class="text-[14px] text-ink-secondary mt-1 max-w-lg mx-auto leading-relaxed">可选：<strong class="text-ink font-medium">套用行业模板</strong>快速生成初稿；或<strong class="text-ink font-medium">空白开始</strong>再自行增删改。模板可随时再套用（会覆盖当前阶段）。</p>
+                    <p class="text-[14px] text-ink-secondary mt-1 max-w-xl mx-auto leading-relaxed"><strong class="text-ink font-medium">①</strong> 选好上方「行业模板」→ <strong class="text-ink font-medium">②</strong> 点「套用模板」→ <strong class="text-ink font-medium">③</strong> 在流程简图中<strong class="text-ink">点击卡片</strong>选中阶段，再在下方填写该阶段的维度与指标。也可「空白开始」自建。</p>
                     <div class="flex flex-wrap justify-center gap-2 mt-2 print-hidden">
                         <button type="button" onclick="runVSGen()" class="inline-flex items-center gap-2 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors">
                             <i class="fas fa-layer-group text-[11px]" aria-hidden="true"></i>
-                            套用所选模板
+                            套用模板
                         </button>
                         <button type="button" onclick="startBlankValueStream()" class="inline-flex items-center gap-2 rounded-[10px] border border-black/[0.12] bg-white px-4 py-2 text-[13px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas transition-colors">
                             <i class="fas fa-plus text-[11px]" aria-hidden="true"></i>
@@ -2181,69 +3966,151 @@
                     </div>
                 </div>`;
             } else {
-                matrix = `<div class="flex flex-col flex-1 min-h-0 ui-table-wrap shadow-nav">
-                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-black/[0.06] bg-canvas/60 px-3 py-2 print-hidden">
-                        <p class="text-[12px] text-ink-secondary">阶段顺序与下栏流程简图一致；改名称、类型或排序后简图立即同步。</p>
-                        <button type="button" onclick="addVSStage()" class="inline-flex items-center gap-1.5 rounded-[10px] bg-white border border-black/[0.10] px-3 py-1.5 text-[12px] font-semibold text-accent shadow-sm hover:bg-canvas transition-colors">
-                            <i class="fas fa-plus text-[10px]" aria-hidden="true"></i>
-                            新增阶段
-                        </button>
-                    </div>
-                    <div class="flex-1 min-h-0 overflow-auto">
-                    <table class="w-full text-[13px]">
-                    <thead><tr>
-                        <th class="p-3 text-left font-semibold min-w-[140px]">阶段名称</th>
-                        <th class="p-3 text-left font-semibold">场景因子</th>
-                        <th class="p-3 text-left font-semibold">业务组件</th>
-                        <th class="p-3 text-center font-semibold w-[7rem]">类型</th>
-                        <th class="p-3 text-center font-semibold w-[8.5rem] print-hidden">排序</th>
-                        <th class="p-3 text-center font-semibold w-[4rem] print-hidden">操作</th>
-                    </tr></thead><tbody>
-                    ${currentState.vsStages.map((s, rowIdx) => `
-                        <tr class="border-t border-black/[0.06] hover:bg-canvas/80 transition-colors">
-                            <td class="p-3 align-top">
-                                <input type="text" class="w-full min-w-[8rem] rounded-[10px] border border-black/[0.10] bg-white px-2 py-2 text-[13px] font-medium text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" value="${escapeHtmlText(s.name)}" onchange="updateVSStage(${s.id},'name',this.value)" placeholder="阶段名称" />
-                            </td>
-                            <td class="p-3 align-top"><textarea class="w-full min-h-[52px] rounded-[10px] border border-black/[0.08] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" rows="2" onchange="updateVSStage(${s.id},'scenarios',this.value)">${escapeHtmlText(s.scenarios || '')}</textarea></td>
-                            <td class="p-3 align-top"><textarea class="w-full min-h-[52px] rounded-[10px] border border-black/[0.08] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" rows="2" onchange="updateVSStage(${s.id},'components',this.value)">${escapeHtmlText(s.components || '')}</textarea></td>
-                            <td class="p-3 text-center align-middle">
-                                <select class="rounded-[10px] border border-black/[0.10] bg-white py-1.5 px-2 text-[12px] font-medium text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" onchange="updateVSStage(${s.id},'type',this.value)">
-                                    <option value="process" ${s.type === 'wait' ? '' : 'selected'}>增值</option>
-                                    <option value="wait" ${s.type === 'wait' ? 'selected' : ''}>等待</option>
-                                </select>
-                            </td>
-                            <td class="p-3 text-center align-middle print-hidden">
-                                <div class="inline-flex rounded-[10px] border border-black/[0.08] bg-white overflow-hidden">
-                                    <button type="button" onclick="moveVSStage(${s.id},-1)" ${rowIdx === 0 ? 'disabled' : ''} class="px-2 py-1.5 text-[11px] font-semibold text-ink-secondary hover:bg-canvas disabled:opacity-30 disabled:pointer-events-none" title="上移">↑</button>
-                                    <button type="button" onclick="moveVSStage(${s.id},1)" ${rowIdx >= currentState.vsStages.length - 1 ? 'disabled' : ''} class="px-2 py-1.5 text-[11px] font-semibold text-ink-secondary hover:bg-canvas border-l border-black/[0.06] disabled:opacity-30 disabled:pointer-events-none" title="下移">↓</button>
-                                </div>
-                            </td>
-                            <td class="p-3 text-center align-middle print-hidden">
-                                <button type="button" onclick="removeVSStage(${s.id})" class="rounded-[8px] px-2 py-1 text-[11px] font-semibold text-ink-tertiary hover:bg-[#ff6961]/12 hover:text-[#c41e1e]" title="删除阶段">删除</button>
-                            </td>
-                        </tr>`).join('')}
-                    </tbody></table></div></div>`;
+                const dimStripHtml = (s) => VS_DIM_KEYS.map(k => {
+                    if (!s.dimActive || !s.dimActive[k]) {
+                        return '<span class="inline-block w-1.5 h-5 rounded-sm bg-black/[0.07]" title="未启用"></span>';
+                    }
+                    const sc = parseInt(s[k], 10) || 3;
+                    const bg = sc <= 2 ? 'bg-[#ff6961]' : sc === 3 ? 'bg-[#f5b041]' : 'bg-[#34c759]';
+                    return `<span title="${VS_DIM_LABELS[k]} ${sc}/5" class="inline-block w-1.5 h-5 rounded-sm ${bg}"></span>`;
+                }).join('');
 
-                flow = `<div class="shrink-0 flex flex-col gap-2"><p class="text-[12px] lg:text-[13px] font-semibold text-ink">流程简图 <span class="font-normal text-ink-tertiary">（与上表顺序一致；可改耗时）</span></p>
-                <div class="overflow-x-auto pb-1"><div class="flex min-w-max gap-2 items-stretch py-1">
-                    ${currentState.vsStages.map((s, i) => `
-                        <div class="flex items-center gap-2">
-                            <div class="w-[158px] rounded-[14px] border ${s.type === 'wait' ? 'border-dashed border-black/[0.15] bg-canvas' : 'border-black/[0.08] bg-white shadow-nav'} p-4 flex flex-col text-center">
-                                <span class="text-[10px] font-semibold uppercase tracking-wider text-ink-tertiary">${s.type === 'wait' ? '等待' : '增值'}</span>
-                                <div class="font-semibold text-[14px] text-ink mt-2 leading-snug">${escapeHtmlText(s.name)}</div>
-                                <div class="mt-3 flex items-center justify-center gap-1 rounded-[10px] border border-black/[0.08] bg-canvas px-2 py-1.5">
+                const diagram = `<section class="rounded-[14px] border border-black/[0.08] bg-white p-3 shadow-nav">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <h3 class="text-[14px] font-semibold text-ink">① 流程简图 <span class="text-[12px] font-normal text-ink-tertiary">（从左到右即先后顺序；点击卡片切换下方②）</span></h3>
+                        <button type="button" onclick="addVSStage()" class="print-hidden inline-flex items-center gap-1.5 rounded-[10px] bg-canvas border border-black/[0.10] px-3 py-1.5 text-[12px] font-semibold text-accent hover:bg-white transition-colors"><i class="fas fa-plus text-[10px]" aria-hidden="true"></i>新增阶段</button>
+                    </div>
+                    <div class="overflow-x-auto pb-1"><div class="flex min-w-max gap-2 items-stretch py-1">
+                    ${currentState.vsStages.map((s, i) => {
+                        const hp = computeStageHealthPct(s);
+                        const hpCls = hp == null ? 'text-ink-tertiary' : healthHeatClass(hp);
+                        const hpTxt = hp == null ? '—' : hp + '%';
+                        const isSel = currentState.vsSelectedStageId === s.id;
+                        const selRing = isSel ? 'ring-2 ring-accent border-accent shadow-md ' : '';
+                        const typeCls = s.type === 'wait' ? 'border-dashed border-black/[0.15] bg-canvas' : 'border-black/[0.08] bg-white';
+                        return `
+                        <div class="flex items-stretch gap-2">
+                            <div class="w-[182px] rounded-[14px] border ${selRing}${typeCls} p-3 flex flex-col shrink-0 shadow-nav cursor-pointer transition-all outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
+                                role="button" tabindex="0"
+                                onclick="selectVsStage(${s.id})"
+                                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectVsStage(${s.id});}">
+                                <div onclick="event.stopPropagation()" class="flex flex-col flex-1 min-h-0">
+                                <div class="flex items-center justify-between gap-1">
+                                    <select class="rounded-[8px] border border-black/[0.10] bg-white py-1 px-1 text-[10px] font-semibold text-ink-tertiary max-w-[5rem]" onchange="updateVSStage(${s.id},'type',this.value)">
+                                        <option value="process" ${s.type === 'wait' ? '' : 'selected'}>增值活动</option>
+                                        <option value="wait" ${s.type === 'wait' ? 'selected' : ''}>等待</option>
+                                    </select>
+                                    <div class="print-hidden inline-flex rounded-[8px] border border-black/[0.08] overflow-hidden bg-white">
+                                        <button type="button" onclick="moveVSStage(${s.id},-1)" ${i === 0 ? 'disabled' : ''} class="px-1.5 py-1 text-[10px] font-semibold text-ink-secondary hover:bg-canvas disabled:opacity-30" title="前移">↑</button>
+                                        <button type="button" onclick="moveVSStage(${s.id},1)" ${i >= currentState.vsStages.length - 1 ? 'disabled' : ''} class="px-1.5 py-1 text-[10px] font-semibold text-ink-secondary hover:bg-canvas border-l border-black/[0.06] disabled:opacity-30" title="后移">↓</button>
+                                    </div>
+                                </div>
+                                <input type="text" class="mt-2 w-full text-center font-semibold text-[14px] text-ink rounded-[10px] border border-black/[0.10] px-2 py-2 bg-white focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" value="${escapeHtmlText(s.name)}" onchange="updateVSStage(${s.id},'name',this.value)" placeholder="阶段名称" />
+                                <p class="text-[9px] text-ink-tertiary text-center mt-1 leading-tight">色条 = ② 已勾选维度的综合分</p>
+                                <div class="flex justify-center gap-0.5 mt-1.5">${dimStripHtml(s)}</div>
+                                <p class="text-[11px] mt-1.5 text-center font-semibold tabular-nums ${hpCls}">健康 ${hpTxt}</p>
+                                <div class="mt-2 flex items-center justify-center gap-1 rounded-[10px] border border-black/[0.08] bg-canvas px-2 py-1.5">
+                                    <span class="text-[10px] text-ink-tertiary">耗时</span>
                                     <input type="number" min="0" class="w-11 text-center text-[14px] font-semibold text-accent bg-transparent outline-none" value="${s.actualTime}" onchange="updateVSStage(${s.id},'actualTime',this.value)">
-                                    <span class="text-[11px] text-ink-tertiary">小时</span>
+                                    <span class="text-[10px] text-ink-tertiary">小时</span>
+                                </div>
+                                <button type="button" onclick="removeVSStage(${s.id})" class="print-hidden mt-2 text-[10px] font-semibold text-ink-tertiary hover:text-[#c41e1e]">删除本阶段</button>
                                 </div>
                             </div>
                             ${i < currentState.vsStages.length - 1 ? '<div class="flex items-center text-ink-tertiary"><i class="fas fa-chevron-right text-[10px]" aria-hidden="true"></i></div>' : ''}
-                        </div>`).join('')}
-                </div></div>
-                <div class="grid sm:grid-cols-3 gap-2 lg:gap-3 mt-3 lg:mt-4">
-                    <div class="rounded-[14px] border border-black/[0.06] bg-canvas px-4 py-3 lg:px-4 lg:py-3"><p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">总交付周期</p><p class="text-[20px] lg:text-[22px] font-semibold text-ink tabular-nums mt-0.5"><span id="metric-lt">${vsMetrics.lt}</span><span class="text-[13px] font-normal text-ink-secondary ml-1">小时</span></p></div>
-                    <div class="rounded-[14px] border border-black/[0.06] bg-canvas px-4 py-3 lg:px-4 lg:py-3"><p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">增值时间</p><p class="text-[20px] lg:text-[22px] font-semibold text-accent tabular-nums mt-0.5"><span id="metric-vt">${vsMetrics.vt}</span><span class="text-[13px] font-normal text-ink-secondary ml-1">小时</span></p></div>
-                    <div class="rounded-[14px] border border-black/[0.06] bg-canvas px-4 py-3 lg:px-4 lg:py-3"><p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">流程效率 PCE</p><p class="text-[20px] lg:text-[22px] font-semibold text-[#34c759] tabular-nums mt-0.5"><span id="metric-pce">${vsMetrics.pce}</span><span class="text-[13px] font-normal text-ink-secondary ml-1">%</span></p></div>
-                </div></div>`;
+                        </div>`;
+                    }).join('')}
+                    </div></div>
+                </section>`;
+
+                const selStage = currentState.vsStages.find(st => st.id === currentState.vsSelectedStageId) || currentState.vsStages[0];
+                const hpSel = computeStageHealthPct(selStage);
+                const hpTxtSel = hpSel == null ? '—' : hpSel + '%';
+                const dimTogglesSel = VS_DIM_KEYS.map(k => `
+                            <label class="inline-flex items-center gap-1.5 rounded-[10px] border border-black/[0.08] bg-white px-2 py-1.5 text-[12px] cursor-pointer select-none">
+                                <input type="checkbox" class="rounded border-black/[0.2]" ${selStage.dimActive[k] ? 'checked' : ''} onchange="toggleVsStageDim(${selStage.id},'${k}',this.checked)" />
+                                <span>${VS_DIM_LABELS[k]}</span>
+                            </label>`).join('');
+                const dimBlocksSel = VS_DIM_KEYS.filter(k => selStage.dimActive[k]).map(k => {
+                    const rows = (selStage.dimKpiRows && selStage.dimKpiRows[k]) ? selStage.dimKpiRows[k] : [];
+                    const cur = parseInt(selStage[k], 10) || 3;
+                    const opts = [1, 2, 3, 4, 5].map(n => `<option value="${n}" ${cur === n ? 'selected' : ''}>${n}</option>`).join('');
+                    const tbody = rows.length ? rows.map(row => `
+                            <tr class="border-t border-black/[0.06]">
+                                <td class="p-2"><input type="text" class="w-full min-w-[6rem] rounded-[8px] border border-black/[0.08] px-2 py-1.5 text-[12px]" value="${escapeHtmlText(row.name)}" placeholder="指标名称" onchange="updateVsDimKpiRow(${selStage.id},'${k}',${row.id},'name',this.value)" /></td>
+                                <td class="p-2"><input type="text" class="w-full min-w-[5rem] rounded-[8px] border border-black/[0.08] px-2 py-1.5 text-[12px]" value="${escapeHtmlText(row.current)}" placeholder="现状" onchange="updateVsDimKpiRow(${selStage.id},'${k}',${row.id},'current',this.value)" /></td>
+                                <td class="p-2"><input type="text" class="w-full min-w-[5rem] rounded-[8px] border border-black/[0.08] px-2 py-1.5 text-[12px]" value="${escapeHtmlText(row.target)}" placeholder="目标" onchange="updateVsDimKpiRow(${selStage.id},'${k}',${row.id},'target',this.value)" /></td>
+                                <td class="p-2 text-center align-middle"><button type="button" onclick="removeVsDimKpiRow(${selStage.id},'${k}',${row.id})" class="text-[11px] font-semibold text-ink-tertiary hover:text-[#c41e1e]" title="删除该行">删</button></td>
+                            </tr>`).join('') : `<tr><td colspan="4" class="p-3 text-center text-[12px] text-ink-tertiary">暂无指标，点击下方「添加指标」录入现状与目标。</td></tr>`;
+                    return `
+                        <div class="rounded-[12px] border border-black/[0.08] bg-canvas/40 p-3 mb-3 last:mb-0">
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                <span class="text-[13px] font-semibold text-ink">${VS_DIM_LABELS[k]}</span>
+                                <div class="flex items-center gap-2 text-[12px]">
+                                    <span class="text-ink-tertiary whitespace-nowrap">综合分（健康度）</span>
+                                    <select class="rounded-[8px] border border-black/[0.10] bg-white py-1 px-2 font-semibold min-w-[3.25rem]" onchange="updateVSStage(${selStage.id},'${k}',this.value)">${opts}</select>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-ink-secondary mb-2 leading-snug">为该维度自定义若干条<strong class="text-ink">具体指标</strong>，填写<strong class="text-ink">现状值</strong>与<strong class="text-ink">目标值</strong>（数字或文字均可）。</p>
+                            <div class="overflow-x-auto rounded-[10px] border border-black/[0.06] bg-white">
+                                <table class="w-full text-[12px]">
+                                    <thead><tr class="bg-canvas/80 text-[11px] text-ink-tertiary">
+                                        <th class="p-2 text-left font-semibold">指标名称</th>
+                                        <th class="p-2 text-left font-semibold">现状值</th>
+                                        <th class="p-2 text-left font-semibold">目标值</th>
+                                        <th class="p-2 w-10"></th>
+                                    </tr></thead>
+                                    <tbody>${tbody}</tbody>
+                                </table>
+                            </div>
+                            <button type="button" onclick="addVsDimKpiRow(${selStage.id},'${k}')" class="print-hidden mt-2 inline-flex items-center gap-1 rounded-[8px] border border-black/[0.10] bg-white px-2.5 py-1 text-[11px] font-semibold text-accent hover:bg-canvas transition-colors">
+                                <i class="fas fa-plus text-[9px]" aria-hidden="true"></i>添加指标
+                            </button>
+                        </div>`;
+                }).join('');
+                const stageMetricsSection = `<section class="mt-3 rounded-[14px] border border-black/[0.08] bg-canvas/50 p-3">
+                    <h3 class="text-[14px] font-semibold text-ink mb-1">② 当前阶段指标 <span class="text-[12px] font-normal text-ink-tertiary">（点击①中卡片切换阶段）</span></h3>
+                    <p class="text-[12px] text-ink-secondary mb-3 leading-relaxed">勾选本阶段要评估的<strong class="text-ink">五类维度</strong>；在每个维度下自定义<strong class="text-ink">具体指标</strong>并填写<strong class="text-ink">现状值</strong>与<strong class="text-ink">目标值</strong>。<strong class="text-ink">综合分 1～5</strong>用于简图色条与端到端健康度汇总。请填写<strong class="text-ink">业务组件</strong>（逗号分隔），下一步会自动生成能力清单。</p>
+                    <div class="rounded-[14px] border border-black/[0.06] bg-white p-3 shadow-sm">
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                            <span class="text-[13px] font-semibold text-ink">${escapeHtmlText(selStage.name)}</span>
+                            <span class="text-[12px] font-bold tabular-nums ${hpSel == null ? 'text-ink-tertiary' : healthHeatClass(hpSel)}">阶段健康度 ${hpTxtSel}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mb-3">${dimTogglesSel}</div>
+                        ${dimBlocksSel || '<p class="text-[12px] text-ink-tertiary mb-2">请至少勾选一项维度。</p>'}
+                        <div class="mt-4 pt-3 border-t border-black/[0.06] space-y-2">
+                            <input type="text" class="w-full rounded-[10px] border border-black/[0.08] px-3 py-2 text-[13px]" placeholder="业务组件，逗号分隔（建议填写）" value="${escapeHtmlText(selStage.components || '')}" onchange="updateVSStage(${selStage.id},'components',this.value)" />
+                            <input type="text" class="w-full rounded-[10px] border border-black/[0.08] px-3 py-2 text-[13px]" placeholder="场景说明（选填）" value="${escapeHtmlText(selStage.scenarios || '')}" onchange="updateVSStage(${selStage.id},'scenarios',this.value)" />
+                            <input type="text" class="w-full rounded-[10px] border border-black/[0.08] px-3 py-2 text-[13px]" placeholder="价值一句话（选填）" value="${escapeHtmlText(selStage.valDesc || '')}" onchange="updateVSStage(${selStage.id},'valDesc',this.value)" />
+                        </div>
+                    </div>
+                </section>`;
+
+                const overview = `<section class="mt-3 rounded-[14px] border border-black/[0.08] bg-white p-3 shadow-nav">
+                    <h3 class="text-[14px] font-semibold text-ink mb-2">③ 整体价值流概览</h3>
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        <div class="rounded-[12px] bg-canvas px-3 py-2.5 border border-black/[0.06]">
+                            <p class="text-[11px] font-semibold text-ink-tertiary">效率（时间）</p>
+                            <p class="text-[14px] font-semibold text-ink mt-1 tabular-nums leading-snug">LT <span id="metric-lt">${vsMetrics.lt}</span> h · VT <span id="metric-vt">${vsMetrics.vt}</span> h</p>
+                            <p class="text-[13px] text-accent font-semibold mt-0.5 tabular-nums">PCE <span id="metric-pce">${vsMetrics.pce}</span>%</p>
+                            <p class="text-[11px] text-ink-secondary mt-1.5 leading-snug">维度「效率」勾选过的阶段平均得分：<strong class="text-ink">${vsMetrics.fmtAvgEff}</strong>。时间与得分一起看更全面。</p>
+                        </div>
+                        <div class="rounded-[12px] bg-canvas px-3 py-2.5 border border-black/[0.06]">
+                            <p class="text-[11px] font-semibold text-ink-tertiary">质量 · 成本 · 体验</p>
+                            <p class="text-[13px] text-ink mt-1.5 leading-relaxed">质量 <strong class="tabular-nums">${vsMetrics.fmtAvgQual}</strong><span class="text-ink-tertiary mx-1">·</span>成本 <strong class="tabular-nums">${vsMetrics.fmtAvgCost}</strong><span class="text-ink-tertiary mx-1">·</span>体验 <strong class="tabular-nums">${vsMetrics.fmtAvgCx}</strong></p>
+                            <p class="text-[11px] text-ink-secondary mt-1.5 leading-snug">为所有阶段中<strong class="text-ink">勾选过该维度</strong>的得分平均；未勾选显示「—」。</p>
+                        </div>
+                        <div class="rounded-[12px] bg-canvas px-3 py-2.5 border border-black/[0.06] sm:col-span-2 lg:col-span-1">
+                            <p class="text-[11px] font-semibold text-ink-tertiary">风险 / 合规 · 综合健康</p>
+                            <p class="text-[13px] text-ink mt-1">风险维度均值 <strong class="tabular-nums">${vsMetrics.fmtAvgRisk}</strong></p>
+                            <p class="text-[15px] font-semibold mt-1 tabular-nums ${healthHeatClass(vsMetrics.healthE2e)}">端到端健康 <span id="metric-health-e2e">${vsMetrics.healthE2e}</span>%</p>
+                            <p class="text-[11px] text-ink-secondary mt-1.5 leading-snug">当前相对最弱：<strong class="text-ink"><span id="metric-worst-stage">${escapeHtmlText(vsMetrics.worstStageName)}</span></strong>（<span id="metric-worst-pct" class="font-semibold tabular-nums ${vsMetrics.worstPct != null ? healthHeatClass(vsMetrics.worstPct) : 'text-ink-tertiary'}">${vsMetrics.worstPct != null ? vsMetrics.worstPct + '%' : '—'}</span>）</p>
+                        </div>
+                    </div>
+                </section>`;
+
+                matrix = '';
+                flow = `<div class="flex flex-col gap-0">${diagram}${stageMetricsSection}${overview}</div>`;
             }
 
             document.getElementById('step-2').innerHTML = `
@@ -2255,18 +4122,19 @@
                         ${stepPageHeading(2)}
                         <div class="flex flex-col lg:flex-row lg:flex-wrap lg:items-end gap-2 lg:gap-3 rounded-[14px] border border-black/[0.06] bg-canvas/80 p-3 lg:p-3">
                         <div class="flex flex-col gap-1 flex-1 min-w-[180px]">
-                            <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">价值流名称</label>
-                            <input class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" value="${currentState.valueStreamName}" onchange="currentState.valueStreamName=this.value">
+                            <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">价值流名称（选填）</label>
+                            <input class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" value="${escapeHtmlText(currentState.valueStreamName)}" onchange="currentState.valueStreamName=this.value">
                         </div>
                         <div class="flex flex-col gap-1 flex-1 min-w-[200px]">
                             <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">行业模板</label>
                             <select class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" onchange="currentState.selectedTemplateId=this.value">${options}</select>
                         </div>
-                        <button type="button" onclick="runVSGen()" class="inline-flex items-center justify-center gap-2 rounded-[10px] bg-accent px-4 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors lg:shrink-0" title="用当前所选模板覆盖下方阶段，可作为企业初稿后再改">
+                        <button type="button" onclick="runVSGen()" class="inline-flex items-center justify-center gap-2 rounded-[10px] bg-accent px-4 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors lg:shrink-0" title="生成下方流程与各阶段，可随时再改">
                             <i class="fas fa-layer-group text-[10px] opacity-90" aria-hidden="true"></i>
-                            套用模板初稿
+                            套用模板
                         </button>
                     </div>
+                    ${currentState.vsStages.length ? '<p class="text-[11px] text-ink-secondary mt-2 leading-snug print-hidden max-w-3xl">操作顺序：<strong class="text-ink">①</strong>点击卡片选中阶段并改顺序与耗时 → <strong class="text-ink">②</strong>为该阶段勾选维度、填综合分与具体指标（现状/目标）→ <strong class="text-ink">③</strong>看底部整体概览。</p>' : ''}
                     </div>
                 </div>
                 <div class="flex flex-col flex-1 min-h-0 min-w-0 gap-2">${matrix}${flow}</div>
@@ -2277,26 +4145,46 @@
         function renderStep3() {
             let body = '';
             if (!currentState.capabilityFramework.length) {
-                body = `<div class="flex flex-1 min-h-0 flex-col justify-center items-center rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-10 text-center">
+                body = `<div class="flex flex-1 min-h-0 flex-col justify-center items-center rounded-[14px] border border-dashed border-black/[0.12] bg-canvas px-6 py-10 text-center gap-3">
                     <p class="text-[15px] font-semibold text-ink">还没有能力清单</p>
-                    <p class="text-[14px] text-ink-secondary mt-2 max-w-lg mx-auto leading-relaxed">请先在「${stepLabel(2)}」生成价值流并填写业务组件，再点击<strong class="text-ink font-medium">下一步</strong>进入本页（将自动生成清单）。</p>
+                    <p class="text-[14px] text-ink-secondary mt-1 max-w-lg mx-auto leading-relaxed">可从「${stepLabel(2)}」填写业务组件后点<strong class="text-ink font-medium">下一步</strong>自动生成；也可点击下方<strong class="text-ink font-medium">手工新增能力块</strong>从零维护。</p>
+                    <button type="button" onclick="addCapabilityFrameworkRow()" class="print-hidden inline-flex items-center gap-2 rounded-[10px] bg-accent px-4 py-2 text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors">
+                        <i class="fas fa-plus text-[11px]" aria-hidden="true"></i>
+                        手工新增能力块
+                    </button>
                 </div>`;
             } else {
-                body = `<div class="flex flex-col flex-1 min-h-0 ui-table-wrap shadow-nav">
+                body = `<div class="flex flex-col flex-1 min-h-0 ui-table-wrap shadow-nav rounded-[14px] border border-black/[0.08] overflow-hidden bg-white">
+                    <div class="flex flex-wrap items-center justify-end gap-2 shrink-0 px-3 py-2 border-b border-black/[0.06] bg-canvas/50 print-hidden">
+                        <button type="button" onclick="addCapabilityFrameworkRow()" class="inline-flex items-center gap-1.5 rounded-[10px] bg-accent px-3 py-1.5 text-[12px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors">
+                            <i class="fas fa-plus text-[10px]" aria-hidden="true"></i>
+                            新增能力块
+                        </button>
+                    </div>
                     <div class="flex-1 min-h-0 overflow-auto">
-                    <table class="w-full text-[13px]">
+                    <table class="w-full text-[13px] table-fixed">
                         <thead><tr>
-                            <th class="p-3 text-left font-semibold">领域 L1</th><th class="p-3 text-left font-semibold">L2</th><th class="p-3 text-left font-semibold">能力块 L3</th>
-                            <th class="p-3 text-left font-semibold">描述</th><th class="p-3 text-left font-semibold">关联价值流</th>
-                            <th class="p-3 text-center font-semibold">当前</th><th class="p-3 text-center font-semibold">目标</th><th class="p-3 text-center font-semibold">ICE</th>
+                            <th class="p-3 text-left font-semibold w-[12%] min-w-[6rem]">价值流阶段</th>
+                            <th class="p-3 text-left font-semibold w-[10%] min-w-[5rem]">业务能力 L3</th>
+                            <th class="p-3 text-left font-semibold w-[20%] min-w-[9rem]">描述</th>
+                            <th class="p-3 text-left font-semibold w-[10%] min-w-[4.5rem]">领域 L1</th>
+                            <th class="p-3 text-left font-semibold w-[10%] min-w-[4.5rem]">类型 L2</th>
+                            <th class="p-3 text-center font-semibold w-[6%]">当前</th>
+                            <th class="p-3 text-center font-semibold w-[6%]">目标</th>
+                            <th class="p-3 text-center font-semibold w-[6%]">ICE</th>
+                            <th class="p-3 text-center font-semibold w-[3rem] print:hidden">操作</th>
                         </tr></thead><tbody>
                         ${currentState.capabilityFramework.map(c => `
-                            <tr class="border-t border-black/[0.06] hover:bg-canvas/80 transition-colors">
-                                <td class="p-3 text-ink-secondary">${c.l1}</td><td class="p-3 text-ink-secondary">${c.l2}</td><td class="p-3 font-semibold text-ink">${c.l3}</td>
-                                <td class="p-3 text-ink-secondary max-w-[220px] leading-relaxed">${c.desc}</td><td class="p-3 text-[12px] text-ink-tertiary">${c.linkedVs}</td>
-                                <td class="p-3 text-center"><input type="number" min="1" max="5" title="1–5 分" class="w-12 rounded-[8px] border border-black/[0.10] py-1.5 text-center text-[13px] font-semibold focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" value="${c.curMat}" onchange="updateFrameworkMat(${c.id},'curMat',this.value)"></td>
-                                <td class="p-3 text-center"><input type="number" min="1" max="5" title="1–5 分" class="w-12 rounded-[8px] border border-black/[0.10] py-1.5 text-center text-[13px] font-semibold focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" value="${c.tgtMat}" onchange="updateFrameworkMat(${c.id},'tgtMat',this.value)"></td>
-                                <td class="p-3 text-center font-semibold tabular-nums text-accent">${c.ice}</td>
+                            <tr class="border-t border-black/[0.06] hover:bg-canvas/80 transition-colors align-top">
+                                <td class="p-3"><input type="text" class="w-full min-w-0 rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[12px] text-ink-tertiary leading-relaxed" value="${escapeHtmlText(c.linkedVs || '')}" onchange="updateFrameworkField(${c.id},'linkedVs',this.value)" title="价值流阶段（如：价值流名 → 阶段名）" /></td>
+                                <td class="p-3"><input type="text" class="w-full min-w-0 rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[13px] font-semibold text-ink" value="${escapeHtmlText(c.l3)}" onchange="updateFrameworkField(${c.id},'l3',this.value)" title="业务能力 L3 名称" /></td>
+                                <td class="p-3"><textarea rows="2" title="描述" class="w-full min-h-[2.75rem] rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[13px] text-ink leading-relaxed resize-y bg-white focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" onchange="updateFrameworkField(${c.id},'desc',this.value)">${escapeHtmlText(c.desc || '')}</textarea></td>
+                                <td class="p-3"><input type="text" class="w-full min-w-0 rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[13px] text-ink" value="${escapeHtmlText(c.l1 || '')}" onchange="updateFrameworkField(${c.id},'l1',this.value)" /></td>
+                                <td class="p-3"><input type="text" class="w-full min-w-0 rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[13px] text-ink" value="${escapeHtmlText(c.l2 || '')}" onchange="updateFrameworkField(${c.id},'l2',this.value)" /></td>
+                                <td class="p-3 text-center align-middle"><input type="number" min="1" max="5" title="1–5 分" class="w-12 rounded-[8px] border border-black/[0.10] py-1.5 text-center text-[13px] font-semibold focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" value="${c.curMat}" onchange="updateFrameworkMat(${c.id},'curMat',this.value)"></td>
+                                <td class="p-3 text-center align-middle"><input type="number" min="1" max="5" title="1–5 分" class="w-12 rounded-[8px] border border-black/[0.10] py-1.5 text-center text-[13px] font-semibold focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" value="${c.tgtMat}" onchange="updateFrameworkMat(${c.id},'tgtMat',this.value)"></td>
+                                <td class="p-3 text-center font-semibold tabular-nums text-accent align-middle">${escapeHtmlText(String(c.ice ?? ''))}</td>
+                                <td class="p-2 text-center align-middle print:hidden"><button type="button" onclick="removeCapabilityFrameworkRow(${c.id})" class="text-ink-tertiary hover:text-[#c41e1e] p-2 rounded-lg transition-colors" title="删除该行"><i class="fas fa-trash text-[13px]" aria-hidden="true"></i></button></td>
                             </tr>`).join('')}
                         </tbody></table></div></div>`;
             }
@@ -2306,9 +4194,21 @@
                 ${methodBlock('s3')}
                 <div class="flex items-start gap-2 sm:gap-3 shrink-0 print-hidden">
                     ${workspaceSidebarToggleHtml()}
-                    <div class="flex-1 min-w-0">${stepPageHeading(3, '')}</div>
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 flex-1 min-w-0">
+                        ${stepPageHeading(3, 'flex-1')}
+                        <div class="flex flex-wrap items-center gap-2 shrink-0">
+                            <button type="button" onclick="exportCapabilityFrameworkExcel()" class="inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-black/[0.12] bg-white px-3 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas hover:text-ink transition-colors" title="导出当前清单或空白表头模板">
+                                <i class="fas fa-file-export text-[11px]" aria-hidden="true"></i>
+                                导出 Excel
+                            </button>
+                            <button type="button" onclick="document.getElementById('cf-xlsx-input').click()" class="inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-black/[0.12] bg-white px-3 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas hover:text-ink transition-colors" title="整表替换并刷新本页与后续步骤">
+                                <i class="fas fa-file-import text-[11px]" aria-hidden="true"></i>
+                                导入 Excel
+                            </button>
+                            <input type="file" id="cf-xlsx-input" class="hidden" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" aria-hidden="true" onchange="importCapabilityFrameworkExcel(event)">
+                        </div>
+                    </div>
                 </div>
-                <p class="text-[12px] lg:text-[13px] text-ink-secondary shrink-0 leading-snug line-clamp-2" title="常见一级域包括：${L1_DOMAINS.join('、')}">常见一级域包括：${L1_DOMAINS.slice(0, 5).join('、')} 等。可在「${stepLabel(4)}」继续微调。</p>
                 <div class="flex flex-col flex-1 min-h-0 min-w-0">${body}</div>
                 </div>`;
             applySidebarCollapsed();
@@ -2368,21 +4268,106 @@
                     <p class="text-[14px] text-ink-secondary mt-2 leading-relaxed max-w-lg mx-auto">完成「${stepLabel(3)}」与「${stepLabel(4)}」后，颜色会根据差距自动计算。</p>
                 </div>`;
             } else {
+                const fw = currentState.capabilityFramework;
+                const dist = heatmapDistributionSummary(fw);
+                const { overall, byL1, byL2 } = dist;
+                const pct = (n, d) => (d > 0 ? Math.round((n / d) * 1000) / 10 : 0);
+                const tableL1Rows = byL1.map(r => `
+                        <tr class="border-t border-black/[0.06] hover:bg-canvas/60">
+                            <td class="p-2 font-medium text-ink">${escapeHtmlText(r.l1)}</td>
+                            <td class="p-2 text-center tabular-nums ${r.red ? 'text-[#b91c1c] font-semibold' : 'text-ink-tertiary'}">${r.red}</td>
+                            <td class="p-2 text-center tabular-nums ${r.yellow ? 'text-amber-900 font-semibold' : 'text-ink-tertiary'}">${r.yellow}</td>
+                            <td class="p-2 text-center tabular-nums ${r.green ? 'text-emerald-800 font-semibold' : 'text-ink-tertiary'}">${r.green}</td>
+                            <td class="p-2 text-center tabular-nums font-medium text-ink">${r.total}</td>
+                            <td class="p-2 text-right text-[11px] text-ink-tertiary tabular-nums">${pct(r.green, r.total)}% 健康</td>
+                        </tr>`).join('');
+                const tableL2Rows = byL2.map(r => `
+                        <tr class="border-t border-black/[0.06] hover:bg-canvas/60">
+                            <td class="p-2 text-ink-secondary max-w-[7rem] truncate align-middle" title="${escapeHtmlText(r.l1)}">${escapeHtmlText(r.l1)}</td>
+                            <td class="p-2 font-medium text-ink align-middle">${escapeHtmlText(r.l2)}</td>
+                            <td class="p-2 text-center tabular-nums align-middle ${r.red ? 'text-[#b91c1c] font-semibold' : 'text-ink-tertiary'}">${r.red}</td>
+                            <td class="p-2 text-center tabular-nums align-middle ${r.yellow ? 'text-amber-900 font-semibold' : 'text-ink-tertiary'}">${r.yellow}</td>
+                            <td class="p-2 text-center tabular-nums align-middle ${r.green ? 'text-emerald-800 font-semibold' : 'text-ink-tertiary'}">${r.green}</td>
+                            <td class="p-2 text-center tabular-nums font-medium text-ink align-middle">${r.total}</td>
+                            <td class="p-2 text-right text-[11px] text-ink-tertiary tabular-nums align-middle">${pct(r.green, r.total)}% 健康</td>
+                        </tr>`).join('');
+                const { l1Order, tree } = buildHeatmapL1L2Tree(fw);
+                const layeredSections = l1Order.map(l1 => {
+                    const node = tree[l1];
+                    const blocksL1 = node.l2Order.flatMap(l2 => node.byL2[l2]);
+                    const stL1 = countHeatStats(blocksL1);
+                    const l2Parts = node.l2Order.map(l2 => {
+                        const blocks = node.byL2[l2];
+                        const st = countHeatStats(blocks);
+                        const grid = blocks.map(c => heatmapCapabilityCardHtml(c)).join('');
+                        return `
+                        <div class="mb-4 last:mb-0">
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                <span class="text-[12px] font-semibold text-ink">${escapeHtmlText(l2)}</span>
+                                <span class="text-[10px] sm:text-[11px] text-ink-tertiary tabular-nums">优先 ${st.red} · 计划 ${st.yellow} · 健康 ${st.green} · ${st.total} 项</span>
+                            </div>
+                            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 lg:gap-3">${grid}</div>
+                        </div>`;
+                    }).join('');
+                    return `
+                    <section class="rounded-[14px] border border-black/[0.08] bg-canvas/40 p-3 mb-3 last:mb-0 shadow-nav">
+                        <div class="flex flex-wrap items-baseline justify-between gap-2 mb-3 pb-2 border-b border-black/[0.06]">
+                            <h3 class="text-[14px] font-semibold text-ink">${escapeHtmlText(l1)}</h3>
+                            <span class="text-[11px] text-ink-secondary tabular-nums">领域内：优先 ${stL1.red} · 计划 ${stL1.yellow} · 健康 ${stL1.green} · 共 ${stL1.total} 项能力块</span>
+                        </div>
+                        ${l2Parts}
+                    </section>`;
+                }).join('');
                 body = `<div class="flex flex-col flex-1 min-h-0 gap-2">
-                    <div class="flex-1 min-h-0 overflow-y-auto pr-1">
-                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 lg:gap-3 auto-rows-fr lg:min-h-full">
-                    ${currentState.capabilityFramework.map(c => {
-                        const cat = heatCategory(c);
-                        const cls = cat === 'red' ? 'heat-red' : cat === 'yellow' ? 'heat-yellow' : 'heat-green';
-                        const badge = cat === 'red' ? '优先处理' : cat === 'yellow' ? '纳入计划' : '相对健康';
-                        return `<button type="button" onclick="setStep(4)" class="rounded-[14px] border-2 p-3 lg:p-3 text-left transition hover:shadow-card min-h-[7rem] lg:min-h-0 lg:h-full flex flex-col ${cls} focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-                            <p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">${c.l1} · ${c.l2}</p>
-                            <p class="text-[15px] lg:text-[16px] font-semibold text-ink mt-1.5 leading-snug">${c.l3}</p>
-                            <p class="text-[11px] lg:text-[12px] text-ink-secondary mt-2 leading-relaxed flex-1">组织 ${c.gapOrg} · 流程 ${c.gapProc} · 数据 ${c.gapData} · IT ${c.gapIt}</p>
-                            <p class="mt-2 lg:mt-3 inline-flex text-[11px] font-semibold px-2 py-1 rounded-full shrink-0 ${cat === 'red' ? 'bg-[#ff6961]/15 text-[#b91c1c]' : cat === 'yellow' ? 'bg-amber-100/80 text-amber-900' : 'bg-emerald-100/80 text-emerald-900'}">${badge}</p>
-                        </button>`;
-                    }).join('')}
-                    </div></div>
+                    <section class="rounded-[14px] border border-black/[0.08] bg-white p-3 shadow-nav shrink-0">
+                        <h3 class="text-[13px] font-semibold text-ink mb-2">热力分布汇总</h3>
+                        <p class="text-[11px] text-ink-secondary mb-2 leading-snug">按业务能力架构 <strong class="text-ink font-medium">L1 / L2</strong> 统计各热力等级的能力块数量；「% 健康」为相对健康（绿）占该分组总数的比例。</p>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold bg-[#ff6961]/15 text-[#b91c1c]">优先处理 ${overall.red}</span>
+                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold bg-amber-100/80 text-amber-900">纳入计划 ${overall.yellow}</span>
+                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold bg-emerald-100/80 text-emerald-900">相对健康 ${overall.green}</span>
+                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold bg-canvas text-ink-secondary border border-black/[0.08]">能力块合计 ${overall.total}</span>
+                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium bg-white text-ink-tertiary border border-black/[0.08] tabular-nums">全局健康占比 ${pct(overall.green, overall.total)}%</span>
+                        </div>
+                        <div class="grid lg:grid-cols-2 gap-3">
+                            <div class="rounded-[10px] border border-black/[0.06] overflow-hidden min-h-0">
+                                <p class="text-[11px] font-semibold text-ink-tertiary px-2 py-1.5 bg-canvas/80 border-b border-black/[0.06]">按一级领域（L1）</p>
+                                <div class="overflow-x-auto max-h-[min(36vh,260px)] overflow-y-auto">
+                                <table class="w-full text-[12px]">
+                                    <thead><tr class="bg-canvas/50 text-[11px] text-ink-tertiary">
+                                        <th class="p-2 text-left font-semibold">L1</th>
+                                        <th class="p-2 text-center font-semibold w-12">优先</th>
+                                        <th class="p-2 text-center font-semibold w-12">计划</th>
+                                        <th class="p-2 text-center font-semibold w-12">健康</th>
+                                        <th class="p-2 text-center font-semibold w-12">计</th>
+                                        <th class="p-2 text-right font-semibold min-w-[4.5rem]">占比</th>
+                                    </tr></thead>
+                                    <tbody>${tableL1Rows}</tbody>
+                                </table></div>
+                            </div>
+                            <div class="rounded-[10px] border border-black/[0.06] overflow-hidden min-h-0">
+                                <p class="text-[11px] font-semibold text-ink-tertiary px-2 py-1.5 bg-canvas/80 border-b border-black/[0.06]">按二级能力（L2）</p>
+                                <div class="overflow-x-auto max-h-[min(36vh,260px)] overflow-y-auto">
+                                <table class="w-full text-[12px]">
+                                    <thead><tr class="bg-canvas/50 text-[11px] text-ink-tertiary">
+                                        <th class="p-2 text-left font-semibold">L1</th>
+                                        <th class="p-2 text-left font-semibold">L2</th>
+                                        <th class="p-2 text-center font-semibold w-11">优先</th>
+                                        <th class="p-2 text-center font-semibold w-11">计划</th>
+                                        <th class="p-2 text-center font-semibold w-11">健康</th>
+                                        <th class="p-2 text-center font-semibold w-11">计</th>
+                                        <th class="p-2 text-right font-semibold min-w-[4.5rem]">占比</th>
+                                    </tr></thead>
+                                    <tbody>${tableL2Rows}</tbody>
+                                </table></div>
+                            </div>
+                        </div>
+                    </section>
+                    <div class="flex flex-wrap items-baseline justify-between gap-2 shrink-0">
+                        <h3 class="text-[13px] font-semibold text-ink">分层热力视图</h3>
+                        <span class="text-[11px] text-ink-tertiary">按 L1 → L2 归类，卡片为能力块（L3）</span>
+                    </div>
+                    <div class="flex-1 min-h-0 overflow-y-auto pr-1 space-y-0">${layeredSections}</div>
                     <p class="shrink-0 text-[12px] lg:text-[13px] text-ink-secondary">点击卡片可跳到差距分析步骤修改评分。</p>
                 </div>`;
             }
@@ -2495,11 +4480,15 @@
                 </div>`;
             }).join('');
 
-            const tplsHtml = Object.entries(currentState.templates).map(([key, t]) => `
-                <div class="flex justify-between items-center gap-3 p-3 lg:p-4 rounded-[14px] border border-black/[0.06] bg-white text-[13px] lg:text-[14px] shadow-nav">
-                    <div class="min-w-0"><span class="font-semibold text-ink">${t.name}</span><span class="text-ink-tertiary ml-2">${t.stages.length} 个阶段</span></div>
-                    <span class="shrink-0 text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${key.startsWith('custom') ? 'bg-accent-muted text-accent' : 'bg-canvas text-ink-secondary'}">${key.startsWith('custom') ? '自定义' : '内置'}</span>
-                </div>`).join('');
+            const tplsHtml = Object.entries(currentState.templates).map(([key, t]) => {
+                const isBuiltIn = !key.startsWith('custom');
+                const editingHere = currentState.editingTemplateKey === key;
+                return `
+                <button type="button" onclick="beginEditTemplate('${key.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')" class="w-full text-left flex justify-between items-center gap-3 p-3 lg:p-4 rounded-[14px] border ${editingHere ? 'border-accent ring-2 ring-accent/25 bg-accent-muted/35' : 'border-black/[0.06] bg-white'} text-[13px] lg:text-[14px] shadow-nav hover:bg-canvas/80 transition-colors">
+                    <div class="min-w-0"><span class="font-semibold text-ink">${escapeHtmlText(t.name)}</span><span class="text-ink-tertiary ml-2">${t.stages.length} 个阶段</span>${editingHere ? '<span class="ml-2 text-[11px] font-semibold text-accent">编辑中</span>' : ''}</div>
+                    <span class="shrink-0 text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${isBuiltIn ? 'bg-canvas text-ink-secondary' : 'bg-accent-muted text-accent'}">${isBuiltIn ? '内置' : '自定义'}</span>
+                </button>`;
+            }).join('');
 
             const tab = currentState.configTab === 'templates' ? 'templates' : 'rules';
             const isRules = tab === 'rules';
@@ -2511,7 +4500,20 @@
                 ${methodBlock('s8')}
                 <div class="flex items-start gap-2 sm:gap-3 mb-2 print-hidden">
                     ${workspaceSidebarToggleHtml()}
-                    <div class="flex-1 min-w-0">${configPageHeading('')}</div>
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 flex-1 min-w-0">
+                        ${configPageHeading('flex-1')}
+                        <div class="flex flex-wrap items-center gap-2 shrink-0">
+                            <button type="button" onclick="exportConfigExcel()" class="inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-black/[0.12] bg-white px-3 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas hover:text-ink transition-colors" title="导出规则与模板两个工作表，含使用说明">
+                                <i class="fas fa-file-export text-[11px]" aria-hidden="true"></i>
+                                导出 Excel
+                            </button>
+                            <button type="button" onclick="document.getElementById('config-xlsx-input').click()" class="inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-black/[0.12] bg-white px-3 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas hover:text-ink transition-colors" title="按工作表合并刷新规则与模板">
+                                <i class="fas fa-file-import text-[11px]" aria-hidden="true"></i>
+                                导入 Excel
+                            </button>
+                            <input type="file" id="config-xlsx-input" class="hidden" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" aria-hidden="true" onchange="importConfigExcel(event)">
+                        </div>
+                    </div>
                 </div>
                 <div class="print-hidden mb-3 flex rounded-[12px] border border-black/[0.08] bg-canvas p-1 gap-1" role="tablist" aria-label="数字化资产配置">
                     <button type="button" id="tab-rules" role="tab" aria-controls="config-panel-rules" aria-selected="${isRules ? 'true' : 'false'}" onclick="setConfigTab('rules')" class="${isRules ? tabBtnOn : tabBtnOff}">画布诊断规则</button>
@@ -2535,9 +4537,13 @@
                 <section id="config-panel-templates" role="tabpanel" aria-labelledby="tab-templates" class="${isTpl ? '' : 'hidden'} flex flex-col flex-1 min-h-0">
                     <div class="rounded-[14px] border border-black/[0.06] bg-canvas/60 p-3 sm:p-4 mb-2 flex flex-col flex-1 min-h-0">
                         <h3 class="text-[15px] lg:text-[16px] font-semibold text-ink mb-0.5">价值流模板库</h3>
-                        <p class="text-[12px] lg:text-[13px] text-ink-secondary mb-2 lg:mb-3 leading-snug">保存常用流程，便于在不同项目中快速复用。</p>
+                        <p class="text-[12px] lg:text-[13px] text-ink-secondary mb-2 lg:mb-3 leading-snug">保存常用流程，便于在不同项目中快速复用。点击下方<strong class="text-ink font-medium">内置/自定义模板卡片</strong>即可载入并修改阶段；套用后在「价值流设计」中点击阶段卡片，补充<strong class="text-ink font-medium">五维综合分、KPI 现状/目标与价值描述</strong>等以完善健康度与组件信息。</p>
                         <div class="rounded-[12px] border border-black/[0.06] bg-white p-3 sm:p-4 mb-2 shadow-nav shrink-0">
-                            <input id="tpl-name" placeholder="模板名称" class="w-full rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] mb-4 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
+                            ${currentState.editingTemplateKey ? `<div class="flex flex-wrap items-center justify-between gap-2 mb-3 rounded-[10px] bg-accent-muted/50 border border-accent/20 px-3 py-2 text-[12px] text-ink">
+                                <span>正在编辑模板 <span class="font-semibold text-accent">${escapeHtmlText(currentState.templates[currentState.editingTemplateKey]?.name || '')}</span>（保存后覆盖当前条目）</span>
+                                <button type="button" onclick="cancelTemplateEdit()" class="shrink-0 rounded-[8px] border border-black/[0.10] bg-white px-2.5 py-1 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">取消编辑</button>
+                            </div>` : ''}
+                            <input id="tpl-name" placeholder="模板名称" value="${currentState.editingTemplateKey && currentState.templates[currentState.editingTemplateKey] ? escapeHtmlText(currentState.templates[currentState.editingTemplateKey].name) : ''}" class="w-full rounded-[10px] border border-black/[0.10] bg-canvas px-3 py-2.5 text-[14px] mb-4 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20">
                             <div class="rounded-[12px] border border-black/[0.06] bg-canvas p-4 mb-3 space-y-3">
                                 <div class="flex flex-wrap gap-3">
                                     <input id="tmp-step-name" placeholder="阶段名称" class="flex-1 min-w-[160px] rounded-[10px] border border-black/[0.10] bg-white px-3 py-2.5 text-[14px]">
@@ -2547,11 +4553,12 @@
                                 <input id="tmp-step-scenarios" placeholder="场景（逗号分隔）" class="w-full rounded-[10px] border border-black/[0.10] bg-white px-3 py-2.5 text-[14px]">
                                 <input id="tmp-step-components" placeholder="业务组件（逗号分隔）" class="w-full rounded-[10px] border border-black/[0.10] bg-white px-3 py-2.5 text-[14px]">
                                 <button type="button" onclick="addTmpStep()" class="inline-flex items-center gap-2 text-[14px] font-semibold text-accent hover:underline"><i class="fas fa-plus text-[11px]"></i>添加阶段到列表</button>
-                                <div id="temp-steps-preview" class="space-y-2 pl-3 border-l-2 border-black/[0.06] text-[12px] text-ink-secondary max-h-[min(22vh,200px)] overflow-y-auto"></div>
+                                <div id="temp-steps-preview" class="space-y-2 pl-3 border-l-2 border-black/[0.06] text-[12px] text-ink-secondary max-h-[min(66vh,600px)] overflow-y-auto"></div>
                             </div>
-                            <button type="button" onclick="saveTemplate()" class="w-full rounded-[10px] bg-accent py-2.5 text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors">保存模板</button>
+                            <button type="button" onclick="saveTemplate()" class="w-full rounded-[10px] bg-accent py-2.5 text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors">${currentState.editingTemplateKey ? '保存修改' : '保存模板'}</button>
                         </div>
-                        <div class="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1 pb-1 sm:pr-2">${tplsHtml}</div>
+                        <p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider mb-1.5 shrink-0">预置与自定义模板（点击编辑）</p>
+                        <div class="space-y-2 flex-1 min-h-[min(66vh,720px)] overflow-y-auto pr-1 pb-1 sm:pr-2">${tplsHtml}</div>
                     </div>
                 </section>`;
             renderTempStepsList();
@@ -2592,10 +4599,12 @@
         const PDF_MARGIN_MM = 10;
         const PDF_IMG_W_MM = PDF_PAGE_W_MM - 2 * PDF_MARGIN_MM;
         const PDF_USABLE_H_MM = PDF_PAGE_H_MM - 2 * PDF_MARGIN_MM;
-        const PDF_CAPTURE_SCALE = 1.35;
-        const PDF_JPEG_QUALITY = 0.72;
-        /** 限制长边像素，避免宽甘特等产生超大位图（有利于控制在约 20MB 内） */
-        const PDF_CANVAS_MAX_EDGE_PX = 2400;
+        /** 清晰度：过低导致中文糊边像「乱码」；过高体积大 */
+        const PDF_CAPTURE_SCALE = Math.min(2.25, Math.max(1.75, typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio * 1.15 : 2));
+        /** 分页切片用 PNG，避免 JPEG 块效应造成笔画粘连、行间错位感 */
+        const PDF_SLICE_FORMAT = 'PNG';
+        /** 仅当单页 canvas 极大时再缩小，减轻锯齿（保留较高上限） */
+        const PDF_CANVAS_MAX_EDGE_PX = 5200;
 
         function downscaleCanvasIfNeeded(canvas) {
             const edge = Math.max(canvas.width, canvas.height);
@@ -2607,21 +4616,21 @@
             out.width = w;
             out.height = h;
             const ctx = out.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, w, h);
             ctx.drawImage(canvas, 0, 0, w, h);
             return out;
         }
 
-        /** 将步骤截图按 A4 可用高度纵向切片为多张 JPEG 写入，避免单页超高导致重叠；体积远小于整页 PNG。 */
+        /** 将步骤截图按 A4 可用高度纵向切片为多页写入（PNG 保文字边缘清晰） */
         function appendCanvasToPdfAsPagedJpeg(pdf, canvas, opts) {
             const needLeading = !!(opts && opts.needLeadingPageBreak);
             const margin = PDF_MARGIN_MM;
             const imgW = PDF_IMG_W_MM;
             const usableH = PDF_USABLE_H_MM;
-            const q = PDF_JPEG_QUALITY;
 
-            const totalHmm = (canvas.height * imgW) / canvas.width;
             const maxPxSlice = Math.max(32, Math.floor((usableH * canvas.width) / imgW));
 
             let yPx = 0;
@@ -2629,7 +4638,8 @@
 
             while (yPx < canvas.height) {
                 const slicePx = Math.min(maxPxSlice, canvas.height - yPx);
-                const sliceHmm = (slicePx * imgW) / canvas.width;
+                let sliceHmm = (slicePx * imgW) / canvas.width;
+                sliceHmm = Math.round(sliceHmm * 1000) / 1000;
 
                 if (!first) {
                     pdf.addPage();
@@ -2642,15 +4652,25 @@
                 sliceCv.width = canvas.width;
                 sliceCv.height = slicePx;
                 const ctx = sliceCv.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(0, 0, sliceCv.width, sliceCv.height);
                 ctx.drawImage(canvas, 0, yPx, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
 
-                const dataUrl = sliceCv.toDataURL('image/jpeg', q);
-                pdf.addImage(dataUrl, 'JPEG', margin, margin, imgW, sliceHmm);
+                const dataUrl = PDF_SLICE_FORMAT === 'PNG'
+                    ? sliceCv.toDataURL('image/png')
+                    : sliceCv.toDataURL('image/jpeg', 0.92);
+                pdf.addImage(dataUrl, PDF_SLICE_FORMAT, margin, margin, imgW, sliceHmm);
 
                 yPx += slicePx;
             }
+        }
+
+        async function waitForFontsReady() {
+            try {
+                if (document.fonts && typeof document.fonts.ready !== 'undefined') await document.fonts.ready;
+            } catch (_) { /* ignore */ }
         }
 
         /** @param {string} [filename] 下载文件名 */
@@ -2687,7 +4707,8 @@
 
             void workspace.offsetHeight;
             void document.getElementById('main-layout')?.offsetHeight;
-            await waitForLayoutMs(120);
+            await waitForFontsReady();
+            await waitForLayoutMs(280);
 
             try {
                 const pdf = new JsPDF({
@@ -2705,7 +4726,16 @@
                         useCORS: true,
                         allowTaint: true,
                         logging: false,
-                        backgroundColor: '#ffffff'
+                        backgroundColor: '#ffffff',
+                        letterRendering: false,
+                        foreignObjectRendering: false,
+                        onclone: (clonedDoc) => {
+                            clonedDoc.body.classList.add('pdf-exporting');
+                            const wEl = clonedDoc.getElementById('workspace');
+                            if (wEl) {
+                                wEl.style.fontFamily = '-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei UI","Microsoft YaHei",sans-serif';
+                            }
+                        }
                     });
                     if (!canvas.width || !canvas.height) {
                         throw new Error(`${contentIds[i]} 截图尺寸为 0，请确认工作台已展开可见`);
