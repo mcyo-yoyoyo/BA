@@ -1,0 +1,11 @@
+{
+  "name": "ba-archipro",
+  "private": true,
+  "description": "本地 AI 代理：绕过浏览器对 DeepSeek/OpenAI 的 CORS 限制",
+  "scripts": {
+    "ai-proxy": "node scripts/ai-proxy.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
