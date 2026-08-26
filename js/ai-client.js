@@ -404,20 +404,20 @@
         }
         if (err && err.message === 'CORS_BLOCKED') {
             return isPublishedStatic()
-                ? 'GitHub Pages 不能直连官方 DeepSeek。请改选硅基流动或 OpenRouter，或在本机运行 npm run dev。'
+                ? 'GitHub Pages 不能直连官方 DeepSeek。请在本机运行 npm run dev 后再试。'
                 : '浏览器不能直连 DeepSeek。请另开终端运行 npm run ai-proxy，或用本仓库的开发服务启动后再试。';
         }
         if (isCorsLike(err) && route && (route.kind === 'direct' || isDeepSeek(cfg && cfg.endpoint))) {
             return isPublishedStatic()
-                ? 'GitHub Pages 不能直连官方 DeepSeek。请改选硅基流动或 OpenRouter，或在本机运行 npm run dev。'
+                ? 'GitHub Pages 不能直连官方 DeepSeek。请在本机运行 npm run dev 后再试。'
                 : '浏览器拦截了对 DeepSeek 的直连。请另开终端运行 npm run ai-proxy，或用本仓库的开发服务启动网站。';
         }
         const parsed = parseApiErrorBlob(err);
         const rawMsg = String(parsed.message || '');
         if ((err && err.status === 405) || /405\s*not allowed|<!doctype html|<html[\s>]|<center>\s*<h1>/i.test(rawMsg)) {
             return isPublishedStatic()
-                ? '当前是静态发布站，没有本站代理。官方 DeepSeek 请改选硅基流动或 OpenRouter，或在本机运行 npm run dev。'
-                : '本站代理不可用。请改选硅基流动 / OpenRouter，或在本机运行 npm run dev。';
+                ? '当前是静态发布站，不能直连官方 DeepSeek。请在本机运行 npm run dev。'
+                : '本站代理不可用。请在本机运行 npm run dev。';
         }
         const blob = (parsed.message + ' ' + parsed.type + ' ' + parsed.code).toLowerCase();
         if (/authentication|invalid.*api key|api key.*invalid|unauthorized/.test(blob) || parsed.type === 'authentication_error' || (err && err.status === 401)) {

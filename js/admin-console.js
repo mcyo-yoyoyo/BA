@@ -410,7 +410,7 @@
         $('admin-body').innerHTML = `
             <div class="card">
                 <h2>模型连接</h2>
-                <p class="hint">先点开 Key 的平台，再粘贴 Key。Cursor 订阅不能当 API Key。Key 只在本标签会话有效，关页或清站点即消失，也不会写入运营包。GitHub Pages 上官方 DeepSeek 连不上，请改用硅基流动或 OpenRouter，或本机 npm run dev。</p>
+                <p class="hint">先点开 Key 的平台，再粘贴 Key。官方 DeepSeek 请在本机用 npm run dev 启动后再试。</p>
                 <div class="ai-provider-row">${chips}</div>
                 <label class="field"><span>API Key</span><input id="ai-key" type="password" autocomplete="off" value="" placeholder="${cfg.apiKey ? '已在本会话保存，改写则覆盖' : '不要带引号或 Bearer'}"></label>
                 <label class="field"><span>接口根地址</span><input id="ai-ep" type="url" value="${esc(cfg.endpoint)}" placeholder="点平台会自动填"></label>
