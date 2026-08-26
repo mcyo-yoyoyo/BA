@@ -1,5 +1,5 @@
 /**
- * 复制为 accounts.local.js（该文件已 gitignore，不要提交）。
+ * 发布站用 js/accounts.js。本机若要覆盖，复制为 accounts.local.js（已 gitignore）。
  * hash = SHA-256 hex of  youwei.v1:{user}:{password}
  *
  * 生成本机哈希（把 USER / PASS 换成实际值）：
