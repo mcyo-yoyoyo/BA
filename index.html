@@ -1,0 +1,468 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>友为 · 从战略到路标</title>
+    <link rel="stylesheet" href="css/brand.css">
+    <style>
+        .nav {
+            position: sticky; top: 0; z-index: 50;
+            backdrop-filter: saturate(160%) blur(18px);
+            background: rgba(247, 245, 240, .92);
+            border-bottom: 1px solid var(--line);
+        }
+        .nav-inner, .hero-inner, .wrap, .footer-inner, .close-inner {
+            max-width: var(--page); margin-left: auto; margin-right: auto;
+            padding-left: var(--gutter); padding-right: var(--gutter);
+        }
+        .nav-inner {
+            height: 64px;
+            display: flex; align-items: center; justify-content: space-between; gap: 20px;
+        }
+        .nav-links { display: flex; align-items: center; gap: 20px; font-size: 14px; color: var(--muted); white-space: nowrap; }
+        .nav-links a { text-decoration: none; color: var(--muted); }
+        .nav-links a:hover { color: var(--ink); }
+        .nav-cta {
+            background: var(--sage); color: #f7f6f2 !important;
+            border-radius: 980px; padding: 8px 16px; font-weight: 600;
+        }
+        .nav-cta:hover { background: var(--sage-hover); }
+
+        .hero { background: var(--canvas); padding: 72px 0 64px; }
+        .hero-inner {
+            display: grid; grid-template-columns: 1.15fr .85fr;
+            gap: 48px; align-items: end;
+        }
+        .hero-kicker {
+            margin: 0 0 16px; font-size: 13px; color: var(--sage); font-weight: 650;
+        }
+        .hero h1 {
+            margin: 0; max-width: 12.5em;
+            font-size: clamp(36px, 5vw, 56px);
+            line-height: 1.14; font-weight: 600; letter-spacing: -.03em;
+            color: var(--ink);
+        }
+        .hero .lead {
+            margin: 18px 0 0; max-width: 38rem;
+            font-size: 18px; line-height: 1.6; color: var(--muted);
+        }
+        .hero-visual {
+            aspect-ratio: 4 / 3; overflow: hidden; background: var(--sand);
+        }
+        .hero-visual img { display: block; width: 100%; height: 100%; object-fit: cover; }
+        .hero-actions { margin-top: 32px; display: flex; gap: 22px; flex-wrap: wrap; align-items: center; }
+        .btn-sage {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 148px; height: 44px; padding: 0 22px;
+            border-radius: 980px; background: var(--sage); color: #f7f6f2;
+            text-decoration: none; font-size: 15px; font-weight: 600;
+        }
+        .btn-sage:hover { background: var(--sage-hover); }
+        .link-sage {
+            color: var(--sage); text-decoration: none; font-size: 15px; font-weight: 550;
+        }
+        .link-sage:hover { text-decoration: underline; }
+
+        .section { padding: 80px 0 0; }
+        .section h2 {
+            margin: 0; font-size: clamp(26px, 3.2vw, 36px);
+            letter-spacing: -.03em; font-weight: 600; color: var(--ink);
+        }
+        .section-lead {
+            margin: 12px 0 0; max-width: 36rem;
+            font-size: 16px; color: var(--muted); line-height: 1.65;
+        }
+
+        .path { margin-top: 36px; }
+        .path-bands {
+            display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+            margin-bottom: 18px;
+        }
+        .path-bands span {
+            font-size: 12px; font-weight: 650; color: var(--sage);
+            padding: 0 10px 10px 0; border-bottom: 1px solid var(--line);
+        }
+        .path-bands .span-2 { grid-column: span 2; }
+        .path-bands .span-3 { grid-column: span 3; }
+        .path-rail {
+            display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+            position: relative; gap: 0;
+        }
+        .path-rail::before {
+            content: ''; position: absolute;
+            left: calc(100% / 14); right: calc(100% / 14);
+            top: 17px; height: 1px; background: var(--line);
+        }
+        .path-node { min-width: 0; padding-right: 10px; }
+        .path-node:last-child { padding-right: 0; }
+        .path-dot {
+            width: 34px; height: 34px; border-radius: 50%;
+            display: grid; place-items: center;
+            background: var(--sage); color: #f7f5f0;
+            font-size: 11px; font-weight: 650;
+            position: relative; z-index: 1;
+        }
+        .path-node b {
+            display: block; margin: 12px 0 4px;
+            font-size: 16px; font-weight: 650; letter-spacing: -.02em;
+        }
+        .path-node small {
+            display: block; font-size: 12px; line-height: 1.45;
+            color: var(--muted);
+        }
+
+        .ind-bar {
+            margin-top: 28px; display: flex; flex-wrap: wrap; gap: 8px 28px;
+            border-bottom: 1px solid var(--line);
+        }
+        .ind-bar button {
+            appearance: none; background: none; border: 0;
+            border-bottom: 2px solid transparent;
+            padding: 0 0 12px; margin-bottom: -1px;
+            font: inherit; font-size: 16px; font-weight: 550;
+            color: var(--muted); cursor: pointer;
+        }
+        .ind-bar button.is-on { color: var(--ink); font-weight: 650; border-bottom-color: var(--sage); }
+
+        .case-stage { margin-top: 0; transition: opacity .18s ease; }
+        .case-stage.is-out { opacity: 0; }
+        .carousel { position: relative; }
+        .carousel-dots {
+            display: flex; flex-wrap: wrap; align-items: flex-end;
+            gap: 8px 22px;
+            margin-top: 16px; border-bottom: 1px solid var(--line);
+        }
+        .carousel-dots button {
+            appearance: none; background: none; border: 0;
+            border-bottom: 2px solid transparent;
+            padding: 0 0 10px; margin-bottom: -1px;
+            font: inherit; font-size: 13px; font-weight: 550; line-height: 1.2;
+            color: var(--muted); cursor: pointer;
+        }
+        .carousel-dots button.is-on { color: var(--ink); font-weight: 650; border-bottom-color: var(--sage); }
+        .carousel-frame { position: relative; margin-top: 18px; }
+        .carousel-slide {
+            display: block; position: relative;
+            aspect-ratio: 16 / 9; overflow: hidden;
+            background: var(--sand); text-decoration: none; color: #f7f6f2;
+        }
+        .carousel-slide img {
+            display: block; width: 100%; height: 100%; object-fit: cover;
+        }
+        .carousel-cap {
+            position: absolute; left: 0; right: 0; bottom: 0;
+            padding: 48px 32px 28px;
+            background: linear-gradient(180deg, transparent 0%, rgba(22, 21, 19, .72) 78%);
+        }
+        .carousel-cap .kicker { margin: 0 0 10px; font-size: 13px; font-weight: 650; color: #dce6e1; }
+        .carousel-cap h3 {
+            margin: 0; max-width: 18em;
+            font-size: clamp(22px, 3vw, 32px);
+            line-height: 1.25; font-weight: 600; letter-spacing: -.03em;
+        }
+        .carousel-cap .sub { margin: 12px 0 0; max-width: 36rem; font-size: 15px; line-height: 1.55; color: rgba(247, 246, 242, .82); }
+        .carousel-cap .more { margin: 18px 0 0; font-size: 14px; font-weight: 600; color: #dce6e1; }
+        .carousel-btn {
+            appearance: none; position: absolute; top: 50%; transform: translateY(-50%);
+            width: 40px; height: 40px; border: 0; border-radius: 980px;
+            background: rgba(247, 245, 240, .92); color: var(--ink);
+            font-size: 22px; line-height: 1; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .carousel-btn:hover { background: #fff; }
+        .carousel-btn.is-prev { left: 16px; }
+        .carousel-btn.is-next { right: 16px; }
+
+        .del-grid {
+            margin-top: 28px;
+            display: grid; grid-template-columns: 1.25fr 1fr;
+            grid-template-rows: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+        }
+        .del {
+            display: flex; flex-direction: column;
+            overflow: hidden; background: #fff;
+            border: 1px solid var(--line);
+            text-decoration: none; color: inherit; min-height: 0;
+        }
+        .del:hover { border-color: rgba(61, 83, 75, .28); }
+        .del.is-lead { grid-row: 1 / span 3; }
+        .del-visual { overflow: hidden; background: var(--sand); }
+        .del-visual img { display: block; width: 100%; height: 100%; object-fit: cover; }
+        .del.is-lead .del-visual { aspect-ratio: 4 / 3; }
+        .del:not(.is-lead) { flex-direction: row; }
+        .del:not(.is-lead) .del-visual { width: 132px; min-height: 100%; flex: none; }
+        .del-body { padding: 22px 24px; display: flex; flex-direction: column; flex: 1; }
+        .del:not(.is-lead) .del-body { padding: 16px 18px; }
+        .del h3 { margin: 0; font-size: 20px; letter-spacing: -.02em; font-weight: 600; }
+        .del.is-lead h3 { font-size: 28px; }
+        .del-body > p { margin: 10px 0 0; font-size: 14px; line-height: 1.6; color: var(--muted); flex: 1; }
+        .del .more { margin-top: 16px; font-size: 13px; font-weight: 600; color: var(--sage); }
+
+        .close { margin: 80px 0 0; padding: 0 0 8px; }
+        .close-inner { padding-top: 0; padding-bottom: 8px; }
+        .close h2 {
+            margin: 0; max-width: none; white-space: nowrap;
+            font-size: clamp(18px, 2.5vw, 32px);
+            letter-spacing: -.03em; font-weight: 600;
+        }
+
+        footer {
+            padding: 36px 0 48px; font-size: 13px; color: var(--dim); line-height: 1.6;
+        }
+        .footer-inner {
+            display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+        }
+        @media (max-width: 900px) {
+            .nav-links a.hide-sm { display: none; }
+            .brand-en { display: none; }
+            .hero-inner, .del-grid { grid-template-columns: 1fr; }
+            .path { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .path-bands, .path-rail { min-width: 720px; }
+            .close h2 { white-space: nowrap; font-size: 16px; }
+            .del.is-lead { grid-row: auto; }
+            .del:not(.is-lead) { flex-direction: column; }
+            .del:not(.is-lead) .del-visual { width: 100%; aspect-ratio: 16 / 9; }
+            .carousel-cap { padding: 36px 20px 20px; }
+            .carousel-dots { gap: 8px 16px; }
+            .carousel-btn.is-prev { left: 10px; }
+            .carousel-btn.is-next { right: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-inner">
+            <a class="brand" href="index.html">
+                <span class="brand-cn">友为</span>
+                <span class="brand-en">Yoway</span>
+            </a>
+            <div class="nav-end">
+                <div class="nav-links">
+                    <a class="hide-sm" href="#method" data-i18n="navMethod">方法</a>
+                    <a class="hide-sm" href="#cases" data-i18n="navScenes">场景</a>
+                    <a class="hide-sm" href="#deliverables" data-i18n="navTake">带走</a>
+                    <a class="nav-cta" href="workshop.html?mode=pro" data-i18n="cta">开始评估</a>
+                </div>
+                <button type="button" class="lang-sw" id="lang-sw" aria-label="Language">en</button>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-inner">
+            <div>
+                <p class="hero-kicker" data-i18n="heroKicker">从战略到执行</p>
+                <h1 data-i18n-html="heroTitle">把经营战略，解码成<br>能落地的变革路标。</h1>
+                <p class="lead" data-i18n-html="heroLead">先对齐商业模式和业务规划，再审视业务痛点与能力差距，<br>最后明确变革举措和路标规划。</p>
+                <div class="hero-actions">
+                    <a class="btn-sage" href="workshop.html?mode=pro" data-i18n="cta">开始评估</a>
+                    <a class="link-sage" href="#cases" data-i18n="seeScenes">看行业场景</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <img src="img/takeaway/invest.png" alt="">
+            </div>
+        </div>
+    </header>
+
+    <section class="section" id="method">
+        <div class="wrap">
+            <h2 data-i18n="methodTitle">方法</h2>
+            <p class="section-lead" data-i18n="methodLead">定方向、建架构、抓落地。七步对齐战略到执行。</p>
+            <div class="path" id="method-body"></div>
+        </div>
+    </section>
+
+    <section class="section" id="cases">
+        <div class="wrap">
+            <h2 data-i18n="scenesTitle">场景</h2>
+            <div class="ind-bar" id="ind-bar" role="tablist" aria-label="行业"></div>
+            <div class="case-stage" id="case-grid"></div>
+        </div>
+    </section>
+
+    <section class="section" id="deliverables">
+        <div class="wrap">
+            <h2 data-i18n="takeTitle">带走</h2>
+            <p class="section-lead" data-i18n="takeLead">画布、架构、路标、底稿，评估后都能打开。</p>
+            <div class="del-grid" id="del-grid"></div>
+        </div>
+    </section>
+
+    <section class="close">
+        <div class="close-inner">
+            <h2 data-i18n="closeTitle">把经营战略，解码成能落地的变革路标。</h2>
+            <div class="hero-actions">
+                <a class="btn-sage" href="workshop.html?mode=pro" data-i18n="cta">开始评估</a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-inner">
+            <span data-i18n="footerLeft">友为 · 从战略到路标</span>
+            <span data-i18n="footerRight">公开报道与官网信息仅供对照，请用贵司经营数据确认。</span>
+        </div>
+    </footer>
+
+    <script src="js/i18n.js"></script>
+    <script src="js/cases-data.js"></script>
+    <script src="js/ops-store.js"></script>
+    <script src="js/accounts.local.js"></script>
+    <script src="js/auth-gate.js"></script>
+    <script>YouweiAuth.initPublic();</script>
+    <script>
+        (function () {
+            const I = window.YouweiI18n;
+            const home = window.YouweiOps ? YouweiOps.getHome() : {};
+            const cells = (window.YouweiOps ? YouweiOps.getMethod() : (window.WENDAO_STEPS || window.WENDAO_METHOD_CELLS)) || [];
+            const industries = window.YouweiOps ? YouweiOps.getIndustries() : (window.WENDAO_INDUSTRIES || []);
+            const dels = window.YouweiOps ? YouweiOps.getDeliverables() : (window.WENDAO_DELIVERABLES || []);
+            const esc = (s) => String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            const t = (k) => I ? I.t(k) : k;
+            const d = () => (I && I.dict()) || {};
+
+            document.querySelectorAll('a.btn-sage, a.nav-cta').forEach((a) => {
+                if (home.ctaHref) a.setAttribute('href', home.ctaHref);
+            });
+
+            function renderMethod() {
+                const steps = (d().steps || []).length ? d().steps : cells.map((row) => ({ short: row.short, line: row.line }));
+                document.getElementById('method-body').innerHTML = `
+                    <div class="path-bands">
+                        <span class="span-2">${esc(t('bandAim'))}</span>
+                        <span class="span-3">${esc(t('bandArch'))}</span>
+                        <span class="span-2">${esc(t('bandLand'))}</span>
+                    </div>
+                    <div class="path-rail">
+                        ${steps.map((row, i) => {
+                            const n = (cells[i] && cells[i].id) || (i + 1);
+                            return `<article class="path-node">
+                                <span class="path-dot">${String(n).padStart(2, '0')}</span>
+                                <b>${esc(row.short)}</b>
+                                <small>${esc(row.line)}</small>
+                            </article>`;
+                        }).join('')}
+                    </div>
+                `;
+            }
+
+            let currentIndustry = (industries[0] && industries[0].id) || '3c';
+            let slideIndex = 0;
+
+            function casesFor(id) {
+                if (window.YouweiOps && YouweiOps.getCasesByIndustry) return YouweiOps.getCasesByIndustry(id);
+                if (window.getWendaoCasesByIndustry) return getWendaoCasesByIndustry(id);
+                return (window.WENDAO_CASES || []).filter((c) => c.industry === '3C');
+            }
+
+            function indCopy(ind) {
+                const pack = d().ind && d().ind[ind.id];
+                return { name: (pack && pack.name) || ind.name };
+            }
+
+            function renderIndustries() {
+                document.getElementById('ind-bar').innerHTML = industries.map((ind) => `
+                    <button type="button" class="${ind.id === currentIndustry ? 'is-on' : ''}" data-id="${esc(ind.id)}" role="tab" aria-selected="${ind.id === currentIndustry ? 'true' : 'false'}">${esc(indCopy(ind).name)}</button>
+                `).join('');
+            }
+
+            function caseImage(c) {
+                return (c && c.image) || (c && c.id ? ('img/cases/' + c.id + '.png') : 'img/takeaway/invest.png');
+            }
+
+            function renderCases() {
+                const cases = casesFor(currentIndustry);
+                const stage = document.getElementById('case-grid');
+                if (!cases.length) { stage.innerHTML = ''; return; }
+                if (slideIndex < 0) slideIndex = cases.length - 1;
+                if (slideIndex >= cases.length) slideIndex = 0;
+                const c = cases[slideIndex];
+                stage.innerHTML = `
+                    <div class="carousel">
+                        <div class="carousel-dots" role="tablist" aria-label="${esc(t('modules'))}">
+                            ${cases.map((item, i) => `
+                                <button type="button" data-slide="${i}" class="${i === slideIndex ? 'is-on' : ''}" aria-selected="${i === slideIndex ? 'true' : 'false'}">${esc(item.kicker)}</button>
+                            `).join('')}
+                        </div>
+                        <div class="carousel-frame">
+                            <a class="carousel-slide" href="case.html?id=${encodeURIComponent(c.id)}">
+                                <img src="${esc(caseImage(c))}" alt="">
+                                <div class="carousel-cap">
+                                    <p class="kicker">${esc(c.kicker)}</p>
+                                    <h3>${esc(c.title)}</h3>
+                                    <p class="sub">${esc(c.subtitle || c.situation)}</p>
+                                    <p class="more">${esc(t('thisScene'))}</p>
+                                </div>
+                            </a>
+                            <button type="button" class="carousel-btn is-prev" data-dir="-1" aria-label="${esc(t('prev'))}">‹</button>
+                            <button type="button" class="carousel-btn is-next" data-dir="1" aria-label="${esc(t('next'))}">›</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderDels() {
+                const pack = d().dels || {};
+                document.getElementById('del-grid').innerHTML = dels.map((item, i) => {
+                    const loc = pack[item.id] || {};
+                    const href = item.href || ('deliverable.html?id=' + encodeURIComponent(item.id));
+                    const visual = item.image ? `<div class="del-visual"><img src="${esc(item.image)}" alt=""></div>` : '';
+                    return `<a class="del${i === 0 ? ' is-lead' : ''}" href="${esc(href)}">
+                        ${visual}
+                        <div class="del-body">
+                            <h3>${esc(loc.title || item.title)}</h3>
+                            <p>${esc(loc.blurb || item.blurb)}</p>
+                            <p class="more">${esc(t('open'))}</p>
+                        </div>
+                    </a>`;
+                }).join('');
+            }
+
+            function paint() {
+                if (I) I.applyStatic();
+                renderMethod();
+                renderIndustries();
+                renderCases();
+                renderDels();
+            }
+
+            paint();
+            if (I) I.bindToggle(paint);
+            document.getElementById('ind-bar').addEventListener('click', (e) => {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                const id = btn.getAttribute('data-id');
+                if (!id || id === currentIndustry) return;
+                currentIndustry = id;
+                slideIndex = 0;
+                const stage = document.getElementById('case-grid');
+                stage.classList.add('is-out');
+                window.setTimeout(() => {
+                    renderIndustries();
+                    renderCases();
+                    stage.classList.remove('is-out');
+                }, 160);
+            });
+            document.getElementById('case-grid').addEventListener('click', (e) => {
+                const dirBtn = e.target.closest('[data-dir]');
+                const dot = e.target.closest('[data-slide]');
+                if (dirBtn) {
+                    e.preventDefault();
+                    slideIndex += Number(dirBtn.getAttribute('data-dir'));
+                    renderCases();
+                    return;
+                }
+                if (dot) {
+                    e.preventDefault();
+                    slideIndex = Number(dot.getAttribute('data-slide'));
+                    renderCases();
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运营后台 · 友为</title>
+    <link rel="stylesheet" href="css/brand.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="shell">
+        <header class="top">
+            <a class="brand" href="admin.html"><b>友为</b><span>Yoway</span></a>
+            <div class="top-end">
+                <nav class="top-nav">
+                    <a href="index.html">返回首页</a>
+                    <a href="workshop.html?mode=pro">工作台</a>
+                    <span class="is-here">管理台</span>
+                </nav>
+                <div id="youwei-account-host"></div>
+            </div>
+        </header>
+        <aside class="side" id="admin-nav"></aside>
+        <main class="main">
+            <p class="kicker">B 端配置</p>
+            <h1 id="admin-title">首页内容</h1>
+            <p class="lead" id="admin-lead">公开文案改仓库。这里只看本机线索、场景上架和评估底稿。</p>
+            <div id="admin-body"></div>
+        </main>
+    </div>
+    <div id="admin-toast" class="toast" role="status"></div>
+    <script src="js/cases-data.js"></script>
+    <script src="js/accounts.local.js"></script>
+    <script src="js/auth-gate.js"></script>
+    <script src="js/ops-store.js"></script>
+    <script src="js/ai-client.js"></script>
+    <script>if (window.YouweiAuth) YouweiAuth.guardAdmin();</script>
+    <script src="js/admin-console.js"></script>
+</body>
+</html>

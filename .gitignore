@@ -1,0 +1,4 @@
+js/accounts.local.js
+node_modules/
+.env
+.env.*
