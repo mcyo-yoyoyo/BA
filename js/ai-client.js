@@ -228,24 +228,36 @@
         return /failed to fetch|networkerror|cors|load failed|network request failed/i.test(m);
     }
 
-    async function probe(url, ms) {
+    function isPublishedStatic() {
+        try {
+            return /github\.io$/i.test(location.hostname) || /gitlab\.io$/i.test(location.hostname);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    async function probeYouweiHealth(url, ms) {
         try {
             const ctrl = new AbortController();
             const t = setTimeout(function () { ctrl.abort(); }, ms || 600);
             const r = await fetch(url, { method: 'GET', signal: ctrl.signal, cache: 'no-store' });
             clearTimeout(t);
-            return r.status < 500;
+            if (r.status !== 200) return false;
+            const ct = String(r.headers.get('content-type') || '');
+            if (!/json/i.test(ct)) return false;
+            const o = await r.json();
+            return !!(o && o.ok);
         } catch (e) {
             return false;
         }
     }
 
     async function resolveRoute(cfg) {
-        if (await probe('/api/ai/health', 500)) {
+        if (!isPublishedStatic() && await probeYouweiHealth('/api/ai/health', 500)) {
             lastRoute = { kind: 'same-origin', url: '/api/ai/chat', label: '本站代理' };
             return lastRoute;
         }
-        if (await probe('http://127.0.0.1:3847/health', 500)) {
+        if (location.protocol !== 'https:' && await probeYouweiHealth('http://127.0.0.1:3847/health', 500)) {
             lastRoute = { kind: 'local-proxy', url: 'http://127.0.0.1:3847/v1/chat/completions', label: '本机 3847 代理' };
             return lastRoute;
         }
@@ -391,12 +403,22 @@
             return '请先在齿轮里点选 Key 所属平台（硅基流动 / OpenAI / OpenRouter / DeepSeek），再保存并试连。Cursor 订阅不能当 API Key。';
         }
         if (err && err.message === 'CORS_BLOCKED') {
-            return '浏览器不能直连 DeepSeek。请另开终端运行 npm run ai-proxy，或用本仓库的开发服务启动后再试。';
+            return isPublishedStatic()
+                ? 'GitHub Pages 不能直连官方 DeepSeek。请改选硅基流动或 OpenRouter，或在本机运行 npm run dev。'
+                : '浏览器不能直连 DeepSeek。请另开终端运行 npm run ai-proxy，或用本仓库的开发服务启动后再试。';
         }
         if (isCorsLike(err) && route && (route.kind === 'direct' || isDeepSeek(cfg && cfg.endpoint))) {
-            return '浏览器拦截了对 DeepSeek 的直连。请另开终端运行 npm run ai-proxy，或用本仓库的开发服务启动网站。';
+            return isPublishedStatic()
+                ? 'GitHub Pages 不能直连官方 DeepSeek。请改选硅基流动或 OpenRouter，或在本机运行 npm run dev。'
+                : '浏览器拦截了对 DeepSeek 的直连。请另开终端运行 npm run ai-proxy，或用本仓库的开发服务启动网站。';
         }
         const parsed = parseApiErrorBlob(err);
+        const rawMsg = String(parsed.message || '');
+        if ((err && err.status === 405) || /405\s*not allowed|<!doctype html|<html[\s>]|<center>\s*<h1>/i.test(rawMsg)) {
+            return isPublishedStatic()
+                ? '当前是静态发布站，没有本站代理。官方 DeepSeek 请改选硅基流动或 OpenRouter，或在本机运行 npm run dev。'
+                : '本站代理不可用。请改选硅基流动 / OpenRouter，或在本机运行 npm run dev。';
+        }
         const blob = (parsed.message + ' ' + parsed.type + ' ' + parsed.code).toLowerCase();
         if (/authentication|invalid.*api key|api key.*invalid|unauthorized/.test(blob) || parsed.type === 'authentication_error' || (err && err.status === 401)) {
             const p = providerOf(cfg && cfg.endpoint);
@@ -412,7 +434,7 @@
         if (/your api key|authentication fails|"error"\s*:/.test(parsed.message)) {
             return '智能助手连接失败。请在齿轮里检查 Key，或先继续改左侧内容。';
         }
-        const clean = String(parsed.message || '').replace(/your api key:\s*\S+/ig, '').trim();
+        const clean = rawMsg.replace(/your api key:\s*\S+/ig, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
         return (clean || '智能助手暂时连不上。').slice(0, 160);
     }
 
