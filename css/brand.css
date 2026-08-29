@@ -49,12 +49,13 @@ a { color: inherit; }
 }
 .lang-sw {
     appearance: none; background: none; border: 0;
-    padding: 0; margin: 0; min-width: 0; height: auto;
-    font: inherit; font-size: 11px; letter-spacing: .06em;
-    color: var(--dim); opacity: .42; cursor: pointer;
+    padding: 0; margin: 0; min-width: 1.6em; height: auto;
+    font: inherit; font-size: 11px; font-weight: 650;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: var(--dim); opacity: .55; cursor: pointer;
     line-height: 1;
 }
-.lang-sw:hover { opacity: .85; color: var(--muted); }
+.lang-sw:hover { opacity: 1; color: var(--ink); }
 
 .bmc-sheet { padding: 16px 16px 18px; background: #efe9dc; }
 .bmc-head {

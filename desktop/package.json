@@ -1,0 +1,58 @@
+{
+  "name": "youwei-desktop",
+  "productName": "友为",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "description": "友为桌面版：独立窗口打开工作台，不改 GitHub 静态页",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --win portable --x64",
+    "dist": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^37.3.1",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.yoway.workshop",
+    "productName": "友为",
+    "copyright": "Yoway",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.mjs",
+      "server.mjs"
+    ],
+    "extraResources": [
+      {
+        "from": "..",
+        "to": "site",
+        "filter": [
+          "*.html",
+          "js/**/*",
+          "css/**/*",
+          "!js/accounts.local.js"
+        ]
+      }
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "artifactName": "Youwei-${version}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "友为",
+      "uninstallDisplayName": "友为"
+    },
+    "portable": {
+      "artifactName": "Youwei-${version}-portable.exe"
+    }
+  }
+}

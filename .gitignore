@@ -2,3 +2,5 @@ js/accounts.local.js
 node_modules/
 .env
 .env.*
+desktop/node_modules/
+desktop/dist/

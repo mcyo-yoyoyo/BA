@@ -481,7 +481,6 @@ body.youwei-modal-on{overflow:hidden}
         ensureModal();
         interceptWorkshopLinks();
         bootFromQuery();
-        injectOpsEntry();
     }
 
     global.YouweiAuth = {

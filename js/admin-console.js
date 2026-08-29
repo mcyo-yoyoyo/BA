@@ -1,18 +1,37 @@
 (function () {
-    const TABS = [
-        { id: 'leads', title: '线索', lead: '登录弹窗留下的姓名和手机，只存在这台电脑的浏览器。' },
-        { id: 'home', title: '场景上架', lead: '只控制行业和案例是否出现。标题、导语、七步改 js/i18n.js。' },
-        { id: 'models', title: '工作台模型', lead: '价值流模板给评估工作台用。先打开一次工作台可同步内置模型。' },
-        { id: 'assets', title: '评估底稿', lead: '评估项目只存在这台电脑。换电脑请先导出，再在那边导入。' },
-        { id: 'assess', title: '评估配置', lead: '画布诊断规则、优先短板条数、近半年 P0 上限。' },
-        { id: 'connect', title: '连接', lead: '先选开 Key 的平台，再粘贴 Key。工作台右侧助手会沿用这份连接。' }
+    const NAV = [
+        {
+            group: '公开站点',
+            items: [
+                { id: 'home', title: '场景上架', lead: '控制首页行业与案例是否出现。也可导出 Excel，改完再导入；编号列请勿改。' }
+            ]
+        },
+        {
+            group: '评估工作台',
+            items: [
+                { id: 'models', title: '价值模板', lead: '步骤 2 用的价值流模板。可导出 Excel 改完再导入。' },
+                { id: 'assess', title: '规则配置', lead: '画布诊断、优先短板条数、近半年 P0 上限。可导出 Excel 改完再导入。' },
+                { id: 'connect', title: '模型连接', lead: '先选开 Key 的平台，再粘贴 Key。工作台右侧助手沿用这份连接。' }
+            ]
+        },
+        {
+            group: '本机数据',
+            items: [
+                { id: 'leads', title: '本机线索', lead: '登录时留下的姓名和手机，只存在这台电脑。可导出 Excel。' },
+                { id: 'assets', title: '评估底稿', lead: '本机已保存的评估。换电脑请先导出，再到那边导入。' }
+            ]
+        }
     ];
 
     const HISTORY_LS = 'archipro-blueprint-history-v1';
     const LEADS_LS = 'youwei_leads_v1';
-    let tab = 'leads';
+    let tab = 'home';
 
     function $(id) { return document.getElementById(id); }
+
+    function allTabs() {
+        return NAV.reduce(function (acc, g) { return acc.concat(g.items); }, []);
+    }
 
     function toast(msg) {
         const el = $('admin-toast');
@@ -38,8 +57,10 @@
     }
 
     function renderNav() {
-        $('admin-nav').innerHTML = TABS.map(function (t) {
-            return '<button type="button" data-tab="' + t.id + '" class="' + (t.id === tab ? 'is-on' : '') + '">' + t.title + '</button>';
+        $('admin-nav').innerHTML = NAV.map(function (g) {
+            return '<p class="side-group">' + esc(g.group) + '</p>' + g.items.map(function (t) {
+                return '<button type="button" data-tab="' + t.id + '" class="' + (t.id === tab ? 'is-on' : '') + '">' + t.title + '</button>';
+            }).join('');
         }).join('');
         $('admin-nav').onclick = function (e) {
             const btn = e.target.closest('button[data-tab]');
@@ -49,12 +70,16 @@
         };
     }
 
-    function loadLeads() {
+    function loadLeadsRaw() {
         try {
             const raw = localStorage.getItem(LEADS_LS);
             const arr = raw ? JSON.parse(raw) : [];
-            return Array.isArray(arr) ? arr.slice().reverse() : [];
+            return Array.isArray(arr) ? arr : [];
         } catch (e) { return []; }
+    }
+
+    function loadLeads() {
+        return loadLeadsRaw().slice().reverse();
     }
 
     function fmtWhen(at) {
@@ -71,27 +96,63 @@
         setTimeout(function () { URL.revokeObjectURL(a.href); }, 800);
     }
 
+    function excelBtns(expId, impId) {
+        return '<button type="button" class="btn ghost" id="' + expId + '">导出 Excel</button>' +
+            (impId
+                ? '<label class="btn ghost xfer-file">导入 Excel<input id="' + impId + '" type="file" accept=".xlsx,.xls,.csv"></label>'
+                : '');
+    }
+
+    function bindExcel(expId, exporter, impId, importer) {
+        const exp = $(expId);
+        if (exp) exp.onclick = function () {
+            try {
+                exporter();
+                toast('已下载 Excel 模板');
+            } catch (e) {
+                toast(e.message || '导出失败');
+            }
+        };
+        if (!impId) return;
+        const inp = $(impId);
+        if (!inp) return;
+        inp.onchange = function () {
+            const file = this.files && this.files[0];
+            this.value = '';
+            if (!file) return;
+            YouweiExcel.readFile(file).then(function (wb) {
+                importer(wb);
+                render();
+            }).catch(function (e) {
+                toast(e.message || '导入失败');
+            });
+        };
+    }
+
     function renderLeads() {
         const list = loadLeads();
         $('admin-body').innerHTML = `
+            <div class="page-bar">
+                ${excelBtns('exp-leads')}
+            </div>
             <div class="card">
-                <h2>本机线索（${list.length}）</h2>
-                <p class="hint">来自登录弹窗「留下」。换电脑或清站点数据会丢，跟进前请导出。</p>
-                <table class="grid">
-                    <thead><tr><th>时间</th><th>姓名</th><th>手机</th><th>备注</th></tr></thead>
-                    <tbody>${list.map(function (r) {
-                        return '<tr><td>' + esc(fmtWhen(r.at)) + '</td><td>' + esc(r.name || '') + '</td><td>' + esc(r.phone || '') + '</td><td>' + esc(r.note || '') + '</td></tr>';
-                    }).join('') || '<tr><td colspan="4">还没有人留下姓名和手机。</td></tr>'}</tbody>
-                </table>
+                <h2>线索一览</h2>
+                <p class="hint">${list.length} 条。来自登录弹窗。换电脑或清站点数据会丢。</p>
+                <div class="stack">${list.map(function (r) {
+                    return '<div class="list-row"><div><b>' + esc(r.name || '未留姓名') + '</b>' +
+                        '<p>' + esc(r.phone || '未留手机') + (r.note ? ' · ' + esc(r.note) : '') + '</p></div>' +
+                        '<span class="meta">' + esc(fmtWhen(r.at)) + '</span></div>';
+                }).join('') || '<p class="empty">还没有人留下姓名和手机。</p>'}</div>
                 <div class="actions">
-                    <button type="button" class="btn ghost" id="exp-leads">导出 JSON</button>
                     <button type="button" class="btn danger" id="clear-leads">清空本机线索</button>
                 </div>
             </div>`;
-        $('exp-leads').onclick = function () {
-            downloadText('youwei-leads.json', JSON.stringify(loadLeads(), null, 2));
-            toast('已下载本机线索');
-        };
+        bindExcel('exp-leads', function () {
+            const rows = [['姓名', '手机', '备注', '时间']].concat(loadLeads().map(function (r) {
+                return [r.name || '', r.phone || '', r.note || '', fmtWhen(r.at)];
+            }));
+            YouweiExcel.download('youwei-leads.xlsx', [{ name: '线索', rows: rows, cols: [16, 16, 28, 20] }]);
+        });
         $('clear-leads').onclick = function () {
             if (!list.length) return;
             if (!confirm('清空这台电脑上的线索？')) return;
@@ -105,41 +166,96 @@
         const inds = YouweiOps.getIndustries({ includeHidden: true });
         const cases = YouweiOps.getCases({ includeHidden: true });
         $('admin-body').innerHTML = `
-            <div class="card">
-                <h2>公开文案不在这里改</h2>
-                <p class="hint">首页标题、导语、七步、带走说明以仓库 <code>js/i18n.js</code> 为准。下面只控制场景是否出现。</p>
+            <div class="page-bar">
+                <button type="button" class="btn" id="save-home">保存上架</button>
+                ${excelBtns('exp-home', 'imp-home')}
             </div>
             <div class="card">
                 <h2>行业</h2>
-                <table class="grid">
-                    <thead><tr><th>上架</th><th>序</th><th>名称</th></tr></thead>
-                    <tbody>${inds.map(function (ind) {
-                        return '<tr>' +
-                            '<td><input type="checkbox" data-ind-pub="' + esc(ind.id) + '"' + (ind.published !== false ? ' checked' : '') + '></td>' +
-                            '<td><input type="number" style="width:64px" data-ind-ord="' + esc(ind.id) + '" value="' + esc(ind.order) + '"></td>' +
-                            '<td>' + esc(ind.name) + '</td></tr>';
-                    }).join('')}</tbody>
-                </table>
+                <p class="hint">勾选后出现在首页行业栏。顺序数字越小越靠前。</p>
+                <div class="stack">${inds.map(function (ind) {
+                    return '<div class="row-item">' +
+                        '<label class="switch"><input type="checkbox" data-ind-pub="' + esc(ind.id) + '"' + (ind.published !== false ? ' checked' : '') + '><span>上架</span></label>' +
+                        '<span class="row-name">' + esc(ind.name) + '</span>' +
+                        '<label class="ord"><span>顺序</span><input type="number" data-ind-ord="' + esc(ind.id) + '" value="' + esc(ind.order) + '"></label>' +
+                        '</div>';
+                }).join('')}</div>
             </div>
             <div class="card">
                 <h2>案例</h2>
-                <table class="grid">
-                    <thead><tr><th>上架</th><th>序</th><th>标题</th><th>场景摘要</th></tr></thead>
-                    <tbody>${cases.map(function (c) {
-                        return '<tr>' +
-                            '<td><input type="checkbox" data-c-pub="' + esc(c.id) + '"' + (c.published !== false ? ' checked' : '') + '></td>' +
-                            '<td><input type="number" style="width:64px" data-c-ord="' + esc(c.id) + '" value="' + esc(c.order) + '"></td>' +
-                            '<td><input data-c-title="' + esc(c.id) + '" value="' + esc(c.title) + '"></td>' +
-                            '<td><input data-c-sit="' + esc(c.id) + '" value="' + esc(c.situation || c.subtitle || '') + '"></td></tr>';
-                    }).join('')}</tbody>
-                </table>
-                <div class="actions">
-                    <button type="button" class="btn" id="save-home">保存上架</button>
-                    <button type="button" class="btn ghost" id="preview-home">打开首页</button>
-                </div>
+                <p class="hint">每条单独成卡。标题和摘要用整行书写，保存后首页轮播会更新。</p>
+                <div class="stack">${cases.map(function (c) {
+                    return '<article class="edit-card">' +
+                        '<div class="edit-head">' +
+                        '<label class="switch"><input type="checkbox" data-c-pub="' + esc(c.id) + '"' + (c.published !== false ? ' checked' : '') + '><span>上架</span></label>' +
+                        '<label class="ord"><span>顺序</span><input type="number" data-c-ord="' + esc(c.id) + '" value="' + esc(c.order) + '"></label>' +
+                        '</div>' +
+                        '<label class="field"><span>标题</span><textarea class="title-box" rows="2" data-c-title="' + esc(c.id) + '">' + esc(c.title) + '</textarea></label>' +
+                        '<label class="field"><span>场景摘要</span><textarea class="sit-box" rows="5" data-c-sit="' + esc(c.id) + '">' + esc(c.situation || c.subtitle || '') + '</textarea></label>' +
+                        '</article>';
+                }).join('')}</div>
+            </div>
+            <div class="page-bar">
+                <button type="button" class="btn" id="save-home-2">保存上架</button>
             </div>`;
         $('save-home').onclick = saveShelf;
-        $('preview-home').onclick = function () { window.open('index.html', '_blank'); };
+        $('save-home-2').onclick = saveShelf;
+        bindExcel('exp-home', exportShelfExcel, 'imp-home', importShelfExcel);
+    }
+
+    function exportShelfExcel() {
+        const Ex = YouweiExcel;
+        const inds = YouweiOps.getIndustries({ includeHidden: true });
+        const cases = YouweiOps.getCases({ includeHidden: true });
+        Ex.download('youwei-shelf.xlsx', [
+            {
+                name: '行业',
+                cols: [16, 16, 8, 8],
+                rows: [['id', '名称', '上架', '顺序']].concat(inds.map(function (ind) {
+                    return [ind.id, ind.name, Ex.yesNo(ind.published !== false), ind.order];
+                }))
+            },
+            {
+                name: '案例',
+                cols: [14, 8, 8, 40, 72],
+                rows: [['id', '上架', '顺序', '标题', '场景摘要']].concat(cases.map(function (c) {
+                    return [c.id, Ex.yesNo(c.published !== false), c.order, c.title || '', c.situation || c.subtitle || ''];
+                }))
+            }
+        ]);
+    }
+
+    function importShelfExcel(wb) {
+        const Ex = YouweiExcel;
+        const knownInd = {};
+        YouweiOps.getIndustries({ includeHidden: true }).forEach(function (ind) { knownInd[ind.id] = true; });
+        const knownCase = {};
+        YouweiOps.getCases({ includeHidden: true }).forEach(function (c) { knownCase[c.id] = true; });
+        const industries = {};
+        Ex.rowsOf(wb, '行业', ['名称', 'id']).forEach(function (r) {
+            const id = Ex.pick(r, ['id', '编号', '行业编号']);
+            if (!id || !knownInd[id]) return;
+            industries[id] = {
+                published: Ex.isYes(Ex.pick(r, ['上架'])),
+                order: Number(Ex.pick(r, ['顺序']) || 0)
+            };
+        });
+        const cases = {};
+        Ex.rowsOf(wb, '案例', ['标题', '场景摘要']).forEach(function (r) {
+            const id = Ex.pick(r, ['id', '编号', '案例编号']);
+            if (!id || !knownCase[id]) return;
+            cases[id] = {
+                published: Ex.isYes(Ex.pick(r, ['上架'])),
+                order: Number(Ex.pick(r, ['顺序']) || 0),
+                title: Ex.pick(r, ['标题']),
+                situation: Ex.pick(r, ['场景摘要', '摘要'])
+            };
+        });
+        if (!Object.keys(industries).length && !Object.keys(cases).length) {
+            throw new Error('没有识别到可导入的行业或案例，请勿改编号列');
+        }
+        YouweiOps.patch({ industries: industries, cases: cases });
+        toast('已导入场景上架');
     }
 
     function saveShelf() {
@@ -173,18 +289,23 @@
         const defMap = (ops.models && ops.models.defaultByIndustry) || {};
         if (!keys.length) {
             $('admin-body').innerHTML = `
+                <div class="page-bar">
+                    <a class="btn" href="workshop.html?mode=pro">打开工作台同步</a>
+                    ${excelBtns('exp-tpl', 'imp-tpl')}
+                </div>
                 <div class="card">
-                    <p class="hint">还没有同步到内置价值流模板。请用同一浏览器先打开一次工作台，再回到这里。</p>
-                    <div class="actions">
-                        <a class="btn" href="workshop.html?mode=pro">打开工作台同步</a>
-                    </div>
+                    <p class="hint">还没有同步到内置价值流模板。请用同一浏览器先打开一次工作台，或导入已填好的 Excel。</p>
                 </div>`;
+            bindExcel('exp-tpl', exportTplExcel, 'imp-tpl', importTplExcel);
             return;
         }
         const first = keys[0];
         $('admin-body').innerHTML = `
+            <div class="page-bar">
+                ${excelBtns('exp-tpl', 'imp-tpl')}
+            </div>
             <div class="card">
-                <h2>模板清单</h2>
+                <h2>价值流模板</h2>
                 <p class="hint">${cat.at ? '已于 ' + cat.at.replace('T', ' ').slice(0, 16) + ' 从工作台同步。' : '正在使用已保存的运营覆盖。'}</p>
                 <label class="field"><span>编辑哪一套</span>
                     <select id="tpl-key">${keys.map(function (k) {
@@ -192,7 +313,7 @@
                     }).join('')}</select>
                 </label>
                 <div id="tpl-editor"></div>
-                <div class="row2">
+                <div class="row2" style="margin-top:20px">
                     <label class="field"><span>3C 默认模板 key</span><input id="def-3c" type="text" value="${esc(defMap['3C'] || 'hwcb_5a')}"></label>
                     <label class="field"><span>汽车默认模板 key</span><input id="def-auto" type="text" value="${esc(defMap['汽车'] || '')}"></label>
                 </div>
@@ -209,17 +330,19 @@
                     <label class="field"><span>名称</span><input id="tpl-name" type="text" value="${esc(t.name)}"></label>
                     <label class="field"><span>适用行业（逗号）</span><input id="tpl-inds" type="text" value="${esc((t.industries || []).join('，'))}"></label>
                 </div>
-                <table class="grid">
-                    <thead><tr><th>阶段</th><th>类型</th><th>时长</th><th>场景</th><th>组件</th></tr></thead>
-                    <tbody>${stages.map(function (s, i) {
-                        return '<tr>' +
-                            '<td><input data-st="' + i + '" data-sk="name" value="' + esc(s.name) + '"></td>' +
-                            '<td><select data-st="' + i + '" data-sk="type"><option value="process"' + (s.type !== 'wait' ? ' selected' : '') + '>过程</option><option value="wait"' + (s.type === 'wait' ? ' selected' : '') + '>关口</option></select></td>' +
-                            '<td><input data-st="' + i + '" data-sk="defaultTime" type="number" style="width:72px" value="' + esc(s.defaultTime != null ? s.defaultTime : s.actualTime || '') + '"></td>' +
-                            '<td><input data-st="' + i + '" data-sk="scenarios" value="' + esc(s.scenarios || '') + '"></td>' +
-                            '<td><input data-st="' + i + '" data-sk="components" value="' + esc(s.components || '') + '"></td></tr>';
-                    }).join('')}</tbody>
-                </table>`;
+                <div class="stack" style="margin-top:14px">${stages.map(function (s, i) {
+                    return '<article class="edit-card">' +
+                        '<div class="row2">' +
+                        '<label class="field"><span>阶段</span><input data-st="' + i + '" data-sk="name" value="' + esc(s.name) + '"></label>' +
+                        '<label class="field"><span>类型</span><select data-st="' + i + '" data-sk="type"><option value="process"' + (s.type !== 'wait' ? ' selected' : '') + '>过程</option><option value="wait"' + (s.type === 'wait' ? ' selected' : '') + '>关口</option></select></label>' +
+                        '</div>' +
+                        '<div class="row2">' +
+                        '<label class="field"><span>时长</span><input data-st="' + i + '" data-sk="defaultTime" type="number" value="' + esc(s.defaultTime != null ? s.defaultTime : s.actualTime || '') + '"></label>' +
+                        '<label class="field"><span>场景</span><textarea rows="2" data-st="' + i + '" data-sk="scenarios">' + esc(s.scenarios || '') + '</textarea></label>' +
+                        '</div>' +
+                        '<label class="field"><span>组件</span><textarea rows="2" data-st="' + i + '" data-sk="components">' + esc(s.components || '') + '</textarea></label>' +
+                        '</article>';
+                }).join('')}</div>`;
         }
         drawEditor(first);
         $('tpl-key').onchange = function () { drawEditor(this.value); };
@@ -251,6 +374,94 @@
             toast('已清空覆盖。打开一次工作台后重新同步。');
             render();
         };
+        bindExcel('exp-tpl', exportTplExcel, 'imp-tpl', importTplExcel);
+    }
+
+    function stageTypeLabel(t) {
+        return t === 'wait' ? '关口' : '过程';
+    }
+
+    function stageTypeValue(v) {
+        const s = String(v || '').trim();
+        return /关口|wait/i.test(s) ? 'wait' : 'process';
+    }
+
+    function exportTplExcel() {
+        const tpls = YouweiOps.getTemplates() || {};
+        const ops = YouweiOps.load();
+        const defMap = (ops.models && ops.models.defaultByIndustry) || {};
+        const keys = Object.keys(tpls);
+        const meta = [['key', '名称', '适用行业']].concat(keys.map(function (k) {
+            const t = tpls[k] || {};
+            return [k, t.name || '', (t.industries || []).join('，')];
+        }));
+        const stages = [['模板key', '序号', '阶段', '类型', '时长', '场景', '组件']];
+        keys.forEach(function (k) {
+            (tpls[k].stages || []).forEach(function (s, i) {
+                stages.push([
+                    k,
+                    i + 1,
+                    s.name || '',
+                    stageTypeLabel(s.type),
+                    s.defaultTime != null ? s.defaultTime : (s.actualTime || ''),
+                    s.scenarios || '',
+                    s.components || ''
+                ]);
+            });
+        });
+        const defs = [['行业', '模板key']].concat(['3C', '汽车', '家电'].map(function (ind) {
+            return [ind, defMap[ind] || (ind === '家电' ? (defMap['3C'] || '') : '')];
+        }));
+        YouweiExcel.download('youwei-templates.xlsx', [
+            { name: '模板', rows: meta, cols: [18, 22, 24] },
+            { name: '阶段', rows: stages, cols: [16, 8, 16, 8, 8, 36, 36] },
+            { name: '默认', rows: defs, cols: [12, 18] }
+        ]);
+    }
+
+    function importTplExcel(wb) {
+        const Ex = YouweiExcel;
+        const tpls = YouweiOps.getTemplates() || {};
+        Ex.rowsOf(wb, '模板', ['key', '名称']).forEach(function (r) {
+            const key = Ex.pick(r, ['key', '模板key', '编号']);
+            if (!key) return;
+            if (!tpls[key]) tpls[key] = { name: '', industries: [], stages: [] };
+            const name = Ex.pick(r, ['名称']);
+            const inds = Ex.pick(r, ['适用行业', '行业']);
+            if (name) tpls[key].name = name;
+            if (inds) tpls[key].industries = inds.split(/[,，、]/).map(function (s) { return s.trim(); }).filter(Boolean);
+        });
+        const byKey = {};
+        Ex.rowsOf(wb, '阶段', ['阶段', '模板key']).forEach(function (r) {
+            const key = Ex.pick(r, ['模板key', 'key']);
+            if (!key) return;
+            if (!byKey[key]) byKey[key] = [];
+            const i = Math.max(0, Number(Ex.pick(r, ['序号']) || byKey[key].length + 1) - 1);
+            const prev = (tpls[key] && tpls[key].stages && tpls[key].stages[i]) || { id: i + 1 };
+            byKey[key][i] = Object.assign({}, prev, {
+                name: Ex.pick(r, ['阶段', '名称']) || prev.name,
+                type: stageTypeValue(Ex.pick(r, ['类型'])),
+                defaultTime: Number(Ex.pick(r, ['时长']) || prev.defaultTime || 0),
+                scenarios: Ex.pick(r, ['场景']) || prev.scenarios || '',
+                components: Ex.pick(r, ['组件']) || prev.components || ''
+            });
+        });
+        Object.keys(byKey).forEach(function (key) {
+            if (!tpls[key]) tpls[key] = { name: key, industries: [], stages: [] };
+            tpls[key].stages = byKey[key].filter(Boolean);
+        });
+        if (!Object.keys(tpls).length) throw new Error('表格里没有可导入的模板');
+        const models = YouweiOps.load().models || {};
+        models.templates = tpls;
+        const defMap = Object.assign({}, models.defaultByIndustry || {});
+        Ex.rowsOf(wb, '默认', ['行业']).forEach(function (r) {
+            const ind = Ex.pick(r, ['行业']);
+            const key = Ex.pick(r, ['模板key', 'key']);
+            if (ind && key) defMap[ind] = key;
+        });
+        models.defaultByIndustry = defMap;
+        YouweiOps.patch({ models: models });
+        toast('已导入价值模板');
     }
 
     function loadHistory() {
@@ -265,31 +476,27 @@
         const a = YouweiOps.getAssets();
         const list = loadHistory();
         $('admin-body').innerHTML = `
+            <div class="page-bar">
+                <button type="button" class="btn ghost" id="exp-hist">导出底稿</button>
+                <label class="btn ghost xfer-file">导入底稿<input id="imp-hist" type="file" accept="application/json"></label>
+            </div>
             <div class="card">
-                <h2>保存策略</h2>
+                <h2>保存规则</h2>
                 <div class="row2">
                     <label class="field"><span>最多保留份数</span><input id="a-max" type="number" min="4" max="200" value="${esc(a.historyMax)}"></label>
                     <label class="field"><span>标题格式</span><input id="a-pat" type="text" value="${esc(a.titlePattern)}"></label>
                 </div>
-                <label class="field"><span><input id="a-del" type="checkbox"${a.allowClientDelete !== false ? ' checked' : ''}> 允许评估用户在资产库删除自己的底稿</span></label>
+                <label class="switch" style="margin:12px 0 0"><input id="a-del" type="checkbox"${a.allowClientDelete !== false ? ' checked' : ''}><span>允许评估用户在资产库删除自己的底稿</span></label>
                 <div class="actions"><button type="button" class="btn" id="save-assets">保存资产策略</button></div>
             </div>
             <div class="card">
-                <h2>本机已存底稿（${list.length}）</h2>
-                <p class="hint">只存在这台电脑的浏览器。换电脑或清站点数据会丢。带走请先导出，到另一台电脑后点导入。</p>
-                <table class="grid">
-                    <thead><tr><th>标题</th><th>时间</th><th></th></tr></thead>
-                    <tbody>${list.map(function (r) {
-                        return '<tr><td>' + esc(r.title || r.name || ('#' + r.id)) + '</td><td>' + esc((r.savedAt || r.at || '').toString().slice(0, 19)) + '</td>' +
-                            '<td><button type="button" class="btn danger" data-del-hist="' + esc(r.id) + '">删除</button></td></tr>';
-                    }).join('') || '<tr><td colspan="3">还没有保存的评估底稿。</td></tr>'}</tbody>
-                </table>
-                <div class="actions">
-                    <button type="button" class="btn ghost" id="exp-hist">导出底稿</button>
-                    <label class="btn ghost" style="cursor:pointer">导入底稿
-                        <input id="imp-hist" type="file" accept="application/json" style="display:none">
-                    </label>
-                </div>
+                <h2>本机已存</h2>
+                <p class="hint">${list.length} 份。只存在这台电脑。带走请先导出。</p>
+                <div class="stack">${list.map(function (r) {
+                    return '<div class="list-row"><div><b>' + esc(r.title || r.name || ('#' + r.id)) + '</b></div>' +
+                        '<span class="meta">' + esc((r.savedAt || r.at || '').toString().slice(0, 19)) + '</span>' +
+                        '<button type="button" class="btn danger" data-del-hist="' + esc(r.id) + '">删除</button></div>';
+                }).join('') || '<p class="empty">还没有保存的评估底稿。</p>'}</div>
             </div>`;
         $('save-assets').onclick = function () {
             YouweiOps.patch({
@@ -331,54 +538,61 @@
             };
             reader.readAsText(file, 'utf-8');
         };
-        $('admin-body').addEventListener('click', function (e) {
-            const btn = e.target.closest('[data-del-hist]');
-            if (!btn) return;
-            const id = Number(btn.getAttribute('data-del-hist'));
-            const next = loadHistory().filter(function (r) { return Number(r.id) !== id; });
-            localStorage.setItem(HISTORY_LS, JSON.stringify(next));
-            toast('已删除该底稿');
-            render();
+        document.querySelectorAll('[data-del-hist]').forEach(function (btn) {
+            btn.onclick = function () {
+                const id = Number(btn.getAttribute('data-del-hist'));
+                const next = loadHistory().filter(function (r) { return Number(r.id) !== id; });
+                localStorage.setItem(HISTORY_LS, JSON.stringify(next));
+                toast('已删除该底稿');
+                render();
+            };
         });
+    }
+
+    function ruleCard(r, i) {
+        return '<article class="edit-card" data-rule-card="' + i + '">' +
+            '<div class="row2">' +
+            '<label class="field"><span>字段</span><input data-r="' + i + '" data-rk="field" value="' + esc(r.field || '') + '"></label>' +
+            '<label class="field"><span>关键词</span><input data-r="' + i + '" data-rk="keyword" value="' + esc(r.keyword || '') + '"></label>' +
+            '</div>' +
+            '<div class="row2">' +
+            '<label class="field"><span>联动字段</span><input data-r="' + i + '" data-rk="compareField" value="' + esc(r.compareField || 'none') + '"></label>' +
+            '<label class="field"><span>联动词</span><input data-r="' + i + '" data-rk="compareKeyword" value="' + esc(r.compareKeyword || '') + '"></label>' +
+            '</div>' +
+            '<div class="row-score">' +
+            '<label class="field"><span>扣分</span><input data-r="' + i + '" data-rk="score" type="number" value="' + esc(r.score || 0) + '"></label>' +
+            '<label class="field"><span>提示</span><textarea rows="2" data-r="' + i + '" data-rk="message">' + esc(r.message || '') + '</textarea></label>' +
+            '</div></article>';
     }
 
     function renderAssess() {
         const a = YouweiOps.getAssessment();
         const rules = YouweiOps.getDefaultRules() || [];
+        const seed = rules.length ? rules : [{ field: 'costStructure', keyword: '', compareField: 'none', compareKeyword: '', score: 10, message: '' }];
         $('admin-body').innerHTML = `
+            <div class="page-bar">
+                ${excelBtns('exp-assess', 'imp-assess')}
+            </div>
             <div class="card">
-                <h2>热力与路标约束</h2>
+                <h2>热力与路标</h2>
                 <div class="row2">
-                    <label class="field"><span>优先短板最多几项（红区）</span><input id="as-heat" type="number" min="1" max="12" value="${esc(a.heatTopN)}"></label>
-                    <label class="field"><span>近半年 P0 上限</span><input id="as-p0" type="number" min="1" max="8" value="${esc(a.p0Cap)}"></label>
+                    <label class="field field-num"><span>优先短板最多几项</span><input id="as-heat" type="number" min="1" max="12" value="${esc(a.heatTopN)}"></label>
+                    <label class="field field-num"><span>近半年 P0 上限</span><input id="as-p0" type="number" min="1" max="8" value="${esc(a.p0Cap)}"></label>
                 </div>
             </div>
             <div class="card">
-                <h2>画布诊断规则（${rules.length}）</h2>
+                <h2>画布诊断</h2>
                 <p class="hint">空着则沿用工作台内置三条。保存后新开的评估会话会带上这套规则。</p>
-                <table class="grid">
-                    <thead><tr><th>字段</th><th>关键词</th><th>联动字段</th><th>联动词</th><th>扣分</th><th>提示</th></tr></thead>
-                    <tbody id="rule-body">${(rules.length ? rules : [{ field: 'costStructure', keyword: '', compareField: 'none', compareKeyword: '', score: 10, message: '' }]).map(function (r, i) {
-                        return '<tr>' +
-                            '<td><input data-r="' + i + '" data-rk="field" value="' + esc(r.field || '') + '"></td>' +
-                            '<td><input data-r="' + i + '" data-rk="keyword" value="' + esc(r.keyword || '') + '"></td>' +
-                            '<td><input data-r="' + i + '" data-rk="compareField" value="' + esc(r.compareField || 'none') + '"></td>' +
-                            '<td><input data-r="' + i + '" data-rk="compareKeyword" value="' + esc(r.compareKeyword || '') + '"></td>' +
-                            '<td><input data-r="' + i + '" data-rk="score" type="number" style="width:64px" value="' + esc(r.score || 0) + '"></td>' +
-                            '<td><input data-r="' + i + '" data-rk="message" value="' + esc(r.message || '') + '"></td></tr>';
-                    }).join('')}</tbody>
-                </table>
+                <div class="stack" id="rule-body">${seed.map(ruleCard).join('')}</div>
                 <div class="actions">
-                    <button type="button" class="btn ghost" id="add-rule">加一行</button>
+                    <button type="button" class="btn ghost" id="add-rule">加一条</button>
                     <button type="button" class="btn" id="save-assess">保存评估配置</button>
                 </div>
             </div>`;
         $('add-rule').onclick = function () {
-            const tb = $('rule-body');
-            const i = tb.querySelectorAll('tr').length;
-            const tr = document.createElement('tr');
-            tr.innerHTML = '<td><input data-r="' + i + '" data-rk="field"></td><td><input data-r="' + i + '" data-rk="keyword"></td><td><input data-r="' + i + '" data-rk="compareField" value="none"></td><td><input data-r="' + i + '" data-rk="compareKeyword"></td><td><input data-r="' + i + '" data-rk="score" type="number" value="10"></td><td><input data-r="' + i + '" data-rk="message"></td>';
-            tb.appendChild(tr);
+            const host = $('rule-body');
+            const i = host.querySelectorAll('[data-rule-card]').length;
+            host.insertAdjacentHTML('beforeend', ruleCard({ field: '', keyword: '', compareField: 'none', compareKeyword: '', score: 10, message: '' }, i));
         };
         $('save-assess').onclick = function () {
             const rows = [];
@@ -398,6 +612,61 @@
             });
             toast('评估配置已保存');
         };
+        bindExcel('exp-assess', exportAssessExcel, 'imp-assess', importAssessExcel);
+    }
+
+    function exportAssessExcel() {
+        const a = YouweiOps.getAssessment();
+        const rules = YouweiOps.getDefaultRules() || [];
+        const seed = rules.length ? rules : [{ field: 'costStructure', keyword: '', compareField: 'none', compareKeyword: '', score: 10, message: '' }];
+        YouweiExcel.download('youwei-rules.xlsx', [
+            {
+                name: '参数',
+                cols: [22, 10],
+                rows: [['项', '值'], ['优先短板最多几项', a.heatTopN], ['近半年P0上限', a.p0Cap]]
+            },
+            {
+                name: '规则',
+                cols: [18, 16, 16, 16, 8, 40],
+                rows: [['字段', '关键词', '联动字段', '联动词', '扣分', '提示']].concat(seed.map(function (r) {
+                    return [r.field || '', r.keyword || '', r.compareField || 'none', r.compareKeyword || '', r.score || 0, r.message || ''];
+                }))
+            }
+        ]);
+    }
+
+    function importAssessExcel(wb) {
+        const Ex = YouweiExcel;
+        let heatTopN = Number(val('as-heat') || 5);
+        let p0Cap = Number(val('as-p0') || 3);
+        Ex.rowsOf(wb, '参数', ['项', '值']).forEach(function (r) {
+            const name = Ex.pick(r, ['项', '名称']);
+            const num = Number(Ex.pick(r, ['值']) || 0);
+            if (/短板/.test(name) && num) heatTopN = num;
+            if (/P0|p0/.test(name) && num) p0Cap = num;
+        });
+        const rules = Ex.rowsOf(wb, '规则', ['字段', '关键词', '提示']).map(function (r, i) {
+            return {
+                id: Date.now() + i,
+                field: Ex.pick(r, ['字段']),
+                keyword: Ex.pick(r, ['关键词']),
+                compareField: Ex.pick(r, ['联动字段']) || 'none',
+                compareKeyword: Ex.pick(r, ['联动词']),
+                score: Number(Ex.pick(r, ['扣分']) || 0),
+                message: Ex.pick(r, ['提示'])
+            };
+        }).filter(function (r) { return r.keyword || r.message; });
+        if (!rules.length && !Ex.rowsOf(wb, '参数', ['项']).length) {
+            throw new Error('表格里没有可导入的规则或参数');
+        }
+        YouweiOps.patch({
+            assessment: {
+                heatTopN: Math.max(1, heatTopN),
+                p0Cap: Math.max(1, p0Cap),
+                rules: rules.length ? rules : YouweiOps.getDefaultRules()
+            }
+        });
+        toast('已导入规则配置');
     }
 
     async function renderConnect() {
@@ -409,7 +678,7 @@
         }).join('');
         $('admin-body').innerHTML = `
             <div class="card">
-                <h2>模型连接</h2>
+                <h2>通道</h2>
                 <p class="hint">先点开 Key 的平台，再粘贴 Key。官方 DeepSeek 请在本机用 npm run dev 启动后再试。</p>
                 <div class="ai-provider-row">${chips}</div>
                 <label class="field"><span>API Key</span><input id="ai-key" type="password" autocomplete="off" value="" placeholder="${cfg.apiKey ? '已在本会话保存，改写则覆盖' : '不要带引号或 Bearer'}"></label>
@@ -420,16 +689,6 @@
                     <button type="button" class="btn" id="save-ai">保存并试连</button>
                     <button type="button" class="btn ghost" id="clear-ai-key">清除 Key</button>
                 </div>
-            </div>
-            <div class="card">
-                <h2>配置进出</h2>
-                <p class="hint">把整包运营配置拷到另一台机器：导出 JSON，再在那边导入。</p>
-                <div class="actions">
-                    <button type="button" class="btn ghost" id="exp-ops">导出运营包</button>
-                    <button type="button" class="btn ghost" id="imp-ops">导入运营包</button>
-                    <button type="button" class="btn danger" id="reset-ops">清空本机运营覆盖</button>
-                </div>
-                <textarea id="ops-pack" placeholder="粘贴运营包 JSON"></textarea>
             </div>`;
         async function refreshStatus() {
             const st = $('ai-status');
@@ -505,29 +764,10 @@
             toast('已清除本会话 Key');
             refreshStatus();
         };
-        $('exp-ops').onclick = function () {
-            $('ops-pack').value = YouweiOps.exportPack();
-            toast('已填入下方文本框，请复制保存');
-        };
-        $('imp-ops').onclick = function () {
-            try {
-                YouweiOps.importPack(val('ops-pack'));
-                toast('运营包已导入');
-                render();
-            } catch (e) {
-                toast(e.message || '导入失败');
-            }
-        };
-        $('reset-ops').onclick = function () {
-            if (!confirm('清空本机运营覆盖？首页和工作台将回到内置文案与模型。')) return;
-            YouweiOps.resetAll();
-            toast('已清空');
-            render();
-        };
     }
 
     function render() {
-        const meta = TABS.find(function (t) { return t.id === tab; }) || TABS[0];
+        const meta = allTabs().find(function (t) { return t.id === tab; }) || allTabs()[0];
         $('admin-title').textContent = meta.title;
         $('admin-lead').textContent = meta.lead;
         renderNav();

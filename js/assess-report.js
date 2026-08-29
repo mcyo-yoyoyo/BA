@@ -262,13 +262,19 @@
             'html,body{margin:0;color:var(--ink);background:var(--surface);font:16px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei UI","Noto Sans SC",sans-serif}',
             'a{color:inherit}',
             '.yr{display:flex;min-height:100vh}',
-            '.yr-nav{position:sticky;top:0;align-self:flex-start;width:168px;flex:none;padding:20px 12px;height:100vh;overflow:auto;background:var(--canvas);border-right:1px solid var(--line)}',
+            '.yr-nav{position:sticky;top:0;align-self:flex-start;width:196px;flex:none;padding:20px 14px 18px;height:100vh;overflow:auto;background:var(--canvas);border-right:1px solid var(--line);display:flex;flex-direction:column}',
             '.yr-nav .brand{display:flex;align-items:baseline;margin:0 0 18px;text-decoration:none}',
             '.yr-nav .brand b{font-size:15px;font-weight:650}',
             '.yr-nav .brand i{font-style:normal;margin-left:8px;padding-left:8px;border-left:1px solid var(--line);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}',
             '.yr-nav a{display:block;padding:7px 8px;margin-bottom:2px;font-size:13px;text-decoration:none;color:var(--muted);border-radius:2px}',
             '.yr-nav a:hover,.yr-nav a:focus{background:#fff;color:var(--ink)}',
             '.yr-nav em{font-style:normal;display:inline-block;width:1.4em;color:var(--sage);font-weight:650;font-size:11px}',
+            '.yr-nav .yr-cta{margin-top:18px;padding:12px 12px 11px;background:#fff;border:1px solid var(--line)}',
+            '.yr-nav .yr-cta p{margin:0 0 10px;font-size:12px;line-height:1.5;color:var(--muted)}',
+            '.yr-nav .yr-cta a{display:block;margin:0;padding:8px 10px;background:var(--sage);color:#f7f6f2;text-align:center;font-size:12px;font-weight:650}',
+            '.yr-nav .yr-cta a:hover{background:#2d3f39;color:#f7f6f2}',
+            '.yr-nav .yr-copy{margin-top:auto;padding-top:18px;font-size:11px;line-height:1.5;color:var(--dim)}',
+            '.yr-nav .yr-copy b{display:block;margin-bottom:4px;color:var(--ink);font-weight:650}',
             '.yr-main{flex:1;min-width:0;padding:28px 36px 64px;max-width:1080px}',
             '.yr-cover{min-height:72vh;display:flex;flex-direction:column;justify-content:flex-end;padding:8px 0 36px}',
             '.yr-kicker{margin:0 0 10px;font-size:13px;font-weight:650;color:var(--sage)}',
@@ -504,12 +510,12 @@
         const rows = fw.map(function (c) {
             const vals = GAP.map(function (g) { return num(c[g.k], 0); });
             const avg = Math.round((vals.reduce(function (a, b) { return a + b; }, 0) / 4) * 10) / 10;
-            return '<tr><td>' + text(c.l3, '—') + '</td>' +
+            return '<tr><td>' + text(c.l3, '—') + '</td><td>' + nl(c.gapNote) + '</td>' +
                 vals.map(function (n) { return '<td>' + n + '</td>'; }).join('') +
                 '<td>' + avg + '</td></tr>';
         }).join('');
-        return sec(4, '能力差距分析', '分数越高越成熟；≤2 视为该维偏弱。',
-            '<table><thead><tr><th>能力 L3</th><th>组织</th><th>流程</th><th>数据</th><th>系统</th><th>均分</th></tr></thead><tbody>' +
+        return sec(4, '能力差距分析', '分数越高越成熟；≤2 视为该维偏弱。右侧说明该项具体差在组织、流程、数据还是系统。',
+            '<table><thead><tr><th>能力 L3</th><th>差距说明</th><th>组织</th><th>流程</th><th>数据</th><th>系统</th><th>均分</th></tr></thead><tbody>' +
             rows + '</tbody></table>');
     }
 
@@ -633,12 +639,16 @@
             step1(st) + step2(st) + step3(st) + step4(st) + step5(st) + step6(st) + step7(st) +
             '<p class="yr-foot">友为 Yoway · 评估过程册　' + esc(meta.project) +
             '　本文件可直接发给客户。</p>';
-        const nav = '<nav class="yr-nav"><a class="brand" href="#cover"><b>友为</b><i>Yoway</i></a>' +
+        const siteHome = 'https://mcyo-yoyoyo.github.io/BA/';
+        const nav = '<nav class="yr-nav"><a class="brand" href="' + siteHome + '"><b>友为</b><i>Yoway</i></a>' +
             '<a href="#cover">封面</a>' +
             '<a href="#brief"><em>·</em>结论</a>' +
             STEPS.map(function (s) {
                 return '<a href="#s' + s.id + '"><em>' + s.id + '</em>' + esc(s.short) + '</a>';
-            }).join('') + '</nav>';
+            }).join('') +
+            '<div class="yr-cta"><p>回到友为平台，继续评估或开新的一场。</p>' +
+            '<a href="' + siteHome + 'workshop.html?mode=pro">开始评估</a></div>' +
+            '<p class="yr-copy"><b>© 友为 Yoway</b>本过程册由友为评估工作台生成，版权归友为所有。公开报道仅供对照，经营数字请以贵司数据为准。</p></nav>';
         return '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">' +
             '<meta name="viewport" content="width=device-width,initial-scale=1">' +
             '<title>' + esc(meta.project) + ' · 评估过程册</title>' +

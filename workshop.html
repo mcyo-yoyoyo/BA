@@ -1209,20 +1209,23 @@ CRM/线索与订单数据
                 ],
                 2: [
                     { id: 'vs_template', label: '套用价值流模板' },
-                    { id: 'vs_health', label: '健康度解读' }
+                    { id: 'vs_health', label: '健康度解读' },
+                    { id: 'vs_metrics', label: '回写阶段指标' }
                 ],
                 3: [
                     { id: 'cap_check', label: '完整性检查' },
-                    { id: 'cap_infer', label: '校准 L1/L2' }
+                    { id: 'cap_write', label: '回写当前目标' }
                 ],
                 4: [
-                    { id: 'gap_suggest', label: '差距建议' }
+                    { id: 'gap_suggest', label: '差距建议' },
+                    { id: 'gap_write', label: '回写差距说明' }
                 ],
                 5: [
                     { id: 'heat_insight', label: '热力解读' }
                 ],
                 6: [
                     { id: 'ini_deep', label: '举措深化' },
+                    { id: 'ini_write', label: '回写举措' },
                     { id: 'fullplan', label: '生成评估路标', fn: 'runPageFullPlan()' }
                 ],
                 7: [
@@ -1978,26 +1981,84 @@ CRM/线索与订单数据
                 lines.push('· 配置 API 后可按商机画像做更细匹配与多模板融合建议。');
                 return lines.join('\n');
             }
-            if (actionId === 'vs_health') {
+            if (actionId === 'vs_health' || actionId === 'vs_metrics') {
                 calcVSMetrics();
                 lines.push(`端到端健康（演示）：${vsMetrics.healthE2e}%`);
                 lines.push(`相对薄弱阶段：${vsMetrics.worstStageName}（${vsMetrics.worstPct != null ? vsMetrics.worstPct + '%' : '—'}）`);
-                lines.push('· 点击弱阶段卡片，在 KPI 与综合分上逐项改进；可接入 AI 解释「为何弱」。');
+                lines.push('· 下面给出各阶段效率/质量/成本/风险/体验分，写入后会更新步骤 2 指标，不改流程简图结构。');
+                lines.push('');
+                lines.push('```json');
+                lines.push(JSON.stringify({
+                    workflowPatch: {
+                        version: 1,
+                        vsStageInsights: (currentState.vsStages || []).map(function (s) {
+                            return {
+                                name: s.name,
+                                dEff: s.dEff || 3,
+                                dQual: s.dQual || 3,
+                                dCost: s.dCost || 3,
+                                dRisk: s.dRisk || 3,
+                                dCx: s.dCx || 3,
+                                valDesc: String(s.valDesc || '').trim() || (s.name + '：对齐节拍、质量与可观测指标。')
+                            };
+                        })
+                    }
+                }, null, 2));
+                lines.push('```');
                 return lines.join('\n');
             }
-            if (actionId === 'cap_check') {
+            if (actionId === 'cap_check' || actionId === 'cap_write') {
                 const n = (currentState.capabilityFramework || []).length;
                 lines.push(`能力块 ${n} 个（演示完整性）：`);
                 lines.push('· 核对价值流各阶段「业务组件」是否覆盖端到端；缺失环节常在采购/交付/数据。');
-                lines.push('· 可用「一键校准 L1/L2」基于组件名演示归类。');
+                lines.push('· 下面给出 L1/L2 与当前/目标成熟度，写入后更新步骤 3，不整表替换。');
+                lines.push('');
+                lines.push('```json');
+                lines.push(JSON.stringify({
+                    workflowPatch: {
+                        version: 1,
+                        capabilityInsights: (currentState.capabilityFramework || []).slice(0, 12).map(function (c) {
+                            const inf = inferL1L2FromComponent(c.l3 || '');
+                            return {
+                                l3: c.l3,
+                                linkedVs: c.linkedVs,
+                                l1: c.l1 || inf.l1,
+                                l2: c.l2 || inf.l2,
+                                desc: String(c.desc || '').trim() || ((c.l3 || '') + '：落实规则、数据留痕与跨角色协同。'),
+                                curMat: c.curMat || 3,
+                                tgtMat: c.tgtMat || 4
+                            };
+                        })
+                    }
+                }, null, 2));
+                lines.push('```');
                 return lines.join('\n');
             }
-            if (actionId === 'gap_suggest') {
-                lines.push('四维差距参考（演示，非替代步骤 4 打分）：');
+            if (actionId === 'gap_suggest' || actionId === 'gap_write') {
+                lines.push('四维差距与说明（演示）：');
                 (currentState.capabilityFramework || []).slice(0, 15).forEach(c => {
-                    const hint = c.curMat <= 2 ? '整体倾向偏弱维（建议审视 0～2 分维度）' : c.curMat === 3 ? '中等水平（可关注流程与数据）' : '相对成熟（保持或精细化）';
-                    lines.push(`· ${c.l3}（成熟度 ${c.curMat}）：${hint}`);
+                    const hint = c.curMat <= 2 ? '组织与流程尚未闭环' : c.curMat === 3 ? '数据口径与系统衔接不稳' : '精细化运营即可';
+                    lines.push(`· ${c.l3}（成熟度 ${c.curMat}）：${c.gapNote || hint}`);
                 });
+                lines.push('');
+                lines.push('```json');
+                lines.push(JSON.stringify({
+                    workflowPatch: {
+                        version: 1,
+                        capabilityGaps: (currentState.capabilityFramework || []).slice(0, 12).map(function (c) {
+                            const hint = c.curMat <= 2 ? '组织权责与流程尚未闭环，先补主责人和标准作业。' : c.curMat === 3 ? '数据口径与系统衔接不稳，先统一主数据再谈自动化。' : '整体可用，差在精细化运营与例外处理。';
+                            return {
+                                l3: c.l3,
+                                gapOrg: c.gapOrg,
+                                gapProc: c.gapProc,
+                                gapData: c.gapData,
+                                gapIt: c.gapIt,
+                                gapNote: String(c.gapNote || '').trim() || hint
+                            };
+                        })
+                    }
+                }, null, 2));
+                lines.push('```');
                 return lines.join('\n');
             }
             if (actionId === 'heat_insight') {
@@ -2008,9 +2069,32 @@ CRM/线索与订单数据
                 lines.push('· 红色多为「某维 0 分」或多维 ≤2 分叠加；详见卡片四维分数摘要。');
                 return lines.join('\n');
             }
-            if (actionId === 'ini_deep') {
+            if (actionId === 'ini_deep' || actionId === 'ini_write') {
                 lines.push(`变革举措 ${(currentState.initiatives || []).length} 条（演示）：`);
-                lines.push('· 可逐项补充技术方案、依赖与 ROI 假设；接入 AI 后可生成路径依赖与预算量级草案。');
+                lines.push('· 下面按当前清单回写标题、窗口与收益假设，写入后更新步骤 6。');
+                if ((currentState.initiatives || []).length) {
+                    lines.push('');
+                    lines.push('```json');
+                    lines.push(JSON.stringify({
+                        workflowPatch: {
+                            version: 1,
+                            initiatives: (currentState.initiatives || []).map(function (ini) {
+                                return {
+                                    title: ini.title,
+                                    caps: ini.caps,
+                                    gaps: ini.gaps,
+                                    window: ini.window,
+                                    benefit: ini.benefit,
+                                    cost: ini.cost,
+                                    phase: ini.phase,
+                                    owner: ini.owner,
+                                    streams: ini.streams
+                                };
+                            })
+                        }
+                    }, null, 2));
+                    lines.push('```');
+                }
                 return lines.join('\n');
             }
             if (actionId === 'roadmap_ai') {
@@ -2115,11 +2199,11 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
 约定（仅输出与当前步骤相关、用户明确要求写入的字段；未涉及的键请省略，不要编造业务细节，不要无故跳步）：\n` +
                 `· workflowPatch.bmc：键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串，与九宫格对应。\n` +
                 `· workflowPatch.valueStreamName：价值流名称（可选）。\n` +
-                `· workflowPatch.stages：价值流阶段数组；每项含 name、type(process|wait)、scenarios、components（逗号分隔组件）、actualTime（小时数，数字），可选 dEff,dQual,dCost,dRisk,dCx（1-5）。提供 stages 时会替换当前价值流阶段列表（与左侧手工/模板互斥于数据层，用户仍可再改）。\n` +
-                `· workflowPatch.capabilities：业务能力清单；非空则整体替换当前清单。每项含 l3，可选 l1,l2,desc（只写该 L3 的能力内容与产出，禁止价值流/阶段类套话）,linkedVs（须与工作流2流程简图中「价值流拆分阶段」的 name 一致，勿只填整条价值流名称）,curMat,tgtMat(1-5),gapOrg,gapProc,gapData,gapIt（四维成熟度各为 0～5 整数，越高越成熟；亦可沿用英文 weak/medium/strong 或旧版缺失/弱/中/强）,sys,tech,ice。\n` +
-                `· workflowPatch.capabilityGaps：仅按 l3 匹配更新四维差距；每项含 l3 及 gapOrg/gapProc/gapData/gapIt 中需要改的字段（同上，0～5）。\n` +
-                `· workflowPatch.vsStageInsights：增量刷新价值流五维；数组每项的 name 须与当前 vsStages 阶段名完全一致，含 dEff,dQual,dCost,dRisk,dCx（1-5 整数），可选 valDesc、dimActive（五维布尔）。不增删阶段。\n` +
-                `· workflowPatch.capabilityInsights：增量刷新能力表述；数组每项含 l3，可选 linkedVs（区分同名 L3），及 desc、l1、l2；不替换整表。\n` +
+                `· workflowPatch.stages：价值流阶段数组；每项含 name、type(process|wait)、scenarios、components（逗号分隔组件）、actualTime（小时数，数字），以及各阶段指标 dEff,dQual,dCost,dRisk,dCx（1-5）。提供 stages 时会替换当前价值流阶段列表（与左侧手工/模板互斥于数据层，用户仍可再改）。\n` +
+                `· workflowPatch.capabilities：业务能力清单；非空则整体替换当前清单。每项含 l3，可选 l1,l2,desc（只写该 L3 的能力内容与产出，禁止价值流/阶段类套话）,linkedVs（须与工作流2流程简图中「价值流拆分阶段」的 name 一致，勿只填整条价值流名称）,curMat,tgtMat(1-5),gapOrg,gapProc,gapData,gapIt（四维成熟度各为 0～5 整数，越高越成熟；亦可沿用英文 weak/medium/strong 或旧版缺失/弱/中/强）,gapNote（该能力块具体差在哪，一两句话）,sys,tech,ice。\n` +
+                `· workflowPatch.capabilityGaps：按 l3 匹配更新四维差距与说明；每项含 l3，可选 gapOrg/gapProc/gapData/gapIt（0～5）及 gapNote。\n` +
+                `· workflowPatch.vsStageInsights：增量刷新各阶段指标；数组每项的 name 须与当前 vsStages 阶段名完全一致，必须含 dEff,dQual,dCost,dRisk,dCx（1-5 整数），可选 valDesc、dimActive（五维布尔）。不增删阶段。步骤 2 解读阶段指标时优先用此字段，不要只改流程简图。\n` +
+                `· workflowPatch.capabilityInsights：增量刷新能力表述；数组每项含 l3，可选 linkedVs（区分同名 L3），及 desc、l1、l2、curMat、tgtMat（1-5）；不替换整表。\n` +
                 `· workflowPatch.initiatives：变革举措；非空则整体替换。每项含 title，可选 caps(数组),gaps,window,benefit,cost（难易程度文案）,phase(P0|P1|P2),tech,deps,milestoneBand，streams 为子路标数组（start 为从 0 起的月索引，len 为持续月数）。\n` +
                 `· workflowPatch.roadmap：可选 startYm(YYYY-MM)、months(6-48)。\n` +
                 `· workflowPatch.canvasDiagnosticRules：画布诊断规则数组（替换写入当前规则表）；每项含 field（英文键）、keyword、message、score（0-100 扣分）、compareField（另一格英文键或 none）、compareKeyword（联动关键词；无联动可省略）。\n` +
@@ -2148,6 +2232,11 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 const out = { version: wp.version || 1 };
                 if (wp.capabilityGaps && wp.capabilityGaps.length) out.capabilityGaps = wp.capabilityGaps;
                 if (sid === 4 && wp.capabilities && wp.capabilities.length) out.capabilities = wp.capabilities;
+                return Object.keys(out).length > 1 ? out : null;
+            }
+            if (sid === 6) {
+                const out = { version: wp.version || 1 };
+                if (wp.initiatives && wp.initiatives.length) out.initiatives = wp.initiatives;
                 return Object.keys(out).length > 1 ? out : null;
             }
             return wp;
@@ -2301,6 +2390,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                     sys: String(raw.sys != null && String(raw.sys).trim() ? raw.sys : def.sys),
                     tech: String(raw.tech != null && String(raw.tech).trim() ? raw.tech : def.tech),
                     ice,
+                    gapNote: String(raw.gapNote != null ? raw.gapNote : '').trim(),
                     scenarioGapProfiles: Array.isArray(raw.scenarioGapProfiles) ? raw.scenarioGapProfiles : []
                 };
             });
@@ -2324,6 +2414,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                         c[k] = normalizeGapDim(u[k], prev);
                     }
                 });
+                if (u.gapNote != null && String(u.gapNote).trim()) c.gapNote = String(u.gapNote).trim();
             });
         }
 
@@ -2374,6 +2465,11 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 if (ins.desc != null && String(ins.desc).trim()) c.desc = String(ins.desc).trim();
                 if (ins.l1 != null && String(ins.l1).trim()) c.l1 = String(ins.l1).trim();
                 if (ins.l2 != null && String(ins.l2).trim()) c.l2 = String(ins.l2).trim();
+                ['curMat', 'tgtMat'].forEach(function (k) {
+                    if (ins[k] == null || ins[k] === '') return;
+                    const n = parseInt(ins[k], 10);
+                    if (!isNaN(n)) c[k] = Math.max(1, Math.min(5, n));
+                });
             });
         }
 
@@ -2660,6 +2756,39 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             }
         }
 
+        async function runStructuredWriteAction(opts) {
+            const inputEl = document.getElementById('ai-user-input');
+            const userMsg = inputEl ? inputEl.value.trim() : '';
+            const ctx = buildAiContextSnapshot();
+            const cfg = loadAiConfig();
+            const stepId = opts.stepId != null ? opts.stepId : getAiStepId();
+            if (!cfg.endpoint && !cfg.apiKey) {
+                setAiOutputText(generateDemoAiReply(opts.actionId, userMsg, ctx));
+                syncAiApplyButton();
+                toast('演示模式：已给出可写入示例，可点「写入当前步骤」');
+                return;
+            }
+            setAiOutputText('生成中…');
+            try {
+                const systemText = (opts.system || '你是企业数字化转型顾问。简体中文，务实可执行，只谈当前步骤。')
+                    + buildAiWorkflowPatchSystemSuffix({ stepId: stepId });
+                const text = await callOpenAiCompatibleChat(systemText, opts.userText(ctx, userMsg));
+                setAiOutputText(text);
+                const wp = restrictWorkflowPatchToStep(extractWorkflowPatchFromText(text), stepId);
+                if (wp) {
+                    const r = applyWorkflowPatchObject(wp);
+                    if (r.ok) toast('已写入：' + (r.summary || '当前步骤'));
+                }
+                syncAiApplyButton();
+            } catch (e) {
+                console.error(e);
+                const friendly = (e && e.friendly) || (window.YouweiAi && YouweiAi.friendlyError(e)) || '智能助手暂时连不上。';
+                setAiOutputText(friendly);
+                if (isAiAuthFail(friendly)) openAiSettings();
+                syncAiApplyButton();
+            }
+        }
+
         async function runAiQuickAction(actionId) {
             const out = document.getElementById('ai-output');
             const inputEl = document.getElementById('ai-user-input');
@@ -2708,6 +2837,94 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 aiApplyCapabilityInferL1L2();
                 setAiOutputText(generateDemoAiReply('cap_check', userMsg, ctx));
                 return;
+            }
+            if (actionId === 'vs_health') {
+                return runStructuredWriteAction({
+                    actionId: 'vs_health',
+                    stepId: 2,
+                    system: '你是端到端价值流顾问。先用两三句解读健康度，再回写各阶段指标，不增删阶段。',
+                    userText: function (rich, extra) {
+                        return '任务：解读步骤 2 价值流健康度，并回写各阶段指标。文末必须输出 vsStageInsights（name 与 vsStages 一致，含五维分与 valDesc）。禁止输出 stages 全表替换。\n上下文：\n'
+                            + JSON.stringify(rich, null, 2) + '\n用户补充：' + (extra || '无');
+                    }
+                });
+            }
+            if (actionId === 'vs_metrics') {
+                return runStructuredWriteAction({
+                    actionId: 'vs_metrics',
+                    stepId: 2,
+                    system: '你是端到端价值流顾问。只刷新各阶段指标，不增删阶段、不改流程简图结构。',
+                    userText: function (rich, extra) {
+                        return '任务：回写步骤 2 各阶段指标。文末必须输出 vsStageInsights：每项 name 与上下文 vsStages 完全一致，给出 dEff,dQual,dCost,dRisk,dCx（1-5）与一句 valDesc。禁止输出 stages 全表替换。\n上下文：\n'
+                            + JSON.stringify(rich, null, 2) + '\n用户补充：' + (extra || '无');
+                    }
+                });
+            }
+            if (actionId === 'cap_check') {
+                return runStructuredWriteAction({
+                    actionId: 'cap_check',
+                    stepId: 3,
+                    system: '你是业务能力架构顾问。先检查清单完整性，再回写 L1/L2 与当前/目标。',
+                    userText: function (rich, extra) {
+                        return '任务：检查步骤 3 能力架构完整性，并回写 capabilityInsights（l3,l1,l2,desc,curMat,tgtMat）。禁止 capabilities 全表替换。\n上下文：\n'
+                            + JSON.stringify(rich, null, 2) + '\n用户补充：' + (extra || '无');
+                    }
+                });
+            }
+            if (actionId === 'cap_write') {
+                return runStructuredWriteAction({
+                    actionId: 'cap_write',
+                    stepId: 3,
+                    system: '你是业务能力架构顾问。只增量回写 L1/L2、描述、当前与目标成熟度，不整表替换。',
+                    userText: function (rich, extra) {
+                        return '任务：回写步骤 3 能力架构。文末必须输出 capabilityInsights：每项含 l3，可选 linkedVs、desc、l1、l2、curMat、tgtMat（1-5）。禁止输出 capabilities 全表替换。\n上下文：\n'
+                            + JSON.stringify(rich, null, 2) + '\n用户补充：' + (extra || '无');
+                    }
+                });
+            }
+            if (actionId === 'gap_suggest') {
+                return runStructuredWriteAction({
+                    actionId: 'gap_suggest',
+                    stepId: 4,
+                    system: '你是能力差距诊断顾问。先解读弱在哪，再回写四维分与差距说明。',
+                    userText: function (rich, extra) {
+                        return '任务：解读步骤 4 差距并回写 capabilityGaps（含 gapNote）。\n上下文：\n'
+                            + JSON.stringify(rich, null, 2) + '\n用户补充：' + (extra || '无');
+                    }
+                });
+            }
+            if (actionId === 'gap_write') {
+                return runStructuredWriteAction({
+                    actionId: 'gap_write',
+                    stepId: 4,
+                    system: '你是能力差距诊断顾问。为每个能力块写清差在哪里，并给出四维分。',
+                    userText: function (rich, extra) {
+                        return '任务：回写步骤 4 差距说明。文末必须输出 capabilityGaps：每项含 l3、gapOrg/gapProc/gapData/gapIt（0-5）与 gapNote（一两句说清该能力块具体差在组织、流程、数据还是系统）。\n上下文：\n'
+                            + JSON.stringify(rich, null, 2) + '\n用户补充：' + (extra || '无');
+                    }
+                });
+            }
+            if (actionId === 'ini_deep') {
+                return runStructuredWriteAction({
+                    actionId: 'ini_deep',
+                    stepId: 6,
+                    system: '你是变革举措规划顾问。先解读优先级，再回写可执行的举措清单。',
+                    userText: function (rich, extra) {
+                        return '任务：深化步骤 6 变革举措，文末输出 initiatives 全量数组。\n上下文：\n'
+                            + JSON.stringify(rich, null, 2) + '\n用户补充：' + (extra || '无');
+                    }
+                });
+            }
+            if (actionId === 'ini_write') {
+                return runStructuredWriteAction({
+                    actionId: 'ini_write',
+                    stepId: 6,
+                    system: '你是变革举措规划顾问。只改举措清单，不跳到路标。',
+                    userText: function (rich, extra) {
+                        return '任务：回写步骤 6 变革举措。文末必须输出 initiatives 全量数组（在现有基础上深化，不要无故删光）。每项含 title，可选 caps,gaps,window,benefit,cost,phase,owner。\n上下文：\n'
+                            + JSON.stringify(rich, null, 2) + '\n用户补充：' + (extra || '无');
+                    }
+                });
             }
             if (actionId === 'preset_insight_refresh') {
                 if (!currentState.vsStages.length) {
@@ -2876,10 +3093,14 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 bmc_insight: '画布语义洞察与风险提示',
                 vs_template: '价值流模板推荐',
                 vs_health: '价值流健康度解读',
+                vs_metrics: '回写各阶段指标',
                 cap_check: '能力架构完整性检查',
+                cap_write: '回写 L1/L2 与当前目标',
                 gap_suggest: '差距分析对标建议',
+                gap_write: '回写能力块差距说明',
                 heat_insight: '热力图解读与行动优先级',
                 ini_deep: '变革举措深化建议',
+                ini_write: '回写变革举措',
                 roadmap_ai: '路标甘特排程建议',
                 config_ai: '画布诊断配置',
                 vs_template_config: '价值流模板配置',
@@ -2930,7 +3151,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             try {
                 const text = await callOpenAiCompatibleChat(systemText, `步骤：${ctx.stepTitle}\n上下文：\n${JSON.stringify(ctx, null, 2)}\n用户问题：${userMsg}\n如用户要求写入表单或你给出了可落地的清单，请在 workflowPatch 中输出对应字段。`);
                 setAiOutputText(text);
-                const wp = extractWorkflowPatchFromText(text);
+                const wp = restrictWorkflowPatchToStep(extractWorkflowPatchFromText(text));
                 if (wp) applyWorkflowPatchObject(wp);
             } catch (e) {
                 const friendly = (e && e.friendly) || (e && e.message) || e;
@@ -2947,8 +3168,32 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             if (rail) rail.classList.toggle('hidden', aiDrawerVisible);
         }
 
+        function setAiWide(on) {
+            const d = document.getElementById('ai-assistant-drawer');
+            const btn = document.getElementById('ai-wide-btn');
+            const icon = btn && btn.querySelector('i');
+            document.body.classList.remove('ai-dock-full');
+            if (d) {
+                d.classList.remove('is-full');
+                d.classList.toggle('is-wide', !!on);
+            }
+            if (btn) btn.title = on ? '收窄助手' : '加宽助手';
+            if (icon) icon.className = on ? 'fas fa-compress-alt text-[13px]' : 'fas fa-arrows-alt-h text-[13px]';
+        }
+
+        function toggleAiWide() {
+            const d = document.getElementById('ai-assistant-drawer');
+            if (!d) return;
+            if (!aiDrawerVisible) {
+                aiDrawerVisible = true;
+                syncAiDockUi();
+            }
+            setAiWide(!d.classList.contains('is-wide'));
+        }
+
         function toggleAiDrawer() {
             aiDrawerVisible = !aiDrawerVisible;
+            if (!aiDrawerVisible) setAiWide(false);
             syncAiDockUi();
             if (aiDrawerVisible) refreshAiAssistantUi();
         }
@@ -3245,6 +3490,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                             </div>
                         </div>
                         <div class="flex items-center gap-1 shrink-0">
+                            <button type="button" id="ai-wide-btn" onclick="toggleAiWide()" class="p-2 rounded-[8px] text-ink-secondary hover:bg-white" title="加宽助手"><i class="fas fa-arrows-alt-h text-[13px]" aria-hidden="true"></i></button>
                             <button type="button" onclick="toggleAiSettings()" class="p-2 rounded-[8px] text-ink-secondary hover:bg-white" title="连接设置"><i class="fas fa-cog text-[13px]" aria-hidden="true"></i></button>
                             <button type="button" onclick="toggleAiDrawer()" class="p-2 rounded-[8px] text-ink-secondary hover:bg-white" title="收起"><i class="fas fa-times text-[14px]" aria-hidden="true"></i></button>
                         </div>
@@ -3321,6 +3567,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             migrateCapabilityFrameworkGapScores();
             applyWorkshopQueryContext();
             initAiAssistant();
+            ensureEngageOverlay();
             renderStep();
             if (typeof bootstrapWendaoStudio === 'function') bootstrapWendaoStudio();
             bindAssetsLibraryChrome();
@@ -3356,15 +3603,8 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
         function guardRoadmapAccess(targetStep) {
             if (targetStep !== 7) return true;
             if (isEngagementReady()) return true;
-            toast('请先填写评估信息：' + missingEngagementFields().join('、') + '。完善后即可生成路标。', 'error');
-            currentState.activePanel = 'workflow';
-            currentState.step = 1;
-            renderNav();
-            renderStepProgress();
-            renderStep();
-            try { localStorage.setItem(ENGAGE_COLLAPSE_LS, '0'); } catch (e) { /* ignore */ }
-            const card = document.getElementById('p0-engage-card');
-            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            toast('补齐评估信息后即可进入路标，不必退回第一步。', 'error');
+            openEngageOverlay({ returnStep: currentState.step, continueTo7: true });
             return false;
         }
 
@@ -3824,18 +4064,153 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             const needEngage = (miss || []).some(function (x) {
                 return x === '企业名称' || x === '评估项目' || x === '规划周期' || x === '负责人';
             });
-            currentState.activePanel = 'workflow';
-            currentState.step = needEngage ? 1 : 6;
             if (needEngage) {
-                try { localStorage.setItem(ENGAGE_COLLAPSE_LS, '0'); } catch (e) { /* ignore */ }
+                openEngageOverlay({ returnStep: currentState.step, continueTo7: currentState.step === 7 });
+                return;
             }
+            currentState.activePanel = 'workflow';
+            currentState.step = 6;
             renderNav();
             renderStepProgress();
             renderStep();
-            if (needEngage) {
-                const card = document.getElementById('p0-engage-card');
-                if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        let pendingEngage = { returnStep: 1, continueTo7: false };
+
+        function ensureEngageOverlay() {
+            if (document.getElementById('engage-overlay')) return;
+            const wrap = document.createElement('div');
+            wrap.id = 'engage-overlay';
+            wrap.className = 'engage-overlay hidden';
+            wrap.innerHTML = `
+                <div class="engage-overlay-card" role="dialog" aria-labelledby="engage-overlay-title">
+                    <button type="button" class="engage-overlay-x" onclick="closeEngageOverlay()" aria-label="关闭">×</button>
+                    <p class="engage-overlay-kicker">评估信息</p>
+                    <h2 id="engage-overlay-title">补齐后继续当前步骤</h2>
+                    <p class="engage-overlay-lead">不必退回第一步。填完企业信息，会回到你刚才所在的步骤。</p>
+                    <p id="engage-overlay-miss" class="engage-overlay-miss"></p>
+                    <div class="engage-overlay-grid">
+                        <label>企业名称<input id="eo-org" type="text" autocomplete="organization"></label>
+                        <label>评估项目<input id="eo-project" type="text"></label>
+                        <label>规划周期<input id="eo-horizon" type="text" placeholder="如 2026–2027"></label>
+                        <label>负责人<input id="eo-sponsor" type="text"></label>
+                    </div>
+                    <div class="engage-overlay-actions">
+                        <button type="button" class="eo-ghost" onclick="closeEngageOverlay()">稍后再说</button>
+                        <button type="button" class="eo-primary" onclick="submitEngageOverlay()">记下并继续</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(wrap);
+        }
+
+        function openEngageOverlay(opts) {
+            ensureEngageOverlay();
+            pendingEngage = {
+                returnStep: (opts && opts.returnStep) || currentState.step || 1,
+                continueTo7: !!(opts && opts.continueTo7)
+            };
+            const wm = currentState.workspaceMeta || {};
+            const setv = function (id, v) {
+                const el = document.getElementById(id);
+                if (el) el.value = v || '';
+            };
+            setv('eo-org', wm.organizationName);
+            setv('eo-project', wm.projectName);
+            setv('eo-horizon', wm.planningHorizon);
+            setv('eo-sponsor', wm.sponsor);
+            const missEl = document.getElementById('engage-overlay-miss');
+            if (missEl) {
+                const miss = missingEngagementFields();
+                missEl.textContent = miss.length ? ('还缺：' + miss.join('、')) : '';
             }
+            const lead = document.querySelector('#engage-overlay .engage-overlay-lead');
+            if (lead) {
+                lead.textContent = pendingEngage.continueTo7
+                    ? '填完即可进入路标，不用从第一步再走一遍。'
+                    : '填完会回到你刚才所在的步骤。';
+            }
+            document.getElementById('engage-overlay').classList.remove('hidden');
+        }
+
+        function closeEngageOverlay() {
+            const el = document.getElementById('engage-overlay');
+            if (el) el.classList.add('hidden');
+        }
+
+        function submitEngageOverlay() {
+            const read = function (id) {
+                const el = document.getElementById(id);
+                return el ? String(el.value || '').trim() : '';
+            };
+            updateEngagementField('organizationName', read('eo-org'));
+            updateEngagementField('projectName', read('eo-project'));
+            updateEngagementField('planningHorizon', read('eo-horizon'));
+            updateEngagementField('sponsor', read('eo-sponsor'));
+            if (!isEngagementReady()) {
+                const missEl = document.getElementById('engage-overlay-miss');
+                if (missEl) missEl.textContent = '还缺：' + missingEngagementFields().join('、');
+                toast('请先补齐四项评估信息', 'error');
+                return;
+            }
+            closeEngageOverlay();
+            if (pendingEngage.continueTo7) {
+                setStep(7);
+                toast('评估信息已记下，已进入路标');
+                return;
+            }
+            const back = pendingEngage.returnStep || currentState.step;
+            currentState.activePanel = 'workflow';
+            currentState.step = back;
+            renderNav();
+            renderStepProgress();
+            renderStep();
+            toast('评估信息已记下，继续当前步骤');
+        }
+
+        /** Electron 不支持 window.prompt，桌面版一点保存会直接中断 */
+        function askSaveTitle(defaultTitle) {
+            return new Promise(function (resolve) {
+                let host = document.getElementById('save-title-overlay');
+                if (!host) {
+                    host = document.createElement('div');
+                    host.id = 'save-title-overlay';
+                    host.className = 'engage-overlay hidden';
+                    host.innerHTML =
+                        '<div class="engage-overlay-card" role="dialog" aria-labelledby="save-title-heading">' +
+                            '<button type="button" class="engage-overlay-x" data-save-x="1" aria-label="关闭">×</button>' +
+                            '<p class="engage-overlay-kicker">保存底稿</p>' +
+                            '<h2 id="save-title-heading">为这个版本起个名字</h2>' +
+                            '<p class="engage-overlay-lead">留空则用默认名称。确定后写入本机底稿并生成过程册。</p>' +
+                            '<label class="save-title-field">版本名称<input id="save-title-input" type="text" autocomplete="off"></label>' +
+                            '<div class="engage-overlay-actions">' +
+                                '<button type="button" class="eo-ghost" data-save-cancel="1">取消</button>' +
+                                '<button type="button" class="eo-primary" data-save-ok="1">保存</button>' +
+                            '</div>' +
+                        '</div>';
+                    document.body.appendChild(host);
+                }
+                const input = host.querySelector('#save-title-input');
+                let settled = false;
+                const finish = function (value) {
+                    if (settled) return;
+                    settled = true;
+                    host.classList.add('hidden');
+                    resolve(value);
+                };
+                host.querySelector('[data-save-ok]').onclick = function () { finish(input.value); };
+                host.querySelector('[data-save-cancel]').onclick = function () { finish(null); };
+                host.querySelector('[data-save-x]').onclick = function () { finish(null); };
+                input.value = defaultTitle || '';
+                input.onkeydown = function (e) {
+                    if (e.key === 'Enter') { e.preventDefault(); finish(input.value); }
+                    if (e.key === 'Escape') { e.preventDefault(); finish(null); }
+                };
+                host.classList.remove('hidden');
+                setTimeout(function () {
+                    input.focus();
+                    input.select();
+                }, 0);
+            });
         }
 
         /** 步骤 7 底部「保存」：门槛通过后写入底稿，并生成带结论页的评估过程册 */
@@ -3859,7 +4234,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 .replace('{org}', wm.organizationName || '企业')
                 .replace('{project}', wm.projectName || currentState.valueStreamName || '评估')
                 .replace('{date}', new Date().toLocaleString('zh-CN', { hour12: false }));
-            const input = window.prompt('为该保存版本命名（留空则使用默认名称）', defaultTitle);
+            const input = await askSaveTitle(defaultTitle);
             if (input === null) return;
             const title = (input || '').trim() || defaultTitle;
             const id = Date.now();
@@ -5006,6 +5381,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                     gapData: gapFromMat(def.mat.d),
                     gapIt: gapFromMat(def.mat.i),
                     sys: def.sys, tech: def.tech, ice,
+                    gapNote: '',
                     scenarioGapProfiles: []
                 });
             });
@@ -5209,7 +5585,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             const avg = gapFourDimAvgRow(c, '');
             return `<button type="button" onclick="jumpToGapRow(${c.id})" class="rounded-[14px] border-2 p-3 lg:p-3 text-left transition hover:shadow-card min-h-[7rem] lg:min-h-0 flex flex-col ${cls} focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                             <p class="text-[15px] lg:text-[16px] font-semibold text-ink leading-snug">${escapeHtmlText(c.l3)}</p>
-                            <p class="text-[11px] lg:text-[12px] text-ink-secondary mt-2 leading-relaxed flex-1">组织 ${g.gapOrg} · 流程 ${g.gapProc} · 数据 ${g.gapData} · IT ${g.gapIt} · 均分 ${avg}</p>
+                            <p class="text-[11px] lg:text-[12px] text-ink-secondary mt-2 leading-relaxed flex-1">${c.gapNote ? escapeHtmlText(String(c.gapNote).slice(0, 72)) : ('组织 ' + g.gapOrg + ' · 流程 ' + g.gapProc + ' · 数据 ' + g.gapData + ' · IT ' + g.gapIt + ' · 均分 ' + avg)}</p>
                             <p class="mt-2 lg:mt-3 inline-flex flex-wrap items-center gap-1.5 shrink-0">
                                 <span class="inline-flex text-[11px] font-semibold px-2 py-1 rounded-full ${badgeCls}">${badge}</span>
                                 <span class="ev-flag assumption">待确认</span>
@@ -5777,18 +6153,23 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             renderStep3();
         }
 
-        /** 业务能力架构：可编辑文本字段（价值流阶段、L3、描述、L1、L2） */
+        /** 业务能力架构：可编辑文本字段（价值流阶段、L3、描述、L1、L2、差距说明） */
         function updateFrameworkField(id, field, val) {
             const c = currentState.capabilityFramework.find(x => x.id === id);
-            if (!c || !['l1', 'l2', 'desc', 'l3', 'linkedVs'].includes(field)) return;
+            if (!c || !['l1', 'l2', 'desc', 'l3', 'linkedVs', 'gapNote'].includes(field)) return;
             const s = String(val ?? '');
             if (field === 'l1') c.l1 = s.trim();
             else if (field === 'l2') c.l2 = s.trim();
             else if (field === 'desc') c.desc = s;
+            else if (field === 'gapNote') c.gapNote = s;
             else if (field === 'l3') {
                 const t = s.trim();
                 c.l3 = t || '未命名能力块';
             } else c.linkedVs = s.trim();
+            if (field === 'gapNote') {
+                renderStep4();
+                return;
+            }
             renderStep3();
             renderStep4();
             renderStep5();
@@ -5821,6 +6202,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 sys: def.sys,
                 tech: def.tech,
                 ice,
+                gapNote: '',
                 scenarioGapProfiles: []
             });
             renderStep3();
@@ -6483,6 +6865,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                     <div class="flex-1 min-h-0 overflow-auto">
                     <table class="w-full text-[13px]"><thead><tr>
                         <th class="p-3 text-left font-semibold">能力块</th>
+                        <th class="p-3 text-left font-semibold min-w-[14rem]">差距说明</th>
                         <th class="p-3 text-center font-semibold">组织</th><th class="p-3 text-center font-semibold">流程</th>
                         <th class="p-3 text-center font-semibold">数据</th><th class="p-3 text-center font-semibold">IT</th>
                         <th class="p-3 text-center font-semibold tabular-nums">均分</th>
@@ -6491,8 +6874,9 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                     ${currentState.capabilityFramework.map(c => {
                 const hl = currentState.gapHighlightCapabilityId === c.id;
                 return `
-                        <tr id="gap-row-${c.id}" class="border-t border-black/[0.06] transition-colors ${hl ? 'bg-[rgba(0,113,227,0.14)] shadow-[inset_0_0_0_1px_rgba(0,113,227,0.35)]' : 'hover:bg-canvas/80'}">
+                        <tr id="gap-row-${c.id}" class="border-t border-black/[0.06] transition-colors align-top ${hl ? 'bg-[rgba(0,113,227,0.14)] shadow-[inset_0_0_0_1px_rgba(0,113,227,0.35)]' : 'hover:bg-canvas/80'}">
                             <td class="p-3 font-semibold text-ink">${escapeHtmlText(c.l3)}</td>
+                            <td class="p-3"><textarea rows="2" class="w-full min-h-[2.75rem] rounded-[8px] border border-black/[0.10] px-2 py-1.5 text-[12px] text-ink leading-relaxed resize-y bg-white focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" placeholder="这项能力具体差在哪：权责、流程断点、口径还是系统托不住" onchange="updateFrameworkField(${c.id},'gapNote',this.value)">${escapeHtmlText(c.gapNote || '')}</textarea></td>
                             <td class="p-3 text-center">${gapSelect(c.id, 'gapOrg', c.gapOrg)}</td>
                             <td class="p-3 text-center">${gapSelect(c.id, 'gapProc', c.gapProc)}</td>
                             <td class="p-3 text-center">${gapSelect(c.id, 'gapData', c.gapData)}</td>
@@ -6528,7 +6912,18 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 const priorityIds = getPriorityRedIdSet(fw);
                 const dist = heatmapDistributionSummary(fw, '', { prioritize: true });
                 const { overall, byL1, byL2 } = dist;
-                const pct = (n, d) => (d > 0 ? Math.round((n / d) * 1000) / 10 : 0);
+                const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) : 0);
+                const shareCell = (st) => {
+                    if (!st.total) return '<span class="text-ink-tertiary tabular-nums">—</span>';
+                    const redP = pct(st.red, st.total);
+                    const watchP = pct(st.watch || 0, st.total);
+                    const yelP = pct(st.yellow, st.total);
+                    const greenP = pct(st.green, st.total);
+                    return `<div class="heat-share" title="优先 ${redP}% · 观察 ${watchP}% · 计划 ${yelP}% · 健康 ${greenP}%">
+                        <span class="heat-share-bar" aria-hidden="true"><i class="is-red" style="width:${redP}%"></i><i class="is-watch" style="width:${watchP}%"></i><i class="is-yel" style="width:${yelP}%"></i><i class="is-green" style="width:${greenP}%"></i></span>
+                        <span class="tabular-nums text-ink">健康 ${greenP}%</span>
+                    </div>`;
+                };
                 const tableL1Rows = byL1.map(r => `
                         <tr class="border-t border-black/[0.06] hover:bg-canvas/60">
                             <td class="p-2 font-medium text-ink">${escapeHtmlText(r.l1)}</td>
@@ -6537,7 +6932,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                             <td class="p-2 text-center tabular-nums ${r.yellow ? 'text-amber-900 font-semibold' : 'text-ink-tertiary'}">${r.yellow}</td>
                             <td class="p-2 text-center tabular-nums ${r.green ? 'text-emerald-800 font-semibold' : 'text-ink-tertiary'}">${r.green}</td>
                             <td class="p-2 text-center tabular-nums font-medium text-ink">${r.total}</td>
-                            <td class="p-2 text-right text-[11px] text-ink-tertiary tabular-nums">${pct(r.green, r.total)}% 健康</td>
+                            <td class="p-2 text-right align-middle">${shareCell(r)}</td>
                         </tr>`).join('');
                 const tableL2Rows = byL2.map(r => `
                         <tr class="border-t border-black/[0.06] hover:bg-canvas/60">
@@ -6548,7 +6943,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                             <td class="p-2 text-center tabular-nums align-middle ${r.yellow ? 'text-amber-900 font-semibold' : 'text-ink-tertiary'}">${r.yellow}</td>
                             <td class="p-2 text-center tabular-nums align-middle ${r.green ? 'text-emerald-800 font-semibold' : 'text-ink-tertiary'}">${r.green}</td>
                             <td class="p-2 text-center tabular-nums font-medium text-ink align-middle">${r.total}</td>
-                            <td class="p-2 text-right text-[11px] text-ink-tertiary tabular-nums align-middle">${pct(r.green, r.total)}% 健康</td>
+                            <td class="p-2 text-right align-middle">${shareCell(r)}</td>
                         </tr>`).join('');
                 const { l1Order, tree } = buildHeatmapL1L2Tree(fw);
                 const layeredSections = l1Order.map(l1 => {
@@ -6587,7 +6982,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                             <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold bg-amber-100/80 text-amber-900">纳入计划 ${overall.yellow}</span>
                             <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold bg-emerald-100/80 text-emerald-900">相对健康 ${overall.green}</span>
                             <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold bg-canvas text-ink-secondary border border-black/[0.08]">能力块合计 ${overall.total}</span>
-                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium bg-white text-ink-tertiary border border-black/[0.08] tabular-nums">全局健康占比 ${pct(overall.green, overall.total)}%</span>
+                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium bg-white text-ink border border-black/[0.08] tabular-nums">全局健康占比 ${overall.total ? pct(overall.green, overall.total) : 0}%</span>
                         </div>
                         <div class="grid lg:grid-cols-2 gap-3">
                             <div class="rounded-[10px] border border-black/[0.06] overflow-hidden min-h-0">
@@ -7194,6 +7589,10 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
         window.toggleNavDrawer = toggleNavDrawer;
         window.closeNavDrawer = closeNavDrawer;
         window.toggleAiDrawer = toggleAiDrawer;
+        window.toggleAiWide = toggleAiWide;
+        window.openEngageOverlay = openEngageOverlay;
+        window.closeEngageOverlay = closeEngageOverlay;
+        window.submitEngageOverlay = submitEngageOverlay;
         window.runAiQuickAction = runAiQuickAction;
         window.applyAiWorkflowPatchFromOutput = applyAiWorkflowPatchFromOutput;
         window.extractWorkflowPatchFromText = extractWorkflowPatchFromText;

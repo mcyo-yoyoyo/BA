@@ -311,7 +311,10 @@
         });
         document.documentElement.lang = lang() === 'en' ? 'en' : 'zh-CN';
         const sw = document.getElementById('lang-sw');
-        if (sw) sw.textContent = lang() === 'en' ? '中' : 'en';
+        if (sw) {
+            sw.textContent = lang() === 'en' ? 'CN' : 'EN';
+            sw.setAttribute('aria-label', lang() === 'en' ? 'Switch to Chinese' : 'Switch to English');
+        }
         if (t('docTitle') && !/deliverable|case/i.test(location.pathname)) document.title = t('docTitle');
         if (root.YouweiAuth && typeof root.YouweiAuth.syncModal === 'function') root.YouweiAuth.syncModal();
     }
