@@ -19,8 +19,25 @@ const MIME = {
     '.jpg': 'image/jpeg',
     '.ico': 'image/x-icon',
     '.woff2': 'font/woff2',
+    '.woff': 'font/woff',
     '.map': 'application/json'
 };
+
+const ALLOWED_UPSTREAM = [
+    'api.deepseek.com',
+    'api.siliconflow.cn',
+    'api.openai.com',
+    'openrouter.ai'
+];
+
+function hostAllowed(hostname) {
+    const h = String(hostname || '').toLowerCase();
+    if (h === 'localhost' || h === '127.0.0.1') return true;
+    let envHost = '';
+    try { envHost = new URL(UPSTREAM).hostname.toLowerCase(); } catch (e) { /* ignore */ }
+    if (envHost && h === envHost) return true;
+    return ALLOWED_UPSTREAM.some((a) => h === a || h.endsWith('.' + a));
+}
 
 function chatUrlFromBase(base) {
     const raw = String(base || '').trim();
@@ -28,6 +45,7 @@ function chatUrlFromBase(base) {
     try {
         const u = new URL(raw);
         if (u.protocol === 'http:' && !/^(localhost|127\.0\.0\.1)$/i.test(u.hostname)) return '';
+        if (!hostAllowed(u.hostname)) return '';
         if (/\/chat\/completions$/i.test(u.href.replace(/\/+$/, ''))) return u.href.replace(/\/+$/, '');
         if (/api\.deepseek\.com/i.test(u.host)) return u.origin.replace(/\/+$/, '') + '/chat/completions';
         const originPath = (u.origin + u.pathname).replace(/\/+$/, '');
@@ -102,6 +120,64 @@ function serveFile(root, req, res) {
     }, fs.readFileSync(target));
 }
 
+function leadsPath(root) {
+    return path.join(root, 'data', 'leads.json');
+}
+
+function readLeads(root) {
+    try {
+        const arr = JSON.parse(fs.readFileSync(leadsPath(root), 'utf8'));
+        return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+async function handleLeads(root, req, res) {
+    const headers = {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'no-store'
+    };
+    if (req.method === 'OPTIONS') {
+        return send(res, 204, {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        }, '');
+    }
+    if (req.method === 'GET') {
+        return send(res, 200, headers, JSON.stringify(readLeads(root)));
+    }
+    if (req.method !== 'POST') {
+        return send(res, 405, headers, JSON.stringify({ ok: false }));
+    }
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    let row = {};
+    try { row = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'); } catch (e) { row = {}; }
+    if (!row || typeof row !== 'object') row = {};
+    const rec = {
+        name: String(row.name || '').trim().slice(0, 80),
+        phone: String(row.phone || '').trim().slice(0, 40),
+        note: String(row.note || '').trim().slice(0, 400),
+        at: String(row.at || new Date().toISOString())
+    };
+    if (!rec.name || !rec.phone) {
+        return send(res, 400, headers, JSON.stringify({ ok: false, message: 'need name and phone' }));
+    }
+    const dir = path.join(root, 'data');
+    fs.mkdirSync(dir, { recursive: true });
+    const list = readLeads(root);
+    list.push(rec);
+    fs.writeFileSync(leadsPath(root), JSON.stringify(list, null, 2));
+    const hook = String(process.env.LEAD_WEBHOOK || '').trim();
+    if (/^https:\/\//i.test(hook)) {
+        fetch(hook, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rec) }).catch(function () {});
+    }
+    return send(res, 200, headers, JSON.stringify({ ok: true }));
+}
+
 function createServer(root) {
     return http.createServer(async (req, res) => {
         const url = new URL(req.url || '/', 'http://127.0.0.1');
@@ -119,6 +195,9 @@ function createServer(root) {
         }
         if (req.method === 'POST' && p.replace(/\/$/, '') === '/api/ai/chat') {
             return proxyChat(req, res);
+        }
+        if (p.replace(/\/$/, '') === '/api/leads') {
+            return handleLeads(root, req, res);
         }
         if (req.method !== 'GET' && req.method !== 'HEAD') {
             return send(res, 405, { 'Content-Type': 'text/plain' }, 'Method Not Allowed');

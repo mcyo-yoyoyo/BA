@@ -1,0 +1,10 @@
+{
+  "org": "客户咨询公司名称",
+  "expires": "2027-08-29",
+  "code": "YW-2026-001",
+  "seats": 3,
+  "bound": true,
+  "home": "https://consult.example.com/",
+  "brand": "友为",
+  "brandEn": "Yoway"
+}

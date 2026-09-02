@@ -1,6 +1,7 @@
 {
   "name": "youwei-desktop",
   "productName": "友为",
+  "author": "YOWAY",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -18,7 +19,7 @@
   "build": {
     "appId": "com.yoway.workshop",
     "productName": "友为",
-    "copyright": "Yoway",
+    "copyright": "Copyright © YOWAY · 创始人 MCYO",
     "asar": true,
     "directories": {
       "output": "dist"
@@ -35,12 +36,16 @@
           "*.html",
           "js/**/*",
           "css/**/*",
+          "img/**/*",
+          "vendor/**/*",
+          "license.json",
+          "license.example.json",
           "!js/accounts.local.js"
         ]
       }
     ],
     "win": {
-      "signAndEditExecutable": false,
+      "signExecutable": false,
       "artifactName": "Youwei-${version}-Setup.${ext}"
     },
     "nsis": {

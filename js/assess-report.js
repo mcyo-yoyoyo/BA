@@ -365,12 +365,47 @@
         ].join('');
     }
 
+    function licenseMeta() {
+        const lic = global.YouweiLicense;
+        const st = lic && lic.status ? lic.status() : {};
+        return {
+            mark: (lic && lic.watermark && lic.watermark()) || '友为评估',
+            brand: (lic && lic.brand && lic.brand()) || '友为',
+            brandEn: (lic && lic.brandEn && lic.brandEn()) || 'Yoway',
+            home: (lic && lic.home && lic.home()) || '',
+            expires: st.expires || '',
+            bound: !!st.bound
+        };
+    }
+
+    function publicHome() {
+        const lic = licenseMeta();
+        if (lic.home) {
+            try {
+                const u = new URL(lic.home);
+                if (/^https?:$/i.test(u.protocol) && !/github\.io$/i.test(u.hostname)) {
+                    return u.href.replace(/\/?$/, '/');
+                }
+            } catch (e) { /* ignore */ }
+        }
+        try {
+            if (!location || location.protocol === 'file:') return '';
+            if (/github\.io$/i.test(location.hostname)) return '';
+            return (location.origin + location.pathname).replace(/[^/]+$/, '');
+        } catch (e) {
+            return '';
+        }
+    }
+
     function coverHtml(meta, counts) {
+        const lic = licenseMeta();
         const toc = STEPS.map(function (s) {
             return '<li><a href="#s' + s.id + '"><span>' + s.id + '　' + esc(s.title) + '</span><i>' + esc(counts[s.id] || '') + '</i></a></li>';
         }).join('');
+        const kicker = esc(lic.brand) + ' · ' + esc(lic.brandEn) + '　评估过程册' +
+            (lic.bound && lic.mark ? '　授权 ' + esc(lic.mark) : '');
         return '<section class="yr-cover" id="cover">' +
-            '<p class="yr-kicker">友为 · Yoway　评估过程册</p>' +
+            '<p class="yr-kicker">' + kicker + '</p>' +
             '<h1>' + esc(meta.org) + '</h1>' +
             '<p class="yr-sub">' + esc(meta.project) + '。按七步还原当时的评估结论，可放大阅读，下载 HTML 即可发给客户。</p>' +
             '<div class="yr-meta">' +
@@ -378,6 +413,8 @@
                 pair('规划周期', meta.horizon) +
                 pair('负责人', meta.owner) +
                 pair('保存时间', meta.saved) +
+                (lic.bound ? pair('授权客户', lic.mark) : '') +
+                (lic.bound && lic.expires ? pair('授权至', lic.expires) : '') +
             '</div>' +
             '<ol class="yr-toc">' +
                 '<li><a href="#brief"><span>结论</span><i>先讲发现与 P0</i></a></li>' +
@@ -634,21 +671,27 @@
             owner: wm.sponsor || '',
             saved: o.savedAt ? formatWhen(o.savedAt) : ''
         };
+        const lic = licenseMeta();
         const body = coverHtml(meta, countsOf(st)) +
             briefHtml(st, meta) +
             step1(st) + step2(st) + step3(st) + step4(st) + step5(st) + step6(st) + step7(st) +
-            '<p class="yr-foot">友为 Yoway · 评估过程册　' + esc(meta.project) +
+            '<p class="yr-foot">' + esc(lic.brand) + ' ' + esc(lic.brandEn) + ' · 评估过程册　' + esc(meta.project) +
+            '　授权：' + esc(lic.mark) +
             '　本文件可直接发给客户。</p>';
-        const siteHome = 'https://mcyo-yoyoyo.github.io/BA/';
-        const nav = '<nav class="yr-nav"><a class="brand" href="' + siteHome + '"><b>友为</b><i>Yoway</i></a>' +
+        const siteHome = publicHome();
+        const workHref = siteHome ? (siteHome + 'workshop.html?mode=pro') : 'workshop.html?mode=pro';
+        const homeHref = siteHome || 'index.html';
+        const nav = '<nav class="yr-nav"><a class="brand" href="' + esc(homeHref) + '"><b>' + esc(lic.brand) + '</b><i>' + esc(lic.brandEn) + '</i></a>' +
             '<a href="#cover">封面</a>' +
             '<a href="#brief"><em>·</em>结论</a>' +
             STEPS.map(function (s) {
                 return '<a href="#s' + s.id + '"><em>' + s.id + '</em>' + esc(s.short) + '</a>';
             }).join('') +
-            '<div class="yr-cta"><p>回到友为平台，继续评估或开新的一场。</p>' +
-            '<a href="' + siteHome + 'workshop.html?mode=pro">开始评估</a></div>' +
-            '<p class="yr-copy"><b>© 友为 Yoway</b>本过程册由友为评估工作台生成，版权归友为所有。公开报道仅供对照，经营数字请以贵司数据为准。</p></nav>';
+            '<div class="yr-cta"><p>回到工作台，继续评估或开新的一场。</p>' +
+            '<a href="' + esc(workHref) + '">打开工作台</a></div>' +
+            '<p class="yr-copy"><b>© ' + esc(lic.brand) + ' ' + esc(lic.brandEn) + '</b>本过程册由' + esc(lic.brand) + '评估工作台生成。授权客户：' +
+            esc(lic.mark) +
+            '。公开报道仅供对照，经营数字请以贵司数据为准。</p></nav>';
         return '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">' +
             '<meta name="viewport" content="width=device-width,initial-scale=1">' +
             '<title>' + esc(meta.project) + ' · 评估过程册</title>' +

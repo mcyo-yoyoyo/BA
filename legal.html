@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用与隐私 · 友为</title>
+    <link rel="stylesheet" href="css/brand.css">
+    <style>
+        .legal { max-width: 720px; margin: 0 auto; padding: 48px 22px 80px; }
+        .legal h1 { margin: 0 0 8px; font-size: 28px; font-weight: 600; letter-spacing: -0.03em; }
+        .legal .lead { margin: 0 0 28px; color: var(--muted); font-size: 15px; line-height: 1.6; }
+        .legal h2 { margin: 28px 0 10px; font-size: 18px; font-weight: 600; }
+        .legal p, .legal li { font-size: 15px; line-height: 1.7; color: #3d3934; }
+        .legal ul { margin: 0 0 12px; padding-left: 1.2em; }
+        .legal a { color: var(--sage); }
+        footer { border-top: 1px solid var(--line); }
+        .footer-inner { max-width: 720px; margin: 0 auto; padding: 18px 22px 28px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+        .nav { border-bottom: 1px solid var(--line); background: #f7f5f0; }
+        .nav-inner { max-width: 720px; margin: 0 auto; padding: 16px 22px; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-inner">
+            <a class="brand" href="index.html"><span class="brand-cn">友为</span><span class="brand-en">Yoway</span></a>
+            <div class="nav-end">
+                <a href="index.html" data-i18n="backHome" style="font-size:13px;color:var(--muted);text-decoration:none">返回首页</a>
+                <button type="button" class="lang-sw" id="lang-sw" aria-label="Switch language">EN</button>
+            </div>
+        </div>
+    </nav>
+    <article class="legal" id="app"></article>
+    <footer>
+        <div class="footer-inner">
+            <span data-i18n="footerLeft">友为 · 从战略到路标</span>
+            <span>
+                <a href="install.html" data-i18n="footerInstall">安装说明</a>
+                ·
+                <span data-i18n="footerRight">公开资料仅供行业对照，不构成业绩承诺。请以贵司经营数据核验。</span>
+            </span>
+        </div>
+    </footer>
+    <script src="js/i18n.js"></script>
+    <script>
+        (function () {
+            const I = window.YouweiI18n;
+            const t = (k) => I ? I.t(k) : k;
+            const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            function paint() {
+                if (I) I.applyStatic();
+                document.title = t('legalTitle') + ' · Yoway';
+                document.getElementById('app').innerHTML =
+                    '<h1>' + esc(t('legalTitle')) + '</h1>' +
+                    '<p class="lead">' + esc(t('legalLead')) + '</p>' +
+                    '<h2>' + esc(t('legalUseT')) + '</h2><ul>' +
+                    [1,2,3,4,5].map(function (n) { return '<li>' + esc(t('legalUse' + n)) + '</li>'; }).join('') +
+                    '</ul><h2>' + esc(t('legalDataT')) + '</h2><ul>' +
+                    [1,2,3,4,5].map(function (n) { return '<li>' + esc(t('legalData' + n)) + '</li>'; }).join('') +
+                    '</ul><h2>' + esc(t('legalNoT')) + '</h2><p>' + esc(t('legalNo')) + '</p>' +
+                    '<h2>' + esc(t('legalPackT')) + '</h2><p>' + esc(t('legalPack')) + '</p>' +
+                    '<p><a href="install.html">' + esc(t('legalToInstall')) + '</a></p>';
+            }
+            paint();
+            if (I) I.bindToggle(paint);
+        })();
+    </script>
+</body>
+</html>

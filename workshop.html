@@ -4,31 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>友为 · 从战略到路标</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI', 'Microsoft YaHei', 'sans-serif'],
-                    },
-                    colors: {
-                        canvas: { DEFAULT: '#f4f1ea', subtle: '#f7f5f0' },
-                        ink: { DEFAULT: '#161513', secondary: '#4f4b45', tertiary: '#6e695f' },
-                        accent: { DEFAULT: '#3d534b', hover: '#2d3f39', muted: 'rgba(61,83,75,0.10)' },
-                        line: 'rgba(22,21,19,0.12)',
-                    },
-                    boxShadow: {
-                        card: '0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04)',
-                        nav: '0 1px 2px rgba(0,0,0,0.04)',
-                    },
-                },
-            },
-        };
-    </script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/workshop-tw.css">
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="css/workshop-unify.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="css/yoway-orb.css">
+    <script src="js/xlsx.min.js"></script>
     <style>
         :root {
             /* 顶栏高度由脚本写入，供侧栏按钮避让 sticky header */
@@ -439,7 +419,8 @@
             display: grid; place-items: center;
             font-size: 12px; font-weight: 650; letter-spacing: 0;
         }
-        .ai-ava.bot { background: #3d534b; color: #f7f6f2; }
+        .ai-ava.bot { background: transparent; color: transparent; overflow: visible; }
+        .ai-ava.bot .yoway-orb { width: 32px; height: 32px; }
         .ai-ava.user { background: #2c2a26; color: #f7f6f2; }
         .ai-bubble { border-radius: 14px; padding: 8px 11px; font-size: 12px; line-height: 1.55; min-width: 0; max-width: 100%; word-break: break-word; }
         .ai-bubble.user { background: #dce6e1; color: #161513; border-radius: 14px 4px 14px 14px; }
@@ -631,7 +612,11 @@
 
     <script src="js/accounts.js"></script>
     <script src="js/accounts.local.js"></script>
+    <script src="js/license.js"></script>
+    <script src="js/scoped-store.js"></script>
+    <script src="js/audit-log.js"></script>
     <script src="js/auth-gate.js"></script>
+    <script src="js/yoway-orb.js"></script>
     <script>if (window.YouweiAuth) YouweiAuth.guardWorkshop();</script>
     <script src="js/cases-data.js"></script>
     <script src="js/ops-store.js"></script>
@@ -3477,13 +3462,16 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             root.id = 'ai-assistant-root';
             root.className = 'ai-assistant-root print-hidden';
             root.innerHTML = `
-                <aside id="ai-assistant-rail" class="${aiDrawerVisible ? 'hidden' : ''}" aria-label="点击唤醒AI助手YOWAY">
-                    <button type="button" onclick="toggleAiDrawer()" title="点击唤醒AI助手YOWAY">点击唤醒AI助手YOWAY</button>
+                <aside id="ai-assistant-rail" class="${aiDrawerVisible ? 'hidden' : ''}" aria-label="唤醒 YOWAY">
+                    <button type="button" class="yoway-wake is-rail" onclick="toggleAiDrawer()" title="唤醒 YOWAY" aria-label="唤醒 YOWAY">
+                        ${(window.YowayOrb && YowayOrb.markup()) || '<span class="yoway-orb"></span>'}
+                        <span class="yoway-wake-txt"><small>唤醒</small><b>YOWAY</b></span>
+                    </button>
                 </aside>
                 <div id="ai-assistant-drawer" class="ai-assistant-drawer youwei-ai-dock ${aiDrawerVisible ? '' : 'hidden'} print-hidden" role="complementary" aria-label="YOWAY">
                     <div class="flex items-center justify-between gap-2 px-3 py-2 border-b border-black/[0.06] bg-canvas/90 shrink-0">
                         <div class="flex items-center gap-2 flex-1 min-w-0 rounded-[8px] px-1 py-0.5 -ml-1">
-                            <span class="ai-ava bot shrink-0" aria-hidden="true">Y</span>
+                            <span class="ai-ava bot shrink-0" aria-hidden="true">${(window.YowayOrb && YowayOrb.markup('sm')) || 'Y'}</span>
                             <div class="min-w-0">
                             <p class="text-[13px] font-semibold text-ink leading-tight tracking-[0.14em]">YOWAY</p>
                             <p id="ai-mode-badge" class="text-[10px] text-ink-tertiary truncate mt-0.5">体验模式</p>
@@ -3565,6 +3553,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             renderNav();
             renderStepProgress();
             migrateCapabilityFrameworkGapScores();
+            restoreDraftIfAny();
             applyWorkshopQueryContext();
             initAiAssistant();
             ensureEngageOverlay();
@@ -3598,6 +3587,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             }
             currentState.workspaceMeta[key] = val;
             if (typeof renderEngagementChrome === 'function') renderEngagementChrome();
+            scheduleDraftSave();
         }
 
         function guardRoadmapAccess(targetStep) {
@@ -3678,6 +3668,10 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
 
         function loadBlueprintHistoryList() {
             try {
+                if (window.YouweiStore && YouweiStore.loadHistory) {
+                    const arr = YouweiStore.loadHistory();
+                    return Array.isArray(arr) ? arr.slice(0, blueprintHistoryMax()) : [];
+                }
                 const raw = localStorage.getItem(BLUEPRINT_HISTORY_LS);
                 const arr = raw ? JSON.parse(raw) : [];
                 return Array.isArray(arr) ? arr.slice(0, blueprintHistoryMax()) : [];
@@ -3688,10 +3682,45 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
 
         function saveBlueprintHistoryList(list) {
             try {
-                localStorage.setItem(BLUEPRINT_HISTORY_LS, JSON.stringify(list.slice(0, blueprintHistoryMax())));
+                const next = list.slice(0, blueprintHistoryMax());
+                if (window.YouweiStore && YouweiStore.saveHistory) YouweiStore.saveHistory(next);
+                else localStorage.setItem(BLUEPRINT_HISTORY_LS, JSON.stringify(next));
             } catch (e) {
                 toast('本地存储失败，请清理浏览器空间后重试', 'error');
             }
+        }
+
+        function draftLooksUsed(snap) {
+            if (!snap || typeof snap !== 'object') return false;
+            const wm = snap.workspaceMeta || {};
+            if (String(wm.organizationName || '').trim() || String(wm.projectName || '').trim()) return true;
+            if ((snap.initiatives || []).length) return true;
+            const bmc = snap.bmc || {};
+            return Object.keys(bmc).some(function (k) { return String(bmc[k] || '').trim(); });
+        }
+
+        function restoreDraftIfAny() {
+            if (!window.YouweiStore || !YouweiStore.loadDraft) return;
+            const d = YouweiStore.loadDraft();
+            if (!d || !draftLooksUsed(d.snapshot)) return;
+            applyWorkflowSnapshot(d.snapshot);
+            if (d.step >= 1 && d.step <= STEP_TOTAL) currentState.step = d.step;
+            toast('已恢复本机草稿');
+        }
+
+        function scheduleDraftSave() {
+            if (!window.YouweiStore || !YouweiStore.saveDraft) return;
+            clearTimeout(window.__youweiDraftTimer);
+            window.__youweiDraftTimer = setTimeout(function () {
+                try {
+                    YouweiStore.saveDraft({
+                        step: currentState.step,
+                        activePanel: currentState.activePanel,
+                        snapshot: getSerializableWorkflowSnapshot(),
+                        at: Date.now()
+                    });
+                } catch (e) { /* ignore */ }
+            }, 500);
         }
 
         function getSerializableWorkflowSnapshot() {
@@ -3941,14 +3970,21 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
         function loadHtml2Canvas() {
             if (window.html2canvas) return Promise.resolve(window.html2canvas);
             return new Promise(function (resolve, reject) {
-                const s = document.createElement('script');
-                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-                s.onload = function () {
-                    if (window.html2canvas) resolve(window.html2canvas);
-                    else reject(new Error('截图组件未就绪'));
-                };
-                s.onerror = function () { reject(new Error('截图组件加载失败')); };
-                document.head.appendChild(s);
+                function attach(src, fallback) {
+                    const s = document.createElement('script');
+                    s.src = src;
+                    s.onload = function () {
+                        if (window.html2canvas) resolve(window.html2canvas);
+                        else if (fallback) attach(fallback, '');
+                        else reject(new Error('截图组件未就绪'));
+                    };
+                    s.onerror = function () {
+                        if (fallback) attach(fallback, '');
+                        else reject(new Error('截图组件加载失败'));
+                    };
+                    document.head.appendChild(s);
+                }
+                attach('js/html2canvas.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
             });
         }
 
@@ -4216,6 +4252,10 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
         /** 步骤 7 底部「保存」：门槛通过后写入底稿，并生成带结论页的评估过程册 */
         async function saveBlueprintHistory() {
             if (currentState.step !== STEP_TOTAL || currentState.activePanel !== 'workflow') return;
+            if (window.YouweiLicense && YouweiLicense.expired()) {
+                toast('授权已到期，不能再生成新的过程册。已保存底稿仍可查看。', 'error');
+                return;
+            }
             if (!currentState.initiatives.length) {
                 toast('请先完成前面的步骤并生成举措与路标数据后再保存', 'error');
                 return;
@@ -4250,6 +4290,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             list.unshift(record);
             saveBlueprintHistoryList(list);
             renderSidebarHistoryPanel();
+            if (window.YouweiAudit) YouweiAudit.add('save_book', title);
             if (!window.YouweiPack || !YouweiPack.buildAndStore) {
                 toast('已保存底稿。过程册组件未加载');
                 if (window.YouweiP2 && YouweiP2.afterSaveVisit) YouweiP2.afterSaveVisit();
@@ -6414,6 +6455,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             }
             updateWorkflowFooter();
             refreshAiAssistantUi();
+            scheduleDraftSave();
         }
 
         const ENGAGE_COLLAPSE_LS = 'youwei_engage_collapsed_v1';

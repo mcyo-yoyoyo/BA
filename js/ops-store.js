@@ -32,7 +32,7 @@
             secondaryLabel: '看行业场景',
             secondaryHref: '#cases',
             footerLeft: '友为 · 从战略到路标',
-            footerRight: '公开报道与官网信息仅供对照，请用贵司经营数据确认。'
+            footerRight: '公开资料仅供行业对照，不构成业绩承诺。请以贵司经营数据核验。'
         };
     }
 

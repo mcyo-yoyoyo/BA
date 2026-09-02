@@ -9,7 +9,7 @@
         .nav {
             position: sticky; top: 0; z-index: 40;
             backdrop-filter: saturate(160%) blur(18px);
-            background: rgba(250, 249, 246, .82);
+            background: rgba(247, 245, 240, .92);
             border-bottom: 1px solid var(--line);
         }
         .nav-inner {
@@ -20,42 +20,89 @@
         .nav-links { display: flex; align-items: center; gap: 18px; font-size: 14px; color: var(--muted); }
         .nav-links a { text-decoration: none; }
         .nav-links a:hover { color: var(--ink); }
-        .pill {
-            display: inline-flex; align-items: center;
-            background: var(--sage); color: #f7f6f2 !important;
-            border-radius: 980px; padding: 7px 14px; font-weight: 550;
+        .page { max-width: var(--page); margin: 0 auto; padding: 36px var(--gutter) 72px; }
+        .layout {
+            display: grid; grid-template-columns: 168px minmax(0, 1fr);
+            gap: 40px; align-items: start;
         }
-        .pill:hover { background: var(--sage-hover); }
-        .hero { padding: 72px 22px 36px; text-align: center; background: var(--canvas); }
+        .toc {
+            position: sticky; top: 88px;
+            padding: 4px 0 8px;
+        }
+        .toc p {
+            margin: 0 0 10px; font-size: 11px; letter-spacing: .08em;
+            color: var(--sage); font-weight: 650;
+        }
+        .toc a {
+            display: block; text-decoration: none;
+            font-size: 13px; line-height: 1.35;
+            padding: 7px 0 7px 12px; margin: 0;
+            color: var(--muted); border-left: 2px solid transparent;
+        }
+        .toc a:hover, .toc a.is-on { color: var(--ink); border-left-color: var(--sage); }
+        .col { max-width: 36rem; }
+        .hero { padding: 8px 0 28px; text-align: left; background: none; }
         .kicker {
-            font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
-            color: var(--sage); font-weight: 650; margin: 0 0 14px;
+            font-size: 13px; letter-spacing: .04em;
+            color: var(--sage); font-weight: 650; margin: 0 0 10px;
         }
         h1 {
-            margin: 0 auto 16px; max-width: 20em;
-            font-size: clamp(28px, 5vw, 56px); line-height: 1.15;
+            margin: 0 0 12px; max-width: none;
+            font-size: clamp(28px, 4vw, 40px); line-height: 1.2;
             font-weight: 600; letter-spacing: -.03em;
         }
-        .lead {
-            margin: 0 auto; max-width: 36rem;
-            font-size: 18px; line-height: 1.5; color: var(--muted);
+        .lead { margin: 0; max-width: none; font-size: 17px; line-height: 1.55; color: var(--muted); }
+        .btn-sage {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 148px; height: 40px; padding: 0 18px;
+            border-radius: 980px; background: var(--sage); color: #f7f6f2;
+            text-decoration: none; font-size: 14px; font-weight: 600;
         }
-        .actions { margin-top: 28px; display: flex; justify-content: center; gap: 22px; flex-wrap: wrap; }
-        .text-link { color: var(--sage); text-decoration: none; font-size: 16px; }
+        .btn-sage:hover { background: var(--sage-hover); }
+        .actions { margin-top: 22px; display: flex; justify-content: flex-start; gap: 20px; flex-wrap: wrap; align-items: center; }
+        .text-link { color: var(--sage); text-decoration: none; font-size: 15px; }
         .text-link:hover { text-decoration: underline; }
+        .who { margin: 0 0 8px; max-width: none; font-size: 14px; color: var(--sage); font-weight: 550; }
         .metric-band {
-            max-width: var(--page); margin: 0 auto; padding: 28px var(--gutter) 48px;
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+            max-width: none; margin: 8px 0 36px; padding: 0;
+            display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
         }
         .metric {
-            background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 24px 22px;
+            background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px 14px;
         }
-        .metric b { display: block; font-size: 30px; letter-spacing: -.03em; font-weight: 600; }
-        .metric span { display: block; margin-top: 6px; font-size: 13px; color: var(--muted); line-height: 1.45; }
-        .wrap { max-width: 760px; margin: 0 auto; padding: 0 var(--gutter) 88px; }
-        .block { margin-bottom: 44px; }
-        .block h2 { font-size: 26px; letter-spacing: -.03em; margin: 0 0 12px; font-weight: 620; color: var(--ink); }
-        .block p { margin: 0; font-size: 17px; line-height: 1.65; color: var(--ink); }
+        .metric b { display: block; font-size: 20px; letter-spacing: -.03em; font-weight: 600; }
+        .metric span { display: block; margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.45; }
+        .wrap { max-width: none; margin: 0; padding: 0; }
+        .block { margin-bottom: 44px; scroll-margin-top: 96px; }
+        .block h2 { font-size: 22px; letter-spacing: -.03em; margin: 0 0 12px; font-weight: 620; color: var(--ink); }
+        .block p { margin: 0; font-size: 16px; line-height: 1.65; color: var(--ink); }
+        .pain-grid, .goal-split {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 16px;
+        }
+        .goal-split { grid-template-columns: 1fr 1fr; }
+        .pain-card, .goal-card {
+            background: var(--canvas); border: 1px solid var(--line); border-radius: 12px; padding: 16px 16px 14px;
+        }
+        .pain-card b, .goal-card b { display: block; font-size: 12px; letter-spacing: .08em; color: var(--sage); margin-bottom: 8px; font-weight: 650; }
+        .pain-card p, .goal-card p { font-size: 15px; line-height: 1.55; margin: 0; }
+        .step-rows { margin-top: 16px; border-top: 1px solid var(--line); }
+        .step-rows article {
+            display: grid; grid-template-columns: 72px 1fr; gap: 14px;
+            padding: 14px 0; border-bottom: 1px solid var(--line);
+        }
+        .step-rows .n { font-size: 12px; font-weight: 650; color: var(--sage); padding-top: 2px; }
+        .step-rows b { display: block; font-size: 15px; font-weight: 620; margin-bottom: 4px; }
+        .step-rows span { display: block; font-size: 14px; line-height: 1.5; color: var(--muted); }
+        .empathy { margin: 16px 0 0; padding: 0; list-style: none; }
+        .empathy li {
+            margin: 0 0 10px; padding: 12px 14px 12px 36px; position: relative;
+            background: var(--canvas); border: 1px solid var(--line); border-radius: 10px;
+            font-size: 16px; line-height: 1.55;
+        }
+        .empathy li::before {
+            content: ''; position: absolute; left: 14px; top: 16px;
+            width: 12px; height: 12px; border: 1.5px solid var(--sage); border-radius: 2px;
+        }
         .facts { margin: 16px 0 0; padding: 0; list-style: none; }
         .facts li {
             margin: 0 0 10px; padding-left: 14px; position: relative;
@@ -76,7 +123,7 @@
             padding: 4px 9px; border-radius: 980px;
             background: var(--sage-soft); color: var(--sage);
         }
-        .scqa-label { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--sage); font-weight: 650; margin: 0 0 8px; }
+        .scqa-label { font-size: 12px; letter-spacing: .06em; color: var(--sage); font-weight: 650; margin: 0 0 8px; }
         .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
         .chip {
             font-size: 12px; padding: 6px 10px; border-radius: 980px;
@@ -94,9 +141,24 @@
             border-top: 1px solid var(--line);
             padding: 28px 22px 48px; color: var(--dim); font-size: 12px;
         }
-        .footer-inner { max-width: 1080px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-        @media (max-width: 720px) {
-            .metric-band { grid-template-columns: 1fr; }
+        .footer-inner { max-width: var(--page); margin: 0 auto; padding: 0 var(--gutter); display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+        @media (max-width: 860px) {
+            .layout { grid-template-columns: 1fr; gap: 0; }
+            .toc {
+                position: sticky; top: 64px; z-index: 30;
+                display: flex; flex-wrap: nowrap; gap: 4px;
+                overflow-x: auto; -webkit-overflow-scrolling: touch;
+                padding: 10px 0 8px; margin: 0 0 18px;
+                background: rgba(247, 245, 240, .94);
+                border-bottom: 1px solid var(--line);
+            }
+            .toc p { display: none; }
+            .toc a {
+                flex: none; border-left: 0; border-bottom: 2px solid transparent;
+                padding: 6px 10px; white-space: nowrap;
+            }
+            .toc a:hover, .toc a.is-on { border-left-color: transparent; border-bottom-color: var(--sage); }
+            .metric-band, .pain-grid, .goal-split { grid-template-columns: 1fr; }
             .nav-links a.hide-sm { display: none; }
         }
     </style>
@@ -110,11 +172,24 @@
             </a>
             <div class="nav-end">
                 <div class="nav-links">
-                    <a class="hide-sm" href="index.html#method" data-i18n="navMethod">方法</a>
-                    <a class="hide-sm" href="index.html#cases" data-i18n="navScenes">场景</a>
-                    <a class="hide-sm" href="index.html#deliverables" data-i18n="navTake">带走</a>
-                    <a class="pill" href="workshop.html?mode=pro" data-i18n="cta">开始评估</a>
+                    <a class="hide-sm" href="index.html#cases" data-i18n="navScenes">行业案例</a>
+                    <a class="hide-sm" href="index.html#method" data-i18n="navMethod">诊断方法</a>
+                    <a class="hide-sm" href="index.html#deliverables" data-i18n="navTake">评估成果</a>
                 </div>
+                <a class="yoway-wake nav-cta" href="workshop.html?mode=pro" aria-label="唤醒 YOWAY">
+                    <span class="yoway-orb" aria-hidden="true">
+                        <span class="yoway-orb-glow"></span>
+                        <span class="yoway-orb-orbit"></span>
+                        <span class="yoway-orb-body">
+                            <span class="yoway-orb-shine"></span>
+                            <span class="yoway-orb-visor"><i></i><i></i></span>
+                        </span>
+                        <span class="yoway-orb-ear is-l"></span>
+                        <span class="yoway-orb-ear is-r"></span>
+                        <span class="yoway-orb-burst"></span>
+                    </span>
+                    <span class="yoway-wake-txt"><small data-i18n="wakeVerb">唤醒</small><b>YOWAY</b></span>
+                </a>
                 <button type="button" class="lang-sw" id="lang-sw" aria-label="Switch language">EN</button>
             </div>
         </div>
@@ -123,103 +198,201 @@
     <footer>
         <div class="footer-inner">
             <span data-i18n="footerLeft">友为 · 从战略到路标</span>
-            <span>行业场景供评估对照，目标数字请用贵司数据确认。</span>
+            <span>
+                <a href="legal.html" data-i18n="footerLegal">使用与隐私</a>
+                ·
+                <a href="install.html" data-i18n="footerInstall">安装说明</a>
+                ·
+                <span data-i18n="footerRight">公开资料仅供行业对照，不构成业绩承诺。请以贵司经营数据核验。</span>
+            </span>
         </div>
     </footer>
     <script src="js/i18n.js"></script>
     <script src="js/cases-data.js"></script>
+    <script src="js/cases-i18n.js"></script>
     <script src="js/ops-store.js"></script>
     <script src="js/accounts.js"></script>
     <script src="js/accounts.local.js"></script>
+    <script src="js/license.js"></script>
+    <script src="js/scoped-store.js"></script>
+    <script src="js/audit-log.js"></script>
     <script src="js/auth-gate.js"></script>
+    <script src="js/yoway-orb.js"></script>
     <script>YouweiAuth.initPublic();</script>
     <script>
         (function () {
-            if (window.YouweiI18n) {
-                YouweiI18n.applyStatic();
-                YouweiI18n.bindToggle();
-            }
+            const I = window.YouweiI18n;
+            const t = (k) => I ? I.t(k) : k;
+            const d = () => (I && I.dict()) || {};
             const params = new URLSearchParams(location.search);
-            const item = window.getWendaoCaseById(params.get('id'));
+            const raw = window.getWendaoCaseById(params.get('id'));
             const app = document.getElementById('app');
-            if (!item) {
-                document.title = '未找到这条场景 · 友为';
-                app.innerHTML = '<div class="missing"><h1>没有这条场景</h1><p class="lead" style="margin-top:16px">回到首页继续浏览。</p><p class="actions"><a class="text-link" href="index.html">返回首页</a></p></div>';
-                return;
-            }
-            document.title = item.title + ' · 友为';
             const esc = (s) => String(s == null ? '' : s)
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-            const studio = 'workshop.html?case=' + encodeURIComponent(item.id) + '&mode=pro';
-            const ev = item.evidence || { status: 'assumption', baseline: '—', target: item.metric.label, note: '评估目标' };
-            const evLabel = ev.status === 'confirmed' ? '已确认' : '评估目标';
+            const studio = raw ? ('workshop.html?case=' + encodeURIComponent(raw.id) + '&mode=pro') : 'workshop.html?mode=pro';
+            const navWake = document.querySelector('.yoway-wake');
+            if (navWake) navWake.setAttribute('href', studio);
+
+            function industryName(item) {
+                const key = item.industry === '汽车' ? 'auto' : item.industry === '家电' ? 'appliance' : '3c';
+                const pack = d().ind && d().ind[key];
+                return (pack && pack.name) || item.industry;
+            }
+
+            function paint() {
+                if (I) I.applyStatic();
+                if (!raw) {
+                    document.title = t('caseMissing') + ' · Yoway';
+                    app.innerHTML = '<div class="missing"><h1>' + esc(t('caseMissing')) + '</h1><p class="lead" style="margin-top:16px">' + esc(t('caseMissingLead')) + '</p><p class="actions"><a class="text-link" href="index.html">' + esc(t('backHome')) + '</a></p></div>';
+                    return;
+                }
+                const item = I && I.localizeCase ? I.localizeCase(raw) : raw;
+            document.title = item.title + ' · Yoway';
+            const ev = item.evidence || { status: 'assumption', baseline: '—', target: item.metric && item.metric.label, note: t('evNote') };
+            const evLabel = ev.status === 'confirmed' ? t('evConfirmed') : t('evAssumption');
             const facts = item.publicFacts || [];
             const refs = item.references || [];
-            const factBlock = facts.length ? `
-                    <section class="block">
-                        <p class="scqa-label">公开对照</p>
-                        <h2>可信信源里怎么做</h2>
-                        ${item.sourceNote ? `<p class="source">${esc(item.sourceNote)}</p>` : ''}
-                        <ul class="facts">${facts.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
-                        ${refs.length ? `<ul class="refs">${refs.map((r) => `<li><a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">${esc(r.label)}</a></li>`).join('')}</ul>` : ''}
-                    </section>` : '';
+            const pains = item.pains || {};
+            const steps = item.steps || [];
+            const empathy = item.empathy || [];
+            const phaseName = { P0: t('phaseNear'), P1: t('phaseMid'), P2: t('phaseLater') };
+            const STEP_META = d().caseSteps || [];
+            const TOC = [
+                { id: 'sec-now', label: t('caseNow') },
+                { id: 'sec-pain', label: t('casePain') },
+                { id: 'sec-goal', label: t('caseGoal') },
+                { id: 'sec-facts', label: t('caseFacts') },
+                { id: 'sec-steps', label: t('casePath') },
+                { id: 'sec-done', label: t('caseDone') },
+                { id: 'sec-you', label: t('caseFit') },
+                { id: 'sec-start', label: t('caseStart') }
+            ];
+            const siblings = (window.WENDAO_CASES || []).filter((c) => c.industry === raw.industry && c.id !== raw.id).slice(0, 3);
+            const painBlock = `
+                <div class="pain-grid">
+                    <article class="pain-card"><b>${esc(t('painOps'))}</b><p>${esc(pains.ops || item.complication || item.challenge || '')}</p></article>
+                    <article class="pain-card"><b>${esc(t('painOrg'))}</b><p>${esc(pains.org || t('painOrgFallback'))}</p></article>
+                    <article class="pain-card"><b>${esc(t('painData'))}</b><p>${esc(pains.data || t('painDataFallback'))}</p></article>
+                </div>`;
+            const goalBlock = `
+                <div class="goal-split">
+                    <article class="goal-card"><b>${esc(t('goalCard'))}</b><p>${esc(item.goal || item.outcome || '')}</p></article>
+                    <article class="goal-card"><b>${esc(t('windowCard'))}</b><p>${esc(item.window || item.complication || '')}</p></article>
+                </div>`;
+            const stepBlock = `
+                <div class="step-rows">
+                    ${STEP_META.map((meta, i) => {
+                        const row = steps[i] || {};
+                        return `<article>
+                            <div class="n">${meta.n}</div>
+                            <div>
+                                <b>${esc(meta.name)}</b>
+                                <span>${esc(meta.hint)}</span>
+                                <span>${esc(row.look || '')}</span>
+                                ${row.out ? `<span>${esc(row.out)}</span>` : ''}
+                            </div>
+                        </article>`;
+                    }).join('')}
+                </div>`;
             app.innerHTML = `
-                <header class="hero">
-                    <p class="kicker">${esc(item.kicker)}</p>
-                    <h1>${esc(item.title)}</h1>
-                    <p class="lead">${esc(item.tagline)}</p>
-                    <div class="actions">
-                        <a class="pill" href="${studio}">用此场景开始评估</a>
-                        <a class="text-link" href="index.html#cases">返回行业案例</a>
-                    </div>
-                </header>
-                <section class="metric-band">
-                    <div class="metric">
-                        <b>${esc(item.metric.value)}</b>
-                        <span>${esc(item.metric.label)}</span>
-                        <span class="ev-pill">${evLabel} · 需用贵司数据校准</span>
-                    </div>
-                    <div class="metric"><b>现在常见情况</b><span>${esc(ev.baseline || '待您填入现状')}</span></div>
-                    <div class="metric"><b>评估目标</b><span>${esc(ev.target || item.metric.label)}</span></div>
-                </section>
-                <main class="wrap">
-                    <section class="block">
-                        <p class="scqa-label">背景</p>
-                        <h2>业务长什么样</h2>
-                        <p>${esc(item.situation || item.subtitle)}</p>
-                    </section>
-                    <section class="block">
-                        <p class="scqa-label">卡点</p>
-                        <h2>为什么现在要动手</h2>
-                        <p>${esc(item.complication || item.challenge)}</p>
-                    </section>
-                    ${factBlock}
-                    <section class="block">
-                        <p class="scqa-label">做法</p>
-                        <h2>评估会顺着哪条链看</h2>
-                        <p>${esc(item.approach)}</p>
-                        <div class="chips">${(item.highlights || []).map((h) => `<span class="chip">${esc(h)}</span>`).join('')}</div>
-                    </section>
-                    <section class="block">
-                        <p class="scqa-label">结果</p>
-                        <h2>如果做成，会看到什么</h2>
-                        <p>${esc(item.outcome)}</p>
-                        <p style="margin-top:12px;font-size:14px;color:var(--dim)">${esc(ev.note || '')}</p>
-                        <div class="ini">
-                            ${(item.initiativesPreview || []).map((x) => `<article><div class="phase">${esc(x.phase)}</div><div>${esc(x.title)}</div></article>`).join('')}
+                <div class="page">
+                    <div class="layout">
+                        <nav class="toc" aria-label="${esc(t('tocPage'))}">
+                            <p>${esc(t('tocPage'))}</p>
+                            ${TOC.map((row) => `<a href="#${row.id}">${esc(row.label)}</a>`).join('')}
+                        </nav>
+                        <div class="col">
+                            <header class="hero">
+                                <p class="kicker">${esc(industryName(item))} · ${esc(item.kicker)}</p>
+                                ${item.audience ? `<p class="who">${esc(item.audience)}</p>` : ''}
+                                <h1>${esc(item.title)}</h1>
+                                <p class="lead">${esc(item.tagline)}</p>
+                                <div class="actions">
+                                    <a class="btn-sage" href="${studio}">${esc(t('startCase'))}</a>
+                                    <a class="text-link" href="index.html#cases">${esc(t('backCases'))}</a>
+                                </div>
+                            </header>
+                            <section class="block" id="sec-now">
+                                <p class="scqa-label">01 · ${esc(t('caseNow'))}</p>
+                                <h2>${esc(t('caseNowH2'))}</h2>
+                                <p>${esc(item.situation || item.subtitle)}</p>
+                            </section>
+                            <section class="block" id="sec-pain">
+                                <p class="scqa-label">02 · ${esc(t('casePain'))}</p>
+                                <h2>${esc(t('casePainH2'))}</h2>
+                                ${painBlock}
+                            </section>
+                            <section class="block" id="sec-goal">
+                                <p class="scqa-label">03 · ${esc(t('caseGoal'))}</p>
+                                <h2>${esc(t('caseGoalH2'))}</h2>
+                                ${goalBlock}
+                            </section>
+                            <section class="block" id="sec-facts">
+                                <p class="scqa-label">04 · ${esc(t('caseFacts'))}</p>
+                                <h2>${esc(t('caseFactsH2'))}</h2>
+                                <p class="source">${esc(t('caseFactsNote'))}</p>
+                                ${item.sourceNote ? `<p class="source">${esc(item.sourceNote)}</p>` : ''}
+                                <ul class="facts">${facts.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+                                ${refs.length ? `<ul class="refs">${refs.map((r) => `<li><a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">${esc(r.label)}</a></li>`).join('')}</ul>` : ''}
+                            </section>
+                            <section class="block" id="sec-steps">
+                                <p class="scqa-label">05 · ${esc(t('casePath'))}</p>
+                                <h2>${esc(t('casePathH2'))}</h2>
+                                ${stepBlock}
+                            </section>
+                            <section class="block" id="sec-done">
+                                <p class="scqa-label">06 · ${esc(t('caseDone'))}</p>
+                                <h2>${esc(t('caseDoneH2'))}</h2>
+                                <p>${esc(item.outcome || '')}</p>
+                                <p class="source" style="margin-top:10px">${esc(ev.note || t('evNote'))}</p>
+                                <div class="metric-band">
+                                    <div class="metric">
+                                        <b>${esc(item.metric.value)}</b>
+                                        <span>${esc(item.metric.label)}</span>
+                                        <span class="ev-pill">${evLabel}</span>
+                                    </div>
+                                    <div class="metric"><b>${esc(t('metricNow'))}</b><span>${esc(ev.baseline || '—')}</span></div>
+                                    <div class="metric"><b>${esc(t('metricTarget'))}</b><span>${esc(ev.target || (item.metric && item.metric.label) || '')}</span></div>
+                                </div>
+                                <div class="ini">
+                                    ${(item.initiativesPreview || []).map((x) => `<article><div class="phase">${esc(phaseName[x.phase] || x.phase)}</div><div>${esc(x.title)}</div></article>`).join('')}
+                                </div>
+                            </section>
+                            ${empathy.length ? `
+                            <section class="block" id="sec-you">
+                                <p class="scqa-label">07 · ${esc(t('caseFit'))}</p>
+                                <h2>${esc(t('caseFitH2'))}</h2>
+                                <p>${esc(t('caseFitLead'))}</p>
+                                <ul class="empathy">${empathy.map((line) => `<li>${esc(line)}</li>`).join('')}</ul>
+                            </section>` : '<div id="sec-you"></div>'}
+                            <section class="block" id="sec-start">
+                                <p class="scqa-label">08 · ${esc(t('caseStart'))}</p>
+                                <h2>${esc(t('caseStartH2'))}</h2>
+                                <p>${esc(t('caseStartLead'))}</p>
+                                ${siblings.length ? `<div class="chips">${siblings.map((c) => { const loc = I && I.localizeCase ? I.localizeCase(c) : c; return `<a class="chip" href="case.html?id=${encodeURIComponent(c.id)}" style="text-decoration:none">${esc(loc.kicker)}</a>`; }).join('')}</div>` : ''}
+                                <p class="actions">
+                                    <a class="btn-sage" href="${studio}">${esc(t('cta'))}</a>
+                                    <a class="text-link" href="index.html#cases">${esc(t('moreCases'))}</a>
+                                </p>
+                            </section>
                         </div>
-                    </section>
-                    <section class="block">
-                        <p class="scqa-label">下一步</p>
-                        <h2>用贵司情况改写这条场景</h2>
-                        <p>公开做法只供对照。进入工作台后，按您自己的业务补名称和负责人，写成能力视图与变革规划。</p>
-                        <p class="actions" style="justify-content:flex-start;margin-top:20px">
-                            <a class="pill" href="${studio}">开始评估</a>
-                            <a class="text-link" href="index.html#cases">看其它场景</a>
-                        </p>
-                    </section>
-                </main>
+                    </div>
+                </div>
             `;
+            const tocLinks = [...app.querySelectorAll('.toc a')];
+            const sections = TOC.map((row) => document.getElementById(row.id)).filter(Boolean);
+            if (window.IntersectionObserver && sections.length) {
+                const io = new IntersectionObserver((entries) => {
+                    entries.forEach((entry) => {
+                        if (!entry.isIntersecting) return;
+                        tocLinks.forEach((a) => a.classList.toggle('is-on', a.getAttribute('href') === '#' + entry.target.id));
+                    });
+                }, { rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+                sections.forEach((sec) => io.observe(sec));
+            }
+            }
+            paint();
+            if (I) I.bindToggle(paint);
         })();
     </script>
 </body>

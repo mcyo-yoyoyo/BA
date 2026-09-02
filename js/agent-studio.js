@@ -268,6 +268,7 @@
         if (!aiChatHistory.length) {
             const hint = (root.getStepAiEmptyHint && root.getStepAiEmptyHint()) || '结合左侧当前步骤提问。';
             out.innerHTML = '<p class="ai-chat-empty">' + escapeChat(hint) + '</p>';
+            syncOrbState();
             return;
         }
         out.innerHTML = aiChatHistory.map((m) => {
@@ -282,14 +283,26 @@
                 : m.source === 'draft'
                     ? '<span class="ai-src is-draft">本地草稿</span>'
                     : '';
+            const ava = m.role === 'user'
+                ? `<span class="ai-ava user" aria-hidden="true">${escapeChat(glyph)}</span>`
+                : `<span class="ai-ava bot" aria-hidden="true">${root.YowayOrb ? YowayOrb.markup('xs') : 'Y'}</span>`;
             return `<div class="ai-row ${side}">` +
-                `<span class="ai-ava ${side}" aria-hidden="true">${escapeChat(glyph)}</span>` +
+                ava +
                 `<div class="ai-stack">` +
                 `<span class="ai-who">${escapeChat(who)}</span>` +
                 `<div class="ai-bubble ${side}">${body}${src}</div>` +
                 `</div></div>`;
         }).join('');
         out.scrollTop = out.scrollHeight;
+        syncOrbState();
+    }
+
+    function syncOrbState() {
+        if (!root.YowayOrb || typeof YowayOrb.setState !== 'function') return;
+        const pending = aiChatHistory.some((m) => m.pending);
+        const last = aiChatHistory.filter((m) => m.role !== 'user').slice(-1)[0];
+        const hasText = !!(last && String(last.text || last.display || '').trim());
+        YowayOrb.setState(pending ? (hasText ? 'speaking' : 'thinking') : 'idle');
     }
 
     function escapeChat(s) {

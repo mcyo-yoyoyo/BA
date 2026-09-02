@@ -18,7 +18,7 @@
             group: '本机数据',
             items: [
                 { id: 'leads', title: '本机线索', lead: '登录时留下的姓名和手机，只存在这台电脑。可导出 Excel。' },
-                { id: 'assets', title: '评估底稿', lead: '本机已保存的评估。换电脑请先导出，再到那边导入。' }
+                { id: 'assets', title: '评估底稿', lead: '本机已保存的评估。也可导出运营包和操作日志。换电脑请先导出。' }
             ]
         }
     ];
@@ -71,6 +71,7 @@
     }
 
     function loadLeadsRaw() {
+        if (window.YouweiStore && YouweiStore.loadLeads) return YouweiStore.loadLeads();
         try {
             const raw = localStorage.getItem(LEADS_LS);
             const arr = raw ? JSON.parse(raw) : [];
@@ -103,11 +104,16 @@
                 : '');
     }
 
+    function audit(action, detail) {
+        if (window.YouweiAudit) YouweiAudit.add(action, detail || '');
+    }
+
     function bindExcel(expId, exporter, impId, importer) {
         const exp = $(expId);
         if (exp) exp.onclick = function () {
             try {
                 exporter();
+                audit('export_excel', expId);
                 toast('已下载 Excel 模板');
             } catch (e) {
                 toast(e.message || '导出失败');
@@ -122,6 +128,7 @@
             if (!file) return;
             YouweiExcel.readFile(file).then(function (wb) {
                 importer(wb);
+                audit('import_excel', impId);
                 render();
             }).catch(function (e) {
                 toast(e.message || '导入失败');
@@ -137,7 +144,7 @@
             </div>
             <div class="card">
                 <h2>线索一览</h2>
-                <p class="hint">${list.length} 条。来自登录弹窗。换电脑或清站点数据会丢。</p>
+                <p class="hint">${list.length} 条。按当前登录账号存在这台电脑；桌面版还会写入 data/leads.json。换电脑请先导出。</p>
                 <div class="stack">${list.map(function (r) {
                     return '<div class="list-row"><div><b>' + esc(r.name || '未留姓名') + '</b>' +
                         '<p>' + esc(r.phone || '未留手机') + (r.note ? ' · ' + esc(r.note) : '') + '</p></div>' +
@@ -156,7 +163,9 @@
         $('clear-leads').onclick = function () {
             if (!list.length) return;
             if (!confirm('清空这台电脑上的线索？')) return;
-            localStorage.removeItem(LEADS_LS);
+            if (window.YouweiStore && YouweiStore.saveLeads) YouweiStore.saveLeads([]);
+            else localStorage.removeItem(LEADS_LS);
+            audit('clear_leads', '');
             toast('已清空');
             render();
         };
@@ -278,6 +287,7 @@
             };
         });
         YouweiOps.patch({ industries: industries, cases: cases });
+        audit('admin_save', 'shelf');
         toast('上架已保存，刷新首页即可');
     }
 
@@ -465,6 +475,7 @@
     }
 
     function loadHistory() {
+        if (window.YouweiStore && YouweiStore.loadHistory) return YouweiStore.loadHistory();
         try {
             const raw = localStorage.getItem(HISTORY_LS);
             const arr = raw ? JSON.parse(raw) : [];
@@ -472,13 +483,22 @@
         } catch (e) { return []; }
     }
 
+    function writeHistory(list) {
+        if (window.YouweiStore && YouweiStore.saveHistory) YouweiStore.saveHistory(list);
+        else localStorage.setItem(HISTORY_LS, JSON.stringify(list));
+    }
+
     function renderAssets() {
         const a = YouweiOps.getAssets();
         const list = loadHistory();
+        const logs = (window.YouweiAudit && YouweiAudit.load) ? YouweiAudit.load().slice(-8).reverse() : [];
         $('admin-body').innerHTML = `
             <div class="page-bar">
                 <button type="button" class="btn ghost" id="exp-hist">导出底稿</button>
                 <label class="btn ghost xfer-file">导入底稿<input id="imp-hist" type="file" accept="application/json"></label>
+                <button type="button" class="btn ghost" id="exp-pack">导出运营包</button>
+                <label class="btn ghost xfer-file">导入运营包<input id="imp-pack" type="file" accept="application/json"></label>
+                <button type="button" class="btn ghost" id="exp-audit">导出操作日志</button>
             </div>
             <div class="card">
                 <h2>保存规则</h2>
@@ -497,6 +517,15 @@
                         '<span class="meta">' + esc((r.savedAt || r.at || '').toString().slice(0, 19)) + '</span>' +
                         '<button type="button" class="btn danger" data-del-hist="' + esc(r.id) + '">删除</button></div>';
                 }).join('') || '<p class="empty">还没有保存的评估底稿。</p>'}</div>
+            </div>
+            <div class="card">
+                <h2>操作留痕</h2>
+                <p class="hint">登录、保存、导出记在这台电脑，按账号分开。带走点上面的「导出操作日志」。</p>
+                <div class="stack">${logs.map(function (r) {
+                    return '<div class="list-row"><div><b>' + esc((YouweiAudit.labelOf && YouweiAudit.labelOf(r.action)) || r.action || '') + '</b>' +
+                        (r.detail ? '<p>' + esc(r.detail) + '</p>' : '') + '</div>' +
+                        '<span class="meta">' + esc(String(r.at || '').replace('T', ' ').slice(0, 16)) + '</span></div>';
+                }).join('') || '<p class="empty">还没有操作记录。</p>'}</div>
             </div>`;
         $('save-assets').onclick = function () {
             YouweiOps.patch({
@@ -506,11 +535,53 @@
                     allowClientDelete: checked('a-del')
                 }
             });
+            audit('admin_save', 'assets');
             toast('资产策略已保存');
         };
         $('exp-hist').onclick = function () {
             downloadText('youwei-assessments.json', JSON.stringify(loadHistory(), null, 2));
+            audit('export_history', String(list.length));
             toast('已下载本机底稿');
+        };
+        $('exp-pack').onclick = function () {
+            try {
+                downloadText('youwei-ops-pack.json', YouweiOps.exportPack());
+                audit('export_pack', '');
+                toast('已下载运营包');
+            } catch (e) {
+                toast(e.message || '导出失败');
+            }
+        };
+        $('imp-pack').onchange = function () {
+            const file = this.files && this.files[0];
+            this.value = '';
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function () {
+                try {
+                    YouweiOps.importPack(String(reader.result || ''));
+                    audit('import_pack', file.name);
+                    toast('已导入运营包');
+                    render();
+                } catch (e) {
+                    toast(e.message || '导入失败');
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        };
+        $('exp-audit').onclick = function () {
+            const rows = (window.YouweiAudit && YouweiAudit.load) ? YouweiAudit.load() : [];
+            const sheet = [['时间', '账号', '动作', '说明']].concat(rows.map(function (r) {
+                return [
+                    String(r.at || '').replace('T', ' ').slice(0, 19),
+                    r.user || '',
+                    (YouweiAudit.labelOf && YouweiAudit.labelOf(r.action)) || r.action || '',
+                    r.detail || ''
+                ];
+            }));
+            YouweiExcel.download('youwei-audit.xlsx', [{ name: '操作日志', rows: sheet, cols: [20, 14, 16, 28] }]);
+            audit('export_audit', String(rows.length));
+            toast('已下载操作日志');
         };
         $('imp-hist').onchange = function () {
             const file = this.files && this.files[0];
@@ -529,7 +600,8 @@
                         if (r.id != null && seen[String(r.id)]) return;
                         merged.push(r);
                     });
-                    localStorage.setItem(HISTORY_LS, JSON.stringify(merged));
+                    writeHistory(merged);
+                    audit('import_history', String(arr.length));
                     toast('已导入 ' + arr.length + ' 条，当前共 ' + merged.length + ' 条');
                     render();
                 } catch (e) {
@@ -542,7 +614,7 @@
             btn.onclick = function () {
                 const id = Number(btn.getAttribute('data-del-hist'));
                 const next = loadHistory().filter(function (r) { return Number(r.id) !== id; });
-                localStorage.setItem(HISTORY_LS, JSON.stringify(next));
+                writeHistory(next);
                 toast('已删除该底稿');
                 render();
             };
@@ -610,6 +682,7 @@
                     rules: clean
                 }
             });
+            audit('admin_save', 'assess');
             toast('评估配置已保存');
         };
         bindExcel('exp-assess', exportAssessExcel, 'imp-assess', importAssessExcel);
@@ -679,7 +752,7 @@
         $('admin-body').innerHTML = `
             <div class="card">
                 <h2>通道</h2>
-                <p class="hint">先点开 Key 的平台，再粘贴 Key。官方 DeepSeek 请在本机用 npm run dev 启动后再试。</p>
+                <p class="hint">先点开 Key 的平台，再粘贴 Key。Key 只留在本会话，退出或闲置后清除。官方 DeepSeek 请在本机用 npm run dev 启动后再试。</p>
                 <div class="ai-provider-row">${chips}</div>
                 <label class="field"><span>API Key</span><input id="ai-key" type="password" autocomplete="off" value="" placeholder="${cfg.apiKey ? '已在本会话保存，改写则覆盖' : '不要带引号或 Bearer'}"></label>
                 <label class="field"><span>接口根地址</span><input id="ai-ep" type="url" value="${esc(cfg.endpoint)}" placeholder="点平台会自动填"></label>
@@ -748,6 +821,7 @@
             const payload = { endpoint: endpoint, apiKey: keyToUse, model: model, provider: provider };
             YouweiOps.patch({ ai: { endpoint: endpoint, model: model, provider: provider } });
             YouweiAi.saveLocal(payload);
+            audit('admin_save', 'ai');
             const st = $('ai-status');
             st.className = 'status';
             st.textContent = '正在试连…';
@@ -779,9 +853,27 @@
         else renderConnect();
     }
 
+    function paintLicense() {
+        const host = document.getElementById('admin-license');
+        const lic = window.YouweiLicense;
+        if (!host || !lic || !lic.status) return;
+        const st = lic.status();
+        const extra = st.expired
+            ? '授权已到期，不能再生成新过程册。'
+            : (st.bound ? '过程册将带上客户名称。' : '未绑定授权，演示账号可用。正式交付请放 license.json 与本机账号表。');
+        host.textContent = st.label + '　' + extra;
+    }
+
     function boot() {
         if (YouweiAuth.mountAccountMenu) YouweiAuth.mountAccountMenu();
         render();
+        paintLicense();
+        if (window.YouweiLicense && YouweiLicense.ready) {
+            YouweiLicense.ready.then(function () {
+                render();
+                paintLicense();
+            });
+        }
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

@@ -23,11 +23,7 @@
         .nav-links { display: flex; align-items: center; gap: 20px; font-size: 14px; color: var(--muted); white-space: nowrap; }
         .nav-links a { text-decoration: none; color: var(--muted); }
         .nav-links a:hover { color: var(--ink); }
-        .nav-cta {
-            background: var(--sage); color: #f7f6f2 !important;
-            border-radius: 980px; padding: 8px 16px; font-weight: 600;
-        }
-        .nav-cta:hover { background: var(--sage-hover); }
+        .nav-cta { text-decoration: none; }
 
         .hero { background: var(--canvas); padding: 72px 0 64px; }
         .hero-inner {
@@ -37,6 +33,7 @@
         .hero-kicker {
             margin: 0 0 16px; font-size: 13px; color: var(--sage); font-weight: 650;
         }
+        .hero-note { margin: 12px 0 0; font-size: 13px; line-height: 1.55; color: var(--dim); }
         .hero h1 {
             margin: 0; max-width: 12.5em;
             font-size: clamp(36px, 5vw, 56px);
@@ -214,6 +211,7 @@
         .footer-inner {
             display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
         }
+        .footer-inner a { color: inherit; }
         @media (max-width: 900px) {
             .nav-links a.hide-sm { display: none; }
             .brand-en { display: none; }
@@ -240,11 +238,24 @@
             </a>
             <div class="nav-end">
                 <div class="nav-links">
-                    <a class="hide-sm" href="#method" data-i18n="navMethod">方法</a>
-                    <a class="hide-sm" href="#cases" data-i18n="navScenes">场景</a>
-                    <a class="hide-sm" href="#deliverables" data-i18n="navTake">带走</a>
-                    <a class="nav-cta" href="workshop.html?mode=pro" data-i18n="cta">开始评估</a>
+                    <a class="hide-sm" href="#cases" data-i18n="navScenes">行业案例</a>
+                    <a class="hide-sm" href="#method" data-i18n="navMethod">诊断方法</a>
+                    <a class="hide-sm" href="#deliverables" data-i18n="navTake">评估成果</a>
                 </div>
+                <a class="yoway-wake nav-cta" href="workshop.html?mode=pro" aria-label="唤醒 YOWAY">
+                    <span class="yoway-orb" aria-hidden="true">
+                        <span class="yoway-orb-glow"></span>
+                        <span class="yoway-orb-orbit"></span>
+                        <span class="yoway-orb-body">
+                            <span class="yoway-orb-shine"></span>
+                            <span class="yoway-orb-visor"><i></i><i></i></span>
+                        </span>
+                        <span class="yoway-orb-ear is-l"></span>
+                        <span class="yoway-orb-ear is-r"></span>
+                        <span class="yoway-orb-burst"></span>
+                    </span>
+                    <span class="yoway-wake-txt"><small data-i18n="wakeVerb">唤醒</small><b>YOWAY</b></span>
+                </a>
                 <button type="button" class="lang-sw" id="lang-sw" aria-label="Switch language">EN</button>
             </div>
         </div>
@@ -256,9 +267,9 @@
                 <p class="hero-kicker" data-i18n="heroKicker">从战略到执行</p>
                 <h1 data-i18n-html="heroTitle">把经营战略，解码成<br>能落地的变革路标。</h1>
                 <p class="lead" data-i18n-html="heroLead">先对齐商业模式和业务规划，再审视业务痛点与能力差距，<br>最后明确变革举措和路标规划。</p>
+                <p class="hero-note" data-i18n="heroNote">本站可浏览行业案例并登录试用。模型助手与完整交付请用桌面版。</p>
                 <div class="hero-actions">
-                    <a class="btn-sage" href="workshop.html?mode=pro" data-i18n="cta">开始评估</a>
-                    <a class="link-sage" href="#cases" data-i18n="seeScenes">看行业场景</a>
+                    <a class="btn-sage" href="workshop.html?mode=pro" data-i18n="cta">唤醒 YOWAY</a>
                 </div>
             </div>
             <div class="hero-visual">
@@ -267,26 +278,27 @@
         </div>
     </header>
 
-    <section class="section" id="method">
-        <div class="wrap">
-            <h2 data-i18n="methodTitle">方法</h2>
-            <p class="section-lead" data-i18n="methodLead">定方向、建架构、抓落地。七步对齐战略到执行。</p>
-            <div class="path" id="method-body"></div>
-        </div>
-    </section>
-
     <section class="section" id="cases">
         <div class="wrap">
-            <h2 data-i18n="scenesTitle">场景</h2>
+            <h2 data-i18n="scenesTitle">行业案例</h2>
+            <p class="section-lead" data-i18n="scenesLead">先确认所属行业课题，再看评估如何拆解。</p>
             <div class="ind-bar" id="ind-bar" role="tablist" aria-label="行业"></div>
             <div class="case-stage" id="case-grid"></div>
         </div>
     </section>
 
+    <section class="section" id="method">
+        <div class="wrap">
+            <h2 data-i18n="methodTitle">诊断方法</h2>
+            <p class="section-lead" data-i18n="methodLead">先厘清商业模式，再定位流程中的慢、贵、险与能力差距，最后排入月份计划。</p>
+            <div class="path" id="method-body"></div>
+        </div>
+    </section>
+
     <section class="section" id="deliverables">
         <div class="wrap">
-            <h2 data-i18n="takeTitle">带走</h2>
-            <p class="section-lead" data-i18n="takeLead">画布、架构、路标、底稿，评估后都能打开。</p>
+            <h2 data-i18n="takeTitle">评估成果</h2>
+            <p class="section-lead" data-i18n="takeLead">评估完成后可打开四份材料：商业模式、能力差距、优先事项与整份底稿。</p>
             <div class="del-grid" id="del-grid"></div>
         </div>
     </section>
@@ -295,7 +307,7 @@
         <div class="close-inner">
             <h2 data-i18n="closeTitle">把经营战略，解码成能落地的变革路标。</h2>
             <div class="hero-actions">
-                <a class="btn-sage" href="workshop.html?mode=pro" data-i18n="cta">开始评估</a>
+                <a class="btn-sage" href="workshop.html?mode=pro" data-i18n="cta">唤醒 YOWAY</a>
             </div>
         </div>
     </section>
@@ -303,16 +315,27 @@
     <footer>
         <div class="footer-inner">
             <span data-i18n="footerLeft">友为 · 从战略到路标</span>
-            <span data-i18n="footerRight">公开报道与官网信息仅供对照，请用贵司经营数据确认。</span>
+            <span>
+                <a href="legal.html" data-i18n="footerLegal">使用与隐私</a>
+                ·
+                <a href="install.html" data-i18n="footerInstall">安装说明</a>
+                ·
+                <span data-i18n="footerRight">公开资料仅供行业对照，不构成业绩承诺。请以贵司经营数据核验。</span>
+            </span>
         </div>
     </footer>
 
     <script src="js/i18n.js"></script>
     <script src="js/cases-data.js"></script>
+    <script src="js/cases-i18n.js"></script>
     <script src="js/ops-store.js"></script>
     <script src="js/accounts.js"></script>
     <script src="js/accounts.local.js"></script>
+    <script src="js/license.js"></script>
+    <script src="js/scoped-store.js"></script>
+    <script src="js/audit-log.js"></script>
     <script src="js/auth-gate.js"></script>
+    <script src="js/yoway-orb.js"></script>
     <script>YouweiAuth.initPublic();</script>
     <script>
         (function () {
@@ -326,7 +349,7 @@
             const t = (k) => I ? I.t(k) : k;
             const d = () => (I && I.dict()) || {};
 
-            document.querySelectorAll('a.btn-sage, a.nav-cta').forEach((a) => {
+            document.querySelectorAll('a.btn-sage, a.nav-cta, a.yoway-wake').forEach((a) => {
                 if (home.ctaHref) a.setAttribute('href', home.ctaHref);
             });
 
@@ -381,12 +404,12 @@
                 if (!cases.length) { stage.innerHTML = ''; return; }
                 if (slideIndex < 0) slideIndex = cases.length - 1;
                 if (slideIndex >= cases.length) slideIndex = 0;
-                const c = cases[slideIndex];
+                const c = I && I.localizeCase ? I.localizeCase(cases[slideIndex]) : cases[slideIndex];
                 stage.innerHTML = `
                     <div class="carousel">
                         <div class="carousel-dots" role="tablist" aria-label="${esc(t('modules'))}">
                             ${cases.map((item, i) => `
-                                <button type="button" data-slide="${i}" class="${i === slideIndex ? 'is-on' : ''}" aria-selected="${i === slideIndex ? 'true' : 'false'}">${esc(item.kicker)}</button>
+                                <button type="button" data-slide="${i}" class="${i === slideIndex ? 'is-on' : ''}" aria-selected="${i === slideIndex ? 'true' : 'false'}">${esc((I && I.localizeCase ? I.localizeCase(item) : item).kicker)}</button>
                             `).join('')}
                         </div>
                         <div class="carousel-frame">

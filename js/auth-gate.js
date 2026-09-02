@@ -4,9 +4,20 @@
 (function (global) {
     const SESSION_KEY = 'youwei_session_v1';
     const HASH_PREFIX = 'youwei.v1:';
+    const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
     function accountsTable() {
-        return global.YOUWEI_LOCAL_ACCOUNTS || global.YOUWEI_ACCOUNTS || {};
+        const raw = global.YOUWEI_LOCAL_ACCOUNTS || global.YOUWEI_ACCOUNTS || {};
+        const lic = global.YouweiLicense;
+        const bound = lic && lic.isBound && lic.isBound();
+        const out = {};
+        Object.keys(raw).forEach(function (k) {
+            const acc = raw[k];
+            if (!acc) return;
+            if (bound && (acc.demo || (lic.isDemoUser && lic.isDemoUser(k))) && !global.YOUWEI_LOCAL_ACCOUNTS) return;
+            out[k] = acc;
+        });
+        return out;
     }
 
     function accountOf(user) {
@@ -20,7 +31,10 @@
     function isAuthed() {
         const s = readSession();
         if (!s || !s.user || !s.at) return false;
-        if (s.role === 'admin' || s.role === 'client') return true;
+        if (Date.now() - Number(s.at) > SESSION_TTL_MS) {
+            logout('expired');
+            return false;
+        }
         return !!accountOf(s.user);
     }
 
@@ -38,9 +52,7 @@
     }
 
     function currentRole() {
-        const s = readSession();
-        if (s && s.role) return s.role;
-        const acc = accountOf(s && s.user);
+        const acc = accountOf(currentUser());
         return acc ? acc.role : '';
     }
 
@@ -56,6 +68,13 @@
         return isAdmin()
             ? ['工作台评估', '管理台配置', '本机线索', '场景上架', '底稿导出']
             : ['工作台评估', '本机保存底稿'];
+    }
+
+    function licenseMenuHtml() {
+        const lic = global.YouweiLicense;
+        if (!lic || !lic.status) return '';
+        const st = lic.status();
+        return '<p class="youwei-acct-k">授权</p><p class="youwei-acct-v">' + escText(st.label) + '</p>';
     }
 
     function escText(s) {
@@ -89,6 +108,9 @@
                     '<ul class="youwei-acct-perms">' + permissionLines().map(function (p) {
                         return '<li>' + escText(p) + '</li>';
                     }).join('') + '</ul>' +
+                    licenseMenuHtml() +
+                    '<a class="youwei-acct-link" href="legal.html">使用与隐私</a>' +
+                    '<a class="youwei-acct-link" href="install.html">安装说明</a>' +
                     '<button type="button" class="youwei-acct-out" id="youwei-acct-out">退出</button>' +
                 '</div>' +
             '</div>';
@@ -147,11 +169,65 @@
             return false;
         }
         if (hex !== acc.hash) return false;
-        localStorage.setItem(SESSION_KEY, JSON.stringify({ user: u, role: acc.role, at: Date.now() }));
+        localStorage.setItem(SESSION_KEY, JSON.stringify({
+            user: u,
+            role: acc.role,
+            at: Date.now(),
+            lastActive: Date.now()
+        }));
+        if (global.YouweiAudit) YouweiAudit.add('login', acc.role);
         return true;
     }
 
-    function logout() {
+    function touchSession() {
+        const s = readSession();
+        if (!s || !s.user) return;
+        s.lastActive = Date.now();
+        try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
+    }
+
+    function idleExpired(limitMs) {
+        const s = readSession();
+        if (!s) return true;
+        const t = Number(s.lastActive || s.at || 0);
+        return !t || (Date.now() - t > limitMs);
+    }
+
+    let idleWatch = 0;
+
+    function watchIdle(opts) {
+        const minutes = Math.max(1, Number(opts && opts.minutes) || 30);
+        const limitMs = minutes * 60 * 1000;
+        if (idleWatch) return;
+        let lastWrite = 0;
+        function bump() {
+            const now = Date.now();
+            if (now - lastWrite < 4000) return;
+            lastWrite = now;
+            touchSession();
+        }
+        ['pointerdown', 'keydown', 'click', 'touchstart'].forEach(function (ev) {
+            document.addEventListener(ev, bump, { passive: true });
+        });
+        touchSession();
+        idleWatch = setInterval(function () {
+            if (!readSession()) return;
+            if (idleExpired(limitMs)) {
+                logout('idle');
+                const next = /admin\.html/i.test(location.pathname || '')
+                    ? 'admin.html'
+                    : 'workshop.html?mode=pro';
+                location.replace('index.html?idle=1&login=1&next=' + encodeURIComponent(next));
+            }
+        }, 15000);
+    }
+
+    function logout(reason) {
+        const s = readSession();
+        if (s && s.user && global.YouweiAudit) {
+            const act = reason === 'idle' ? 'idle_logout' : (reason === 'expired' ? 'session_expired' : 'logout');
+            YouweiAudit.add(act, '');
+        }
         localStorage.removeItem(SESSION_KEY);
         if (global.YouweiAi && typeof global.YouweiAi.clearKey === 'function') {
             YouweiAi.clearKey();
@@ -173,10 +249,11 @@
             <div class="youwei-login-backdrop" data-login-close="1"></div>
             <div class="youwei-login-card" role="dialog" aria-modal="true" aria-labelledby="youwei-login-title">
                 <button type="button" class="youwei-login-x" data-login-close="1" aria-label="Close">×</button>
-                <p class="youwei-login-brand"><span>友为</span><i>Yoway</i></p>
+                <div class="youwei-login-mark yoway-wake is-login" data-yoway-orb="lg"></div>
+                <p class="youwei-login-brand"><span>友为</span><i>YOWAY</i></p>
                 <p class="youwei-login-kicker" id="youwei-login-kicker">从战略到执行</p>
-                <h2 id="youwei-login-title">开始评估</h2>
-                <p class="youwei-login-lead" id="youwei-login-lead">先对齐商业模式和业务规划，再审视业务痛点与能力差距，最后明确变革举措和路标规划。</p>
+                <h2 id="youwei-login-title">唤醒 YOWAY</h2>
+                <p class="youwei-login-lead" id="youwei-login-lead">登录后进入评估。先写清怎么赚钱，再看慢在哪、差在哪，最后排进月份。</p>
                 <p class="youwei-login-path" id="youwei-login-path">定方向 · 建架构 · 抓落地</p>
                 <form id="youwei-login-form" autocomplete="on">
                     <label><span id="youwei-login-user-lab">账号</span>
@@ -188,12 +265,12 @@
                     <p id="youwei-login-error" class="youwei-login-error hidden">账号或密码不正确。</p>
                     <div class="youwei-login-actions">
                         <button type="button" class="youwei-login-ghost" data-login-close="1" id="youwei-login-cancel">取消</button>
-                        <button type="submit" class="youwei-login-submit" id="youwei-login-submit">开始评估</button>
+                        <button type="submit" class="youwei-login-submit" id="youwei-login-submit">进入评估</button>
                     </div>
                 </form>
                 <div class="youwei-login-aside" id="youwei-login-aside">
                     <p class="youwei-login-aside-k" id="youwei-lead-kicker">还没有账号</p>
-                    <p class="youwei-login-aside-d" id="youwei-lead-lead">留下姓名与手机，我们会约评估。</p>
+                    <p class="youwei-login-aside-d" id="youwei-lead-lead">留下姓名和手机，方便顾问在本机查看。公开网页不会把线索发到友为。</p>
                     <form id="youwei-lead-form">
                         <div class="youwei-lead-row">
                             <input id="youwei-lead-name" name="name" type="text" autocomplete="name" placeholder="姓名">
@@ -209,6 +286,7 @@
                 </div>
             </div>`;
         document.body.appendChild(wrap);
+        if (global.YowayOrb && typeof YowayOrb.hydrate === 'function') YowayOrb.hydrate();
 
         wrap.addEventListener('click', function (e) {
             if (e.target && e.target.getAttribute('data-login-close') === '1') closeModal();
@@ -235,7 +313,7 @@
             }
             saveLead({ name: name, phone: phone, note: note, at: new Date().toISOString() });
             if (msg) {
-                msg.textContent = t('leadOk', '已记下，我们会联系您。');
+                msg.textContent = t('leadOk', '已记在这台电脑。顾问可在管理台导出。需要对接请直接联系顾问。');
                 msg.classList.remove('hidden');
                 msg.classList.add('is-ok');
             }
@@ -306,8 +384,10 @@
             if (el) el.textContent = text;
         };
         set('youwei-login-kicker', admin ? t('loginAdminKicker', '运营') : t('loginKicker', '从战略到执行'));
-        set('youwei-login-title', admin ? t('loginAdminTitle', '进入管理台') : t('loginTitle', '开始评估'));
-        set('youwei-login-lead', admin ? t('loginAdminLead', '改首页、模型与评估规则。') : t('loginLead', '先对齐商业模式和业务规划，再审视业务痛点与能力差距，最后明确变革举措和路标规划。'));
+        set('youwei-login-title', admin ? t('loginAdminTitle', '进入管理台') : t('loginTitle', '唤醒 YOWAY'));
+        set('youwei-login-lead', wrap.dataset.idle === '1'
+            ? t('loginIdle', '已因闲置退出，请重新登录。')
+            : (admin ? t('loginAdminLead', '改首页、模型与评估规则。') : t('loginLead', '登录后进入评估：先厘清商业模式，再定位流程与能力差距，最后排入月份计划。')));
         set('youwei-login-path', t('loginPath', '定方向 · 建架构 · 抓落地'));
         const path = document.getElementById('youwei-login-path');
         if (path) path.style.display = admin ? 'none' : '';
@@ -319,11 +399,11 @@
         if (pass) pass.placeholder = t('loginPassPh', '请输入密码');
         set('youwei-login-error', t('loginErr', '账号或密码不正确。'));
         set('youwei-login-cancel', t('loginCancel', '取消'));
-        set('youwei-login-submit', admin ? t('loginAdminSubmit', '进入') : t('loginSubmit', '开始评估'));
+        set('youwei-login-submit', admin ? t('loginAdminSubmit', '进入') : t('loginSubmit', '进入评估'));
         const aside = document.getElementById('youwei-login-aside');
         if (aside) aside.style.display = admin ? 'none' : '';
         set('youwei-lead-kicker', t('leadKicker', '还没有账号'));
-        set('youwei-lead-lead', t('leadLead', '留下姓名与手机，我们会约评估。'));
+        set('youwei-lead-lead', t('leadLead', '留下姓名和手机，方便顾问在本机查看。公开网页不会把线索发到友为。'));
         const name = document.getElementById('youwei-lead-name');
         const phone = document.getElementById('youwei-lead-phone');
         const note = document.getElementById('youwei-lead-note');
@@ -335,12 +415,25 @@
     }
 
     function saveLead(row) {
-        const KEY = 'youwei_leads_v1';
         let list = [];
-        try { list = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { list = []; }
-        if (!Array.isArray(list)) list = [];
-        list.push(row);
-        try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
+        if (global.YouweiStore && YouweiStore.loadLeads) {
+            list = YouweiStore.loadLeads();
+            list.push(row);
+            try { YouweiStore.saveLeads(list); } catch (e) { /* ignore */ }
+        } else {
+            const KEY = 'youwei_leads_v1';
+            try { list = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { list = []; }
+            if (!Array.isArray(list)) list = [];
+            list.push(row);
+            try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
+        }
+        try {
+            fetch('/api/leads', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(row)
+            }).catch(function () { /* 公开网页没有本机接口 */ });
+        } catch (e) { /* ignore */ }
     }
 
     function closeModal() {
@@ -376,7 +469,10 @@
     }
 
     function guardAdmin() {
-        if (isAdmin()) return true;
+        if (isAdmin()) {
+            watchIdle({ minutes: 15 });
+            return true;
+        }
         if (isAuthed()) {
             location.replace('workshop.html?mode=pro');
             return false;
@@ -394,13 +490,16 @@
         a.id = 'youwei-ops-link';
         a.href = 'admin.html';
         a.textContent = '管理台';
-        const cta = nav.querySelector('.nav-cta');
+        const cta = nav.querySelector('.nav-cta, .yoway-wake');
         if (cta) nav.insertBefore(a, cta);
         else nav.appendChild(a);
     }
 
     function guardWorkshop() {
-        if (isAuthed()) return true;
+        if (isAuthed()) {
+            watchIdle({ minutes: 30 });
+            return true;
+        }
         const q = location.search && location.search.indexOf('mode=') !== -1 ? location.search : '?mode=pro';
         location.replace('index.html?login=1&next=' + encodeURIComponent('workshop.html' + q));
         return false;
@@ -408,8 +507,11 @@
 
     function bootFromQuery() {
         const params = new URLSearchParams(location.search || '');
-        if (params.get('login') === '1') {
+        if (params.get('login') === '1' || params.get('idle') === '1') {
             const next = params.get('next') || 'workshop.html?mode=pro';
+            ensureModal();
+            const wrap = document.getElementById('youwei-login-modal');
+            if (wrap && params.get('idle') === '1') wrap.dataset.idle = '1';
             openModal(next);
         }
     }
@@ -423,10 +525,11 @@ body.youwei-modal-on{overflow:hidden}
 .youwei-login-modal{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:24px}
 .youwei-login-modal.hidden{display:none}
 .youwei-login-backdrop{position:absolute;inset:0;background:rgba(22,21,19,.58);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
-.youwei-login-card{position:relative;width:min(420px,100%);max-height:min(92vh,760px);overflow:auto;background:#f7f5f0;border:1px solid rgba(22,21,19,.12);padding:32px 28px 24px}
+.youwei-login-card{position:relative;width:min(420px,100%);max-height:min(92vh,760px);overflow:auto;background:#f7f5f0;border:1px solid rgba(61,83,75,.16);padding:32px 28px 24px;border-radius:16px;box-shadow:0 24px 64px rgba(22,21,19,.2),0 0 0 1px rgba(142,240,220,.12),0 0 40px rgba(47,111,102,.12)}
 .youwei-login-x{appearance:none;position:absolute;top:14px;right:16px;border:0;background:none;padding:0;font-size:20px;line-height:1;color:#6e695f;opacity:.4;cursor:pointer}
 .youwei-login-x:hover{opacity:.85;color:#161513}
-.youwei-login-brand{display:flex;align-items:baseline;margin:0 0 18px;color:#161513}
+.youwei-login-mark{display:flex;align-items:center;margin:0 0 12px}
+.youwei-login-brand{display:flex;align-items:baseline;margin:0 0 14px;color:#161513}
 .youwei-login-brand span{font-size:16px;font-weight:600;letter-spacing:.04em}
 .youwei-login-brand i{font-style:normal;margin-left:10px;padding-left:10px;border-left:1px solid rgba(22,21,19,.12);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#4f4b45}
 .youwei-login-kicker{margin:0 0 8px;font-size:13px;font-weight:650;color:#3d534b}
@@ -470,6 +573,8 @@ body.youwei-modal-on{overflow:hidden}
 .youwei-acct-v{margin:3px 0 0;font-size:13px;font-weight:550;color:#161513}
 .youwei-acct-perms{margin:6px 0 0;padding:0;list-style:none}
 .youwei-acct-perms li{margin:0 0 3px;font-size:12px;color:#4f4b45;line-height:1.4}
+.youwei-acct-link{display:block;margin-top:8px;font-size:12px;color:#3d534b;text-decoration:none}
+.youwei-acct-link:hover{text-decoration:underline}
 .youwei-acct-out{appearance:none;display:block;width:100%;margin-top:12px;padding:8px 0 0;border:0;border-top:1px solid rgba(22,21,19,.1);background:none;font-size:12px;color:#6e695f;opacity:.7;cursor:pointer;text-align:left}
 .youwei-acct-out:hover{opacity:1;color:#161513}
 `;
@@ -494,6 +599,7 @@ body.youwei-modal-on{overflow:hidden}
         syncModal: syncModal,
         guardWorkshop: guardWorkshop,
         guardAdmin: guardAdmin,
+        watchIdle: watchIdle,
         initPublic: initPublic,
         mountAccountMenu: mountAccountMenu,
         avatarGlyph: avatarGlyph

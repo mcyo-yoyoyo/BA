@@ -6,7 +6,8 @@
     "dev": "node scripts/dev.mjs",
     "start": "node scripts/dev.mjs",
     "ai-proxy": "node scripts/ai-proxy.mjs",
-    "site": "python serve.py"
+    "site": "python serve.py",
+    "build:workshop-css": "npx tailwindcss -i css/workshop-tw-src.css -o css/workshop-tw.css --minify --config tailwind.config.cjs"
   },
   "engines": {
     "node": ">=18"
