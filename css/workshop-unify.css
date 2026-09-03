@@ -133,6 +133,132 @@ body.app-shell {
     display: none !important;
 }
 
+.p0-lock-hint {
+    padding: 0 22px 8px;
+}
+.p0-lock-hint-btn {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(154, 52, 18, .22);
+    background: #fff4e5;
+    color: #9a3412;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    padding: 5px 10px;
+    border-radius: 980px;
+    cursor: pointer;
+}
+.p0-lock-hint-btn:hover { background: #ffedd5; }
+
+.meeting-ready-ok,
+.meeting-ready-no {
+    margin: 6px 0 0;
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.4;
+}
+.meeting-ready-ok { color: #3d534b; }
+.meeting-ready-no { color: #9a3412; }
+
+.case-topic-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    border: 1px solid rgba(61, 83, 75, .14);
+    background: #f6f7f5;
+    border-radius: 980px;
+    padding: 3px 4px 3px 10px;
+}
+.case-topic-bar.is-open {
+    border-radius: 12px;
+    padding-bottom: 6px;
+}
+.case-topic-bar-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    border: 0;
+    background: transparent;
+    padding: 2px 0;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+}
+.case-topic-bar-k {
+    flex: none;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: .06em;
+    color: #3d534b;
+}
+.case-topic-bar-t {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    font-weight: 600;
+    color: #3f3c37;
+}
+.case-topic-bar-x {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border: 0;
+    border-radius: 980px;
+    background: transparent;
+    color: #6e695f;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    font-family: inherit;
+}
+.case-topic-bar-x:hover { background: rgba(22, 21, 19, .06); color: #161513; }
+.case-topic-bar-body {
+    flex: 1 1 100%;
+    display: grid;
+    gap: 6px;
+    padding: 2px 8px 8px 2px;
+    max-height: min(42vh, 320px);
+    overflow: auto;
+}
+.case-topic-bar-note,
+.case-topic-bar-aud,
+.case-topic-bar-fit,
+.case-topic-bar-src {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: #6e695f;
+}
+.case-topic-bar-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 650;
+    line-height: 1.4;
+    color: #161513;
+}
+.case-topic-bar-lead,
+.case-topic-bar-sit {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #3f3c37;
+}
+.case-topic-bar-pains,
+.case-topic-bar-facts {
+    margin: 0;
+    padding: 0 0 0 16px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #3f3c37;
+}
+.case-topic-bar-facts { color: #4f4b45; }
+
 .p0-engage-card {
     border: 1px solid rgba(44, 42, 38, 0.08);
     background: #fff;

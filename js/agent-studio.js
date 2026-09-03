@@ -80,17 +80,74 @@
         root.currentState.bmcReport = null;
     }
 
-    function applyCaseContext(caseId) {
+    function readFitPicked(caseId) {
+        try {
+            const raw = JSON.parse(sessionStorage.getItem('youwei_fit_' + caseId) || '[]');
+            return Array.isArray(raw) ? raw.filter(function (n) { return n === 0 || n > 0; }) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function applyCaseContext(caseId, opts) {
         const item = root.getWendaoCaseById && root.getWendaoCaseById(caseId);
         const state = root.currentState;
         if (!item || !state) return item || null;
-        state.workflowIndustry = item.industry || '3C';
-        state.selectedTemplateId = item.templateId;
-        state.valueStreamName = item.valueStreamName;
-        if (state.workspaceMeta) {
-            if (!String(state.workspaceMeta.projectName || '').trim()) {
-                state.workspaceMeta.projectName = item.title;
+        const options = opts || {};
+        state.workflowIndustry = root.normalizeWorkflowIndustry
+            ? root.normalizeWorkflowIndustry(item.industry || '3C')
+            : (item.industry || '3C');
+        if (item.templateId && state.templates && state.templates[item.templateId]) {
+            state.selectedTemplateId = item.templateId;
+        }
+        if (item.valueStreamName) state.valueStreamName = item.valueStreamName;
+        if (state.workspaceMeta && !String(state.workspaceMeta.projectName || '').trim()) {
+            state.workspaceMeta.projectName = item.title;
+        }
+        const empathy = item.empathy || [];
+        const fit = readFitPicked(item.id);
+        const fitLines = fit.map(function (i) { return empathy[i]; }).filter(Boolean);
+        state.caseContext = {
+            id: item.id,
+            title: item.title,
+            kicker: item.kicker || item.category || '',
+            tagline: item.tagline || item.subtitle || '',
+            industry: item.industry || '',
+            templateId: item.templateId || '',
+            valueStreamName: item.valueStreamName || '',
+            brief: item.brief || '',
+            situation: item.situation || '',
+            challenge: item.challenge || '',
+            audience: item.audience || '',
+            pains: item.pains || {},
+            publicFacts: item.publicFacts || [],
+            sourceNote: item.sourceNote || '',
+            empathy: empathy,
+            fitPicked: fit,
+            fitLines: fitLines
+        };
+        if (!state.knowledgeRefs || typeof state.knowledgeRefs !== 'object') {
+            state.knowledgeRefs = { version: 1, anonymizedCaseIds: [], linkedAssetRecordIds: [] };
+        }
+        const kr = state.knowledgeRefs;
+        if (!Array.isArray(kr.anonymizedCaseIds)) kr.anonymizedCaseIds = [];
+        if (kr.anonymizedCaseIds.indexOf(item.id) === -1) kr.anonymizedCaseIds.push(item.id);
+        kr.caseId = item.id;
+        kr.publicFacts = item.publicFacts || [];
+        kr.sourceNote = item.sourceNote || '';
+        kr.fitLines = fitLines;
+        try {
+            const prev = sessionStorage.getItem('youwei_case_topic_id_v1');
+            if (prev !== item.id) {
+                sessionStorage.setItem('youwei_case_topic_id_v1', item.id);
+                sessionStorage.removeItem('youwei_case_topic_hide_v1');
+                sessionStorage.removeItem('youwei_case_topic_open_v1');
             }
+        } catch (e) { /* ignore */ }
+        const emptyVs = !state.vsStages || !state.vsStages.length;
+        if (!options.skipTemplate && emptyVs && item.templateId) {
+            applyTemplateSilent(item.templateId);
+            applyPainScores(item.brief, item.painStages);
         }
         return item;
     }
@@ -142,7 +199,7 @@
                 deps: red ? '数据口径与主数据先对齐' : '承接 P0 中台能力',
                 milestoneBand: red ? 'M1–M2' : 'M3–M4',
                 evidenceStatus: 'assumption',
-                evidenceSource: '主题规则起草',
+                evidenceSource: '规则展开，待规划确认',
                 streams: null
             });
         });
@@ -160,7 +217,7 @@
                 deps: '与同域中台举措并行',
                 milestoneBand: 'M3–M5',
                 evidenceStatus: 'assumption',
-                evidenceSource: '热力观察清单',
+                evidenceSource: '规则展开，待规划确认',
                 streams: null
             });
         });
@@ -178,7 +235,7 @@
                 deps: '',
                 milestoneBand: 'M5–M6',
                 evidenceStatus: 'assumption',
-                evidenceSource: '巩固草案',
+                evidenceSource: '规则展开，待规划确认',
                 streams: null
             });
         }
@@ -199,8 +256,41 @@
         return true;
     }
 
+    function landAfterPlan(landOn) {
+        const wantRoadmap = landOn === 'roadmap';
+        const meet = typeof root.isMeetingReady === 'function' && root.isMeetingReady();
+        if (wantRoadmap && meet && typeof root.setStep === 'function') {
+            root.setStep(7);
+            if (typeof root.renderEngagementChrome === 'function') root.renderEngagementChrome();
+            return;
+        }
+        root.currentState.step = 6;
+        root.currentState.activePanel = 'workflow';
+        if (typeof root.renderNav === 'function') root.renderNav();
+        if (typeof root.renderStepProgress === 'function') root.renderStepProgress();
+        if (typeof root.renderStep === 'function') root.renderStep();
+        if (wantRoadmap && !meet && typeof root.toast === 'function') {
+            root.toast('举措已生成。近半年 P0 写明责任人后，才能进入可上会路标。');
+        }
+        if (typeof root.renderEngagementChrome === 'function') root.renderEngagementChrome();
+    }
+
+    function refuseEmptyPayorPlan() {
+        if (typeof root.isBmcPayorReady === 'function' && !root.isBmcPayorReady()) {
+            if (typeof root.toast === 'function') {
+                root.toast('先写清付费对象：卖给谁，或钱从哪来。写完再一键规划。', 'error');
+            }
+            if (typeof root.setStep === 'function') root.setStep(1);
+            return true;
+        }
+        return false;
+    }
+
     function runLocalFullPlan(brief, opts) {
         const options = opts || {};
+        if (refuseEmptyPayorPlan()) {
+            return { ok: false, summary: '付费对象未写清，未生成路标。' };
+        }
         const beforeSlice = typeof root.captureWorkflowSlice === 'function' ? root.captureWorkflowSlice() : null;
         const item = options.caseId ? applyCaseContext(options.caseId) : null;
         const text = String(brief || (item && item.brief) || '').trim();
@@ -221,16 +311,12 @@
         applyPainScores(text, item && item.painStages);
         root.runFrameworkGen({ silent: true });
         buildThematicInitiatives();
-        root.currentState.step = options.landOn === 'roadmap' ? 7 : 6;
-        root.currentState.activePanel = 'workflow';
-        if (typeof root.renderNav === 'function') root.renderNav();
-        if (typeof root.renderStepProgress === 'function') root.renderStepProgress();
-        if (typeof root.renderStep === 'function') root.renderStep();
-        const summary = `已生成「${root.currentState.valueStreamName || '价值流'}」：能力 ${root.currentState.capabilityFramework.length} 项，举措 ${root.currentState.initiatives.length} 条，路标 ${root.currentState.roadmapMonths} 个月。`;
+        landAfterPlan(options.landOn);
+        const summary = `〔规则展开，待规划确认〕已生成「${root.currentState.valueStreamName || '价值流'}」：能力 ${root.currentState.capabilityFramework.length} 项，举措 ${root.currentState.initiatives.length} 条，路标 ${root.currentState.roadmapMonths} 个月。`;
         if (beforeSlice && typeof root.pushPatchVersion === 'function') {
             root.pushPatchVersion(summary, beforeSlice);
         }
-        if (typeof root.markAiWrite === 'function') root.markAiWrite('draft', '本地规划');
+        if (typeof root.markAiWrite === 'function') root.markAiWrite('draft', '规则展开');
         return {
             ok: true,
             summary
@@ -598,6 +684,10 @@
 
     async function runAgentFullPlan(brief, opts) {
         const options = opts || {};
+        if (refuseEmptyPayorPlan()) {
+            appendAiChat('assistant', '先写清付费对象：卖给谁，或钱从哪来。写在第一步画布后，再生成评估路标。');
+            return;
+        }
         const q = studioQuery();
         const caseId = options.caseId || q.get('case') || '';
         const text = String(brief || $('ai-user-input') && $('ai-user-input').value || '').trim();
@@ -615,6 +705,10 @@
         if (cfg.needsProvider || (cfg.apiKey && !cfg.endpoint)) {
             if (root.openAiSettings) root.openAiSettings('请先点选 Key 所属平台，再保存并试连');
             const local = runLocalFullPlan(seed, { caseId, landOn: options.landOn || 'initiatives' });
+            if (!local || !local.ok) {
+                appendAiChat('assistant', (local && local.summary) || '付费对象未写清，未生成路标。');
+                return;
+            }
             appendAiChat('assistant', local.summary + '\n\n右侧助手还没对上平台。请在齿轮里点选硅基流动 / OpenAI / OpenRouter / DeepSeek，保存并试连后再用模型改稿。');
             root.toast('请先在齿轮里选对平台');
             return;
@@ -622,11 +716,11 @@
         if (cfg.endpoint && cfg.apiKey) {
             try {
                 const ctx = root.buildAiContextSnapshot();
-                const systemText = '你是 YOWAY 评估助手，面向企业业务负责人。用业务语言输出可执行的变革事项与路标，禁止空话和内部方法论辩白。'
+                const systemText = '你是 YOWAY 评估助手，面向企业业务负责人。先质询证据、近半年消化量和 P0 责任人，再给可执行事项。禁止空话、假数和内部方法论辩白。用户没给数字时写「待贵司数据确认」。'
                     + root.buildAiWorkflowPatchSystemSuffix();
                 const userText = `任务：根据业务简述，一次生成完整规划并写入 workflowPatch（必须包含 bmc、valueStreamName、stages、capabilities、initiatives、roadmap）。\n`
                     + `硬性：initiatives 4～6 条，按主题合并而非每个能力一条；每条含 title,caps,gaps,window,benefit,cost,phase(P0|P1|P2),tech,deps,streams(子路标 start/len)。roadmap.months 建议 18。\n`
-                    + `行业默认 3C。价值流优先用营销/电商5A/零售O2O/服务ITR/GTM/渠道交易，不要做成纯研发链，除非用户明确要 IPD。\n`
+                    + `行业默认消费电子。价值流优先用营销/电商5A/零售O2O/服务ITR/GTM/渠道交易，不要做成纯研发链，除非用户明确要 IPD。\n`
                     + `案例提示：${item ? item.title + ' / ' + item.templateId : '无'}\n`
                     + `上下文：\n${JSON.stringify(ctx).slice(0, 8000)}\n业务简述：\n${String(seed).slice(0, 2500)}`;
                 appendAiChat('assistant', '', { pending: true });
@@ -639,34 +733,33 @@
                     if (!(root.currentState.vsStages || []).length) applyTemplateSilent(inferTemplateFromBrief(seed));
                     if (!(root.currentState.capabilityFramework || []).length) root.runFrameworkGen({ silent: true });
                     if (!(root.currentState.initiatives || []).length) buildThematicInitiatives();
-                    root.currentState.step = options.landOn === 'roadmap' ? 7 : 6;
-                    root.currentState.activePanel = 'workflow';
-                    root.renderNav(); root.renderStepProgress(); root.renderStep();
+                    landAfterPlan(options.landOn === 'roadmap' || options.openBriefing ? 'roadmap' : 'initiatives');
                     appendAiChat('assistant', reply);
                 }
                 root.toast('评估已写入工作台，可继续对话微调');
-                if (options.landOn === 'roadmap' || options.openBriefing) {
-                    root.setStep(7);
-                }
                 return;
             } catch (e) {
                 console.error(e);
                 const local = runLocalFullPlan(seed, { caseId, landOn: options.landOn || 'initiatives' });
+                if (!local || !local.ok) {
+                    appendAiChat('assistant', (local && local.summary) || '付费对象未写清，未生成路标。');
+                    return;
+                }
                 appendAiChat('assistant', local.summary + '\n智能助手暂未连接，已按' + chatUserName() + '的描述生成完整评估，可继续在对话里微调。');
                 root.toast('评估已生成，可继续微调');
-                if (options.landOn === 'roadmap' || options.openBriefing) {
-                    root.setStep(7);
-                }
+                if (options.landOn === 'roadmap' || options.openBriefing) landAfterPlan('roadmap');
                 return;
             }
         }
 
         const local = runLocalFullPlan(seed, { caseId, landOn: options.landOn || 'initiatives' });
-        await streamLocalText(local.summary + '\n\n' + chatUserName() + '可以继续这样说：\n· 「把售后提到最优先，路标压缩到 12 个月」\n· 「事项再少两条，只留最影响经营的」\n· 「走到第七步点保存，会生成可发给客户的过程册」');
-        root.toast(local.summary);
-        if (options.landOn === 'roadmap' || options.openBriefing) {
-            root.setStep(7);
+        if (!local || !local.ok) {
+            await streamLocalText((local && local.summary) || '付费对象未写清，未生成路标。');
+            return;
         }
+        await streamLocalText(local.summary + '\n\n' + chatUserName() + '可以继续这样说：\n· 「把售后提到最优先，路标压缩到 12 个月」\n· 「事项再少两条，只留最影响经营的」\n· 「走到第六步写明 P0 责任人后，再进路标保存过程册」');
+        root.toast(local.summary);
+        if (options.landOn === 'roadmap' || options.openBriefing) landAfterPlan('roadmap');
     }
 
     function currentStudioStep() {
@@ -745,11 +838,11 @@
                 : '';
             const focusAsk = (root.getStepFocusQuestion && root.getStepFocusQuestion(stepId).ask) || '';
             const systemText = (stepId === 1
-                ? '你是商业画布顾问。只改九宫格，禁止生成举措、价值流或路标，禁止建议跳步。简体中文。先三到六句人话，只追问这一件：' + focusAsk + ' 再给只含 bmc 的 json 补丁。'
-                : '你是 YOWAY 评估助手。面向企业业务负责人，用对方能听懂的话调优当前步骤：只改与本步相关的字段，不要无故清空其它模块，不要跳步。简体中文，先给三到六句人话，只追问这一件：' + focusAsk + ' 再给 json 补丁。')
+                ? '你是商业画布顾问。先问清付费对象与证据，只改九宫格，禁止生成举措、价值流或路标，禁止建议跳步。简体中文。没给数字时写「待贵司数据确认」。先三到六句人话，只追问这一件：' + focusAsk + ' 再给只含 bmc 的 json 补丁。'
+                : '你是 YOWAY 评估助手。先质询证据、近半年消化量和 P0 责任人，再给补丁。面向企业业务负责人，用对方能听懂的话调优当前步骤：只改与本步相关的字段，不要无故清空其它模块，不要跳步。简体中文，没给数字时写「待贵司数据确认」。先给三到六句人话，只追问这一件：' + focusAsk + ' 再给 json 补丁。')
                 + suffix;
             const userText = stepId === 1
-                ? ('当前步骤：商业画布。只输出 workflowPatch.bmc。\n行业：' + (ctx.workflowIndustry || '') + '\n当前画布：\n' + JSON.stringify(ctx.bmc || {}, null, 2) + '\n用户：' + userMsg)
+                ? ('当前步骤：商业画布。只输出 workflowPatch.bmc。\n行业：' + ((root.workflowIndustryLabel && root.workflowIndustryLabel(ctx.workflowIndustry)) || ctx.workflowIndustry || '') + '\n当前画布：\n' + JSON.stringify(ctx.bmc || {}, null, 2) + '\n用户：' + userMsg)
                 : ('当前步骤：' + (ctx.stepTitle || '') + '\n上下文：\n' + JSON.stringify(ctx).slice(0, 9000) + '\n用户：' + userMsg + '\n只改与本步相关的字段。');
             const history = aiChatHistory.filter((m) => !m.pending).slice(-7, -1);
             const reply = await callChat(systemText, userText, history, updateStreamingAssistant);
@@ -852,7 +945,7 @@
                 <div class="grid gap-2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:22px 0 10px">
                     <input id="guide-org" placeholder="企业名称" style="border:1px solid rgba(22,21,19,.12);border-radius:0;padding:10px 12px;font-size:15px;background:#fff">
                     <input id="guide-project" placeholder="评估项目" style="border:1px solid rgba(22,21,19,.12);border-radius:0;padding:10px 12px;font-size:15px;background:#fff">
-                    <input id="guide-horizon" placeholder="规划周期 如 2026–2027" style="border:1px solid rgba(22,21,19,.12);border-radius:0;padding:10px 12px;font-size:15px;background:#fff">
+                    <input id="guide-horizon" placeholder="本年度 SP/BP 窗口，如 2026" style="border:1px solid rgba(22,21,19,.12);border-radius:0;padding:10px 12px;font-size:15px;background:#fff">
                     <input id="guide-sponsor" placeholder="负责人" style="border:1px solid rgba(22,21,19,.12);border-radius:0;padding:10px 12px;font-size:15px;background:#fff">
                 </div>
                 <textarea id="guide-brief" rows="3" placeholder="可选：行业、客群、现在最痛的环节（稍后也可在画布里改）"></textarea>
@@ -969,7 +1062,7 @@
         try { wrapRenderStep7(); } catch (e) { console.error(e); }
         try { if (typeof root.refreshAiAssistantUi === 'function') root.refreshAiAssistantUi(); } catch (e) { console.error(e); }
 
-        hideGuideOverlay(true);
+        hideGuideOverlay(false);
         if (caseId) {
             const item = applyCaseContext(caseId);
             const ind = (item && item.industry) || (root.currentState && root.currentState.workflowIndustry);
@@ -978,10 +1071,14 @@
             if (typeof root.renderStepProgress === 'function') root.renderStepProgress();
             if (typeof root.setStep === 'function') root.setStep(1);
             else if (typeof root.renderStep === 'function') root.renderStep();
-            root.toast(item ? ('已带入「' + item.title + '」场景，请从画布改成贵司情况') : '已进入工作台');
+            if (typeof root.renderEngagementChrome === 'function') root.renderEngagementChrome();
+            root.toast(item ? ('已带入课题「' + item.title + '」。请改成贵司情况，并补齐评估信息。') : '已进入工作台');
+        } else if (typeof root.renderEngagementChrome === 'function') {
+            root.renderEngagementChrome();
         }
     }
 
+    root.applyCaseContext = applyCaseContext;
     root.bootstrapWendaoStudio = bootstrapWendaoStudio;
     root.openGuideOverlay = openGuideOverlay;
     root.hideGuideOverlay = hideGuideOverlay;

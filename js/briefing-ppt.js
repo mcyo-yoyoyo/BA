@@ -90,7 +90,7 @@
         return {
             org: wm.organizationName || '评估对象',
             project: wm.projectName || st.valueStreamName || '数字化转型评估',
-            industry: st.workflowIndustry || '',
+            industry: (st.workflowIndustry === '3C' || st.workflowIndustry === '3c') ? '消费电子' : (st.workflowIndustry || ''),
             horizon: wm.planningHorizon || (months + ' 个月'),
             owner: wm.sponsor || '',
             vsName: st.valueStreamName || '价值流',

@@ -269,7 +269,9 @@
                 <p class="lead" data-i18n-html="heroLead">先对齐商业模式和业务规划，再审视业务痛点与能力差距，<br>最后明确变革举措和路标规划。</p>
                 <p class="hero-note" data-i18n="heroNote">本站可浏览行业案例并登录试用。模型助手与完整交付请用桌面版。</p>
                 <div class="hero-actions">
-                    <a class="btn-sage" href="workshop.html?mode=pro" data-i18n="cta">唤醒 YOWAY</a>
+                    <a class="yoway-wake" href="workshop.html?mode=pro" aria-label="唤醒 YOWAY" data-yoway-orb>
+                        <span class="yoway-wake-txt"><small data-i18n="wakeVerb">唤醒</small><b>YOWAY</b></span>
+                    </a>
                 </div>
             </div>
             <div class="hero-visual">
@@ -307,7 +309,9 @@
         <div class="close-inner">
             <h2 data-i18n="closeTitle">把经营战略，解码成能落地的变革路标。</h2>
             <div class="hero-actions">
-                <a class="btn-sage" href="workshop.html?mode=pro" data-i18n="cta">唤醒 YOWAY</a>
+                <a class="yoway-wake" href="workshop.html?mode=pro" aria-label="唤醒 YOWAY" data-yoway-orb>
+                    <span class="yoway-wake-txt"><small data-i18n="wakeVerb">唤醒</small><b>YOWAY</b></span>
+                </a>
             </div>
         </div>
     </section>
@@ -339,6 +343,7 @@
     <script>YouweiAuth.initPublic();</script>
     <script>
         (function () {
+            function startHome() {
             const I = window.YouweiI18n;
             const home = window.YouweiOps ? YouweiOps.getHome() : {};
             const cells = (window.YouweiOps ? YouweiOps.getMethod() : (window.WENDAO_STEPS || window.WENDAO_METHOD_CELLS)) || [];
@@ -384,8 +389,11 @@
             }
 
             function indCopy(ind) {
-                const pack = d().ind && d().ind[ind.id];
-                return { name: (pack && pack.name) || ind.name };
+                if (I && I.lang && I.lang() === 'en') {
+                    const pack = d().ind && d().ind[ind.id];
+                    return { name: (pack && pack.name) || ind.name };
+                }
+                return { name: ind.name };
             }
 
             function renderIndustries() {
@@ -486,6 +494,9 @@
                     renderCases();
                 }
             });
+            }
+            if (window.YouweiOps && YouweiOps.ready) YouweiOps.ready().then(startHome).catch(startHome);
+            else startHome();
         })();
     </script>
 </body>

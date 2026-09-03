@@ -6,6 +6,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { handleContentApi } from './content-store.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT || 8765);
@@ -198,6 +199,9 @@ const server = http.createServer(async (req, res) => {
     if (p.replace(/\/$/, '') === '/api/leads') {
         return handleLeads(req, res);
     }
+    if (await handleContentApi(ROOT, req, res, p)) {
+        return;
+    }
     if (req.method !== 'GET' && req.method !== 'HEAD') {
         return send(res, 405, { 'Content-Type': 'text/plain' }, 'Method Not Allowed');
     }
@@ -218,6 +222,7 @@ server.listen(PORT, '127.0.0.1', () => {
     console.log(`[youwei] 已启动  http://127.0.0.1:${PORT}/`);
     console.log(`[youwei] 工作台  http://127.0.0.1:${PORT}/workshop.html`);
     console.log(`[youwei] 管理台  http://127.0.0.1:${PORT}/admin.html`);
+    console.log(`[youwei] 内容库  data/content.json  /api/ops`);
     console.log(`[youwei] AI 代理 /api/ai/chat  ->  ${upstreamChatUrl()}`);
     console.log('');
 });

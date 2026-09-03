@@ -3,7 +3,7 @@
         {
             group: '公开站点',
             items: [
-                { id: 'home', title: '场景上架', lead: '控制首页行业与案例是否出现。也可导出 Excel，改完再导入；编号列请勿改。' }
+                { id: 'home', title: '场景上架', lead: '行业与案例写入本机后台库 data/content.json，首页直接读取，不进浏览器缓存。编号列请勿改。' }
             ]
         },
         {
@@ -171,44 +171,104 @@
         };
     }
 
+    function factsText(arr) {
+        return (arr || []).join('\n');
+    }
+
+    function parseLines(s, max) {
+        return String(s || '').split(/\n/).map(function (x) { return x.trim(); }).filter(Boolean).slice(0, max || 8);
+    }
+
+    function refsText(arr) {
+        return (arr || []).map(function (r) {
+            return String((r && r.label) || '') + ' | ' + String((r && r.url) || '');
+        }).join('\n');
+    }
+
+    function parseRefs(s) {
+        return parseLines(s, 8).map(function (line) {
+            const parts = line.split('|');
+            const url = (parts.length > 1 ? parts.slice(1).join('|') : parts[0]).trim();
+            const label = (parts.length > 1 ? parts[0] : url).trim();
+            return url ? { label: label || url, url: url } : null;
+        }).filter(Boolean);
+    }
+
+    function backendHint() {
+        if (YouweiOps.backendOk && YouweiOps.backendOk()) {
+            return '当前读后台库 data/content.json。保存后刷新首页即可看到。';
+        }
+        return '本机后台未启动，页面只显示内置种子，保存会失败。请用 npm run dev 或桌面版打开。';
+    }
+
     function renderHome() {
         const inds = YouweiOps.getIndustries({ includeHidden: true });
         const cases = YouweiOps.getCases({ includeHidden: true });
         $('admin-body').innerHTML = `
             <div class="page-bar">
-                <button type="button" class="btn" id="save-home">保存上架</button>
+                <button type="button" class="btn" id="save-home">写入后台库</button>
                 ${excelBtns('exp-home', 'imp-home')}
             </div>
+            <p class="hint">${esc(backendHint())}</p>
             <div class="card">
                 <h2>行业</h2>
-                <p class="hint">勾选后出现在首页行业栏。顺序数字越小越靠前。</p>
+                <p class="hint">上架后出现在首页行业栏。顺序数字越小越靠前。名称会显示在前台。</p>
                 <div class="stack">${inds.map(function (ind) {
-                    return '<div class="row-item">' +
+                    return '<article class="edit-card">' +
+                        '<div class="edit-head">' +
                         '<label class="switch"><input type="checkbox" data-ind-pub="' + esc(ind.id) + '"' + (ind.published !== false ? ' checked' : '') + '><span>上架</span></label>' +
-                        '<span class="row-name">' + esc(ind.name) + '</span>' +
+                        '<span class="who">' + esc(ind.id) + '</span>' +
                         '<label class="ord"><span>顺序</span><input type="number" data-ind-ord="' + esc(ind.id) + '" value="' + esc(ind.order) + '"></label>' +
-                        '</div>';
+                        '</div>' +
+                        '<div class="row2">' +
+                        '<label class="field"><span>名称</span><input type="text" data-ind-name="' + esc(ind.id) + '" value="' + esc(ind.name || '') + '"></label>' +
+                        '<label class="field"><span>短标</span><input type="text" data-ind-kicker="' + esc(ind.id) + '" value="' + esc(ind.kicker || '') + '"></label>' +
+                        '</div>' +
+                        '<label class="field"><span>行业说明</span><textarea rows="2" data-ind-blurb="' + esc(ind.id) + '">' + esc(ind.blurb || '') + '</textarea></label>' +
+                        '<label class="field"><span>课题导语</span><textarea rows="2" data-ind-lead="' + esc(ind.id) + '">' + esc(ind.casesLead || '') + '</textarea></label>' +
+                        '</article>';
                 }).join('')}</div>
             </div>
             <div class="card">
                 <h2>案例</h2>
-                <p class="hint">每条单独成卡。标题和摘要用整行书写，保存后首页轮播会更新。</p>
+                <p class="hint">标题、摘要、配图进入首页轮播；对照事实与出处进入案例页和工作台选题备忘。信源刷新只起草，须点「采纳」再保存。</p>
                 <div class="stack">${cases.map(function (c) {
-                    return '<article class="edit-card">' +
+                    const refs = c.references || [];
+                    const urls = (c.sourceUrls && c.sourceUrls.length)
+                        ? c.sourceUrls.join('\n')
+                        : refs.map(function (r) { return r.url; }).filter(Boolean).join('\n');
+                    return '<article class="edit-card" id="case-card-' + esc(c.id) + '">' +
                         '<div class="edit-head">' +
                         '<label class="switch"><input type="checkbox" data-c-pub="' + esc(c.id) + '"' + (c.published !== false ? ' checked' : '') + '><span>上架</span></label>' +
+                        '<span class="who">' + esc(c.id) + ' · ' + esc(c.industry || '') + '</span>' +
                         '<label class="ord"><span>顺序</span><input type="number" data-c-ord="' + esc(c.id) + '" value="' + esc(c.order) + '"></label>' +
                         '</div>' +
-                        '<label class="field"><span>标题</span><textarea class="title-box" rows="2" data-c-title="' + esc(c.id) + '">' + esc(c.title) + '</textarea></label>' +
-                        '<label class="field"><span>场景摘要</span><textarea class="sit-box" rows="5" data-c-sit="' + esc(c.id) + '">' + esc(c.situation || c.subtitle || '') + '</textarea></label>' +
+                        '<label class="field"><span>标题</span><textarea class="title-box" rows="2" data-c-title="' + esc(c.id) + '">' + esc(c.title || '') + '</textarea></label>' +
+                        '<div class="row2">' +
+                        '<label class="field"><span>首页标签</span><input type="text" data-c-kicker="' + esc(c.id) + '" value="' + esc(c.kicker || '') + '"></label>' +
+                        '<label class="field"><span>配图路径</span><input type="text" data-c-image="' + esc(c.id) + '" value="' + esc(c.image || '') + '"></label>' +
+                        '</div>' +
+                        '<label class="field"><span>副题</span><textarea rows="2" data-c-sub="' + esc(c.id) + '">' + esc(c.subtitle || c.tagline || '') + '</textarea></label>' +
+                        '<label class="field"><span>场景摘要</span><textarea class="sit-box" rows="4" data-c-sit="' + esc(c.id) + '">' + esc(c.situation || '') + '</textarea></label>' +
+                        '<label class="field"><span>对照事实（一行一条，最多 3～8 条）</span><textarea rows="4" data-c-facts="' + esc(c.id) + '">' + esc(factsText(c.publicFacts)) + '</textarea></label>' +
+                        '<label class="field"><span>出处说明</span><textarea rows="2" data-c-srcnote="' + esc(c.id) + '">' + esc(c.sourceNote || '') + '</textarea></label>' +
+                        '<label class="field"><span>出处（名称 | 网址，一行一条）</span><textarea rows="3" data-c-refs="' + esc(c.id) + '">' + esc(refsText(refs)) + '</textarea></label>' +
+                        '<label class="field"><span>刷新用信源网址（一行一条，可与出处相同）</span><textarea rows="3" data-c-urls="' + esc(c.id) + '">' + esc(urls) + '</textarea></label>' +
+                        '<div class="actions">' +
+                        '<button type="button" class="btn ghost" data-refresh="' + esc(c.id) + '">从信源起草对照</button>' +
+                        '</div>' +
+                        '<div class="fact-draft hidden" id="draft-' + esc(c.id) + '"></div>' +
                         '</article>';
                 }).join('')}</div>
             </div>
             <div class="page-bar">
-                <button type="button" class="btn" id="save-home-2">保存上架</button>
+                <button type="button" class="btn" id="save-home-2">写入后台库</button>
             </div>`;
         $('save-home').onclick = saveShelf;
         $('save-home-2').onclick = saveShelf;
+        document.querySelectorAll('[data-refresh]').forEach(function (btn) {
+            btn.onclick = function () { refreshCaseFacts(btn.getAttribute('data-refresh')); };
+        });
         bindExcel('exp-home', exportShelfExcel, 'imp-home', importShelfExcel);
     }
 
@@ -219,16 +279,28 @@
         Ex.download('youwei-shelf.xlsx', [
             {
                 name: '行业',
-                cols: [16, 16, 8, 8],
-                rows: [['id', '名称', '上架', '顺序']].concat(inds.map(function (ind) {
-                    return [ind.id, ind.name, Ex.yesNo(ind.published !== false), ind.order];
+                cols: [12, 14, 8, 8, 16, 40, 36],
+                rows: [['id', '名称', '上架', '顺序', '短标', '行业说明', '课题导语']].concat(inds.map(function (ind) {
+                    return [ind.id, ind.name, Ex.yesNo(ind.published !== false), ind.order, ind.kicker || '', ind.blurb || '', ind.casesLead || ''];
                 }))
             },
             {
                 name: '案例',
-                cols: [14, 8, 8, 40, 72],
-                rows: [['id', '上架', '顺序', '标题', '场景摘要']].concat(cases.map(function (c) {
-                    return [c.id, Ex.yesNo(c.published !== false), c.order, c.title || '', c.situation || c.subtitle || ''];
+                cols: [14, 8, 8, 36, 14, 28, 40, 28, 48, 36, 40],
+                rows: [['id', '上架', '顺序', '标题', '首页标签', '副题', '场景摘要', '配图', '对照事实', '出处说明', '出处']].concat(cases.map(function (c) {
+                    return [
+                        c.id,
+                        Ex.yesNo(c.published !== false),
+                        c.order,
+                        c.title || '',
+                        c.kicker || '',
+                        c.subtitle || '',
+                        c.situation || '',
+                        c.image || '',
+                        factsText(c.publicFacts),
+                        c.sourceNote || '',
+                        refsText(c.references)
+                    ];
                 }))
             }
         ]);
@@ -246,7 +318,11 @@
             if (!id || !knownInd[id]) return;
             industries[id] = {
                 published: Ex.isYes(Ex.pick(r, ['上架'])),
-                order: Number(Ex.pick(r, ['顺序']) || 0)
+                order: Number(Ex.pick(r, ['顺序']) || 0),
+                name: Ex.pick(r, ['名称']),
+                kicker: Ex.pick(r, ['短标']),
+                blurb: Ex.pick(r, ['行业说明']),
+                casesLead: Ex.pick(r, ['课题导语'])
             };
         });
         const cases = {};
@@ -257,23 +333,36 @@
                 published: Ex.isYes(Ex.pick(r, ['上架'])),
                 order: Number(Ex.pick(r, ['顺序']) || 0),
                 title: Ex.pick(r, ['标题']),
-                situation: Ex.pick(r, ['场景摘要', '摘要'])
+                kicker: Ex.pick(r, ['首页标签', '标签']),
+                subtitle: Ex.pick(r, ['副题']),
+                situation: Ex.pick(r, ['场景摘要', '摘要']),
+                image: Ex.pick(r, ['配图']),
+                publicFacts: parseLines(Ex.pick(r, ['对照事实']), 8),
+                sourceNote: Ex.pick(r, ['出处说明']),
+                references: parseRefs(Ex.pick(r, ['出处']))
             };
         });
         if (!Object.keys(industries).length && !Object.keys(cases).length) {
             throw new Error('没有识别到可导入的行业或案例，请勿改编号列');
         }
-        YouweiOps.patch({ industries: industries, cases: cases });
-        toast('已导入场景上架');
+        YouweiOps.patch({ industries: industries, cases: cases }).then(function () {
+            toast('已导入并写入后台库');
+        }).catch(function (e) {
+            toast(e.message || '导入失败');
+        });
     }
 
-    function saveShelf() {
+    function collectShelf() {
         const industries = {};
         document.querySelectorAll('[data-ind-pub]').forEach(function (el) {
             const id = el.getAttribute('data-ind-pub');
             industries[id] = {
                 published: el.checked,
-                order: Number((document.querySelector('[data-ind-ord="' + id + '"]') || {}).value || 0)
+                order: Number((document.querySelector('[data-ind-ord="' + id + '"]') || {}).value || 0),
+                name: (document.querySelector('[data-ind-name="' + id + '"]') || {}).value,
+                kicker: (document.querySelector('[data-ind-kicker="' + id + '"]') || {}).value,
+                blurb: (document.querySelector('[data-ind-blurb="' + id + '"]') || {}).value,
+                casesLead: (document.querySelector('[data-ind-lead="' + id + '"]') || {}).value
             };
         });
         const cases = {};
@@ -283,12 +372,136 @@
                 published: el.checked,
                 order: Number((document.querySelector('[data-c-ord="' + id + '"]') || {}).value || 0),
                 title: (document.querySelector('[data-c-title="' + id + '"]') || {}).value,
-                situation: (document.querySelector('[data-c-sit="' + id + '"]') || {}).value
+                kicker: (document.querySelector('[data-c-kicker="' + id + '"]') || {}).value,
+                subtitle: (document.querySelector('[data-c-sub="' + id + '"]') || {}).value,
+                situation: (document.querySelector('[data-c-sit="' + id + '"]') || {}).value,
+                image: (document.querySelector('[data-c-image="' + id + '"]') || {}).value,
+                publicFacts: parseLines((document.querySelector('[data-c-facts="' + id + '"]') || {}).value, 8),
+                sourceNote: (document.querySelector('[data-c-srcnote="' + id + '"]') || {}).value,
+                references: parseRefs((document.querySelector('[data-c-refs="' + id + '"]') || {}).value),
+                sourceUrls: parseLines((document.querySelector('[data-c-urls="' + id + '"]') || {}).value, 8)
             };
         });
-        YouweiOps.patch({ industries: industries, cases: cases });
-        audit('admin_save', 'shelf');
-        toast('上架已保存，刷新首页即可');
+        return { industries: industries, cases: cases };
+    }
+
+    function saveShelf() {
+        const shelf = collectShelf();
+        YouweiOps.patch(shelf).then(function () {
+            audit('admin_save', 'shelf');
+            toast('已写入后台库，刷新首页即可');
+        }).catch(function (e) {
+            toast(e.message || '写入失败');
+        });
+    }
+
+    function parseDraftJson(raw) {
+        const text = String(raw || '');
+        const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+        const blob = fence ? fence[1] : text;
+        const start = blob.indexOf('{');
+        const end = blob.lastIndexOf('}');
+        if (start < 0 || end <= start) return null;
+        try {
+            return JSON.parse(blob.slice(start, end + 1));
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function showDraft(id, draft) {
+        const box = document.getElementById('draft-' + id);
+        if (!box) return;
+        const facts = (draft.facts || []).map(function (x) { return String(x || '').trim(); }).filter(Boolean);
+        const note = String(draft.sourceNote || '').trim();
+        const excerpts = draft.excerpts || [];
+        box.classList.remove('hidden');
+        box.innerHTML =
+            '<p class="hint">' + esc(draft.hint || '以下为起草稿，不会自动上首页。点采纳后写入表单，再点「写入后台库」。') + '</p>' +
+            (facts.length ? '<p><b>拟写对照</b></p><ul>' + facts.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') +
+            (note ? '<p>' + esc(note) + '</p>' : '') +
+            (excerpts.length ? '<p class="hint">已抓到 ' + excerpts.length + ' 个页面，可对照改写。</p>' : '') +
+            '<div class="actions">' +
+            '<button type="button" class="btn" data-accept="' + esc(id) + '">采纳到表单</button>' +
+            '<button type="button" class="btn ghost" data-dismiss="' + esc(id) + '">弃掉</button>' +
+            '</div>';
+        box._draft = { facts: facts, sourceNote: note };
+        const acc = box.querySelector('[data-accept]');
+        const dis = box.querySelector('[data-dismiss]');
+        if (acc) acc.onclick = function () {
+            const factsEl = document.querySelector('[data-c-facts="' + id + '"]');
+            const noteEl = document.querySelector('[data-c-srcnote="' + id + '"]');
+            if (factsEl && facts.length) factsEl.value = facts.join('\n');
+            if (noteEl && note) noteEl.value = note;
+            toast('已采纳到表单，请再点「写入后台库」');
+            box.classList.add('hidden');
+        };
+        if (dis) dis.onclick = function () { box.classList.add('hidden'); box.innerHTML = ''; };
+    }
+
+    async function refreshCaseFacts(id) {
+        const urls = parseLines((document.querySelector('[data-c-urls="' + id + '"]') || {}).value, 4);
+        const refs = parseRefs((document.querySelector('[data-c-refs="' + id + '"]') || {}).value);
+        refs.forEach(function (r) {
+            if (r.url && urls.indexOf(r.url) === -1 && urls.length < 4) urls.push(r.url);
+        });
+        if (!urls.length) {
+            toast('请先填写信源网址');
+            return;
+        }
+        if (!YouweiOps.backendOk || !YouweiOps.backendOk()) {
+            toast('本机后台未启动，无法抓取信源');
+            return;
+        }
+        toast('正在抓取信源…');
+        const pages = [];
+        for (let i = 0; i < urls.length; i += 1) {
+            try {
+                pages.push(await YouweiOps.fetchSource(urls[i]));
+            } catch (e) {
+                pages.push({ ok: false, url: urls[i], message: e.message || '失败' });
+            }
+        }
+        const okPages = pages.filter(function (p) { return p.ok && p.text; });
+        if (!okPages.length) {
+            toast((pages[0] && pages[0].message) || '信源抓不到');
+            return;
+        }
+        const title = (document.querySelector('[data-c-title="' + id + '"]') || {}).value || id;
+        const oldFacts = (document.querySelector('[data-c-facts="' + id + '"]') || {}).value || '';
+        const pack = okPages.map(function (p, i) {
+            return (i + 1) + '. ' + (p.title || p.url) + '\n' + p.url + '\n' + String(p.text || '').slice(0, 2800);
+        }).join('\n\n');
+        if (!window.YouweiAi || !YouweiAi.chat) {
+            showDraft(id, { facts: [], sourceNote: '', excerpts: okPages, hint: '未加载模型连接。下面是抓到的正文，请手工改对照。' });
+            return;
+        }
+        try {
+            const reply = await YouweiAi.chat({
+                stream: false,
+                temperature: 0.2,
+                system: '你是行业对照编辑。只根据给定公开网页写对照事实，不是友为客户案例，不是品牌授权。禁止编造经营数字、占比、人数、金额。每条事实必须能追溯到给定网址。简体中文。只输出 JSON：{"facts":["...","...","..."],"sourceNote":"..."}。facts 2到3条，每条不超过80字。sourceNote 须点明对照品牌与「不是授权、请用贵司数据确认」。',
+                user: '课题：' + title + '\n现有对照（可作语气参考，勿照抄过期句）：\n' + oldFacts + '\n\n信源摘录：\n' + pack
+            });
+            const parsed = parseDraftJson(reply);
+            if (!parsed || !Array.isArray(parsed.facts) || !parsed.facts.length) {
+                showDraft(id, { facts: [], sourceNote: '', excerpts: okPages, hint: '模型未给出可用 JSON。已抓到信源，请手工改对照。' });
+                return;
+            }
+            showDraft(id, {
+                facts: parsed.facts.slice(0, 3),
+                sourceNote: parsed.sourceNote || '',
+                excerpts: okPages
+            });
+            toast('起草完成，请审阅后采纳');
+        } catch (e) {
+            showDraft(id, {
+                facts: [],
+                sourceNote: '',
+                excerpts: okPages,
+                hint: (e && e.friendly) || e.message || '模型未通。已抓到信源，请手工改对照。'
+            });
+        }
     }
 
     function renderModels() {
@@ -380,7 +593,7 @@
             const models = YouweiOps.load().models || {};
             models.templates = null;
             YouweiOps.patch({ models: models });
-            localStorage.removeItem('youwei_ops_catalog_v1');
+            if (YouweiOps.saveCatalog) YouweiOps.saveCatalog({ templates: null, rules: null, at: '' });
             toast('已清空覆盖。打开一次工作台后重新同步。');
             render();
         };
@@ -865,15 +1078,19 @@
     }
 
     function boot() {
-        if (YouweiAuth.mountAccountMenu) YouweiAuth.mountAccountMenu();
-        render();
-        paintLicense();
-        if (window.YouweiLicense && YouweiLicense.ready) {
-            YouweiLicense.ready.then(function () {
-                render();
-                paintLicense();
-            });
-        }
+        const go = function () {
+            if (YouweiAuth.mountAccountMenu) YouweiAuth.mountAccountMenu();
+            render();
+            paintLicense();
+            if (window.YouweiLicense && YouweiLicense.ready) {
+                YouweiLicense.ready.then(function () {
+                    render();
+                    paintLicense();
+                });
+            }
+        };
+        if (window.YouweiOps && YouweiOps.ready) YouweiOps.ready().then(go).catch(go);
+        else go();
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

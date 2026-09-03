@@ -546,6 +546,7 @@
         </div>
         <div class="youwei-work-sub print-hidden">
             <div id="step-progress" class="step-progress-rail overflow-x-auto no-scrollbar" aria-label="步骤进度"></div>
+            <div id="p0-lock-hint" class="p0-lock-hint" hidden></div>
         </div>
     </header>
 
@@ -567,7 +568,7 @@
                     <button type="button" onclick="closeNavDrawer()" title="收起">收起</button>
                 </div>
                 <nav id="nav-list" class="flex flex-col gap-0.5 rounded-[14px] bg-white p-1.5 lg:p-1 shadow-nav border border-black/[0.06] lg:flex-1 lg:min-h-0 lg:overflow-y-auto no-scrollbar"></nav>
-                <div id="sidebar-history-panel" class="print-hidden shrink-0 mt-3 lg:mt-1.5 rounded-[14px] bg-white border border-black/[0.06] p-3 lg:p-2 shadow-nav lg:max-h-[min(22vh,156px)] flex flex-col min-h-0"></div>
+                <div id="sidebar-history-panel" class="print-hidden shrink-0 mt-3 lg:mt-1.5 rounded-[14px] bg-white border border-black/[0.06] p-3 lg:p-2 shadow-nav lg:max-h-[min(28vh,220px)] flex flex-col min-h-0"></div>
                 <p class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider mt-3 mb-1.5 lg:mt-2 lg:mb-1 shrink-0 sidebar-expand-only hidden">配置</p>
                 <button type="button" id="nav-config-btn" onclick="openConfigPanel()" class="print-hidden hidden w-full flex items-center gap-2 rounded-[10px] px-3 py-2 text-left transition-all border border-black/[0.06] bg-white shadow-nav text-ink-secondary hover:bg-canvas hover:text-ink lg:py-1.5">
                     <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-canvas text-ink-tertiary"><i class="fas fa-sliders text-[12px]" aria-hidden="true"></i></span>
@@ -609,6 +610,7 @@
             </div>
         </main>
     </div>
+    <input type="file" id="planning-file-input" class="hidden" accept=".html,.json,.youwei.json,application/json,text/html" aria-hidden="true" onchange="onPlanningFilePicked(event)">
 
     <script src="js/accounts.js"></script>
     <script src="js/accounts.local.js"></script>
@@ -779,8 +781,25 @@
             return preset && preset.l3Desc ? String(preset.l3Desc).trim() : '';
         }
 
-        /** 步骤 1 所选行业，决定步骤 2 可见的价值流模板 */
+        /** 步骤 1 所选行业，决定步骤 2 可见的价值流模板。内部键仍为 3C，界面显示「消费电子」 */
         const WORKFLOW_INDUSTRIES = ['3C', '汽车', '家电'];
+
+        function normalizeWorkflowIndustry(raw) {
+            const t = String(raw == null ? '' : raw).trim();
+            if (!t) return '3C';
+            if (t === '消费电子' || /^3c$/i.test(t)) return '3C';
+            if (t === '汽车' || t === '家电') return t;
+            return WORKFLOW_INDUSTRIES.includes(t) ? t : '3C';
+        }
+
+        function workflowIndustryLabel(raw) {
+            const k = normalizeWorkflowIndustry(raw);
+            return k === '3C' ? '消费电子' : k;
+        }
+
+        function workflowIndustryChoicesLabel(sep) {
+            return WORKFLOW_INDUSTRIES.map(workflowIndustryLabel).join(sep || '、');
+        }
         /** 切换行业或当前模板不适用时，优先选中的内置模板 key（须在该行业可选列表内） */
         const DEFAULT_VS_TEMPLATE_BY_INDUSTRY = {
             '3C': 'hwcb_5a',
@@ -1050,8 +1069,13 @@ CRM/线索与订单数据
             knowledgeRefs: {
                 version: 1,
                 anonymizedCaseIds: [],
-                linkedAssetRecordIds: []
+                linkedAssetRecordIds: [],
+                caseId: '',
+                publicFacts: [],
+                sourceNote: '',
+                fitLines: []
             },
+            caseContext: null,
             /** §2 热力图：空字符串 = 全局四维；非空时为价值流「场景因子」文案，对应能力块 scenarioGapProfiles（界面已移除场景切换，保留字段兼容旧快照） */
             heatmapScenarioView: '',
             /** P1：4A 数据对象 / 系统依赖 / 技术约束 */
@@ -1109,14 +1133,15 @@ CRM/线索与订单数据
 
         function applyIndustryBmcPreset(industry, opts) {
             const silent = !!(opts && opts.silent);
-            const pack = INDUSTRY_BMC[industry] || INDUSTRY_BMC['3C'];
-            currentState.workflowIndustry = INDUSTRY_BMC[industry] ? industry : (currentState.workflowIndustry || '3C');
+            const key = normalizeWorkflowIndustry(industry);
+            const pack = INDUSTRY_BMC[key] || INDUSTRY_BMC['3C'];
+            currentState.workflowIndustry = INDUSTRY_BMC[key] ? key : (currentState.workflowIndustry || '3C');
             currentState.bmc = Object.assign({}, pack);
             currentState.bmcReport = null;
             ensureSelectedTemplateForIndustry();
             if (currentState.step === 1 && currentState.activePanel === 'workflow') renderStep1();
             if (typeof refreshAiAssistantUi === 'function') refreshAiAssistantUi();
-            if (!silent) toast('已换成「' + currentState.workflowIndustry + '」示范画布，可在格子里改成贵司情况');
+            if (!silent) toast('已换成「' + workflowIndustryLabel(currentState.workflowIndustry) + '」示范画布，可在格子里改成贵司情况');
             return true;
         }
 
@@ -1124,17 +1149,18 @@ CRM/线索与订单数据
             try {
                 const q = new URLSearchParams(location.search);
                 const ind = q.get('industry');
-                if (ind && WORKFLOW_INDUSTRIES.includes(ind)) {
+                if (ind && WORKFLOW_INDUSTRIES.includes(normalizeWorkflowIndustry(ind))) {
                     applyIndustryBmcPreset(ind, { silent: true });
                 }
             } catch (e) { /* ignore */ }
         }
 
         function setWorkflowIndustry(val) {
-            if (!WORKFLOW_INDUSTRIES.includes(val)) return;
-            currentState.workflowIndustry = val;
+            const key = normalizeWorkflowIndustry(val);
+            if (!WORKFLOW_INDUSTRIES.includes(key)) return;
+            currentState.workflowIndustry = key;
             ensureSelectedTemplateForIndustry();
-            applyIndustryBmcPreset(val);
+            applyIndustryBmcPreset(key);
             if (currentState.step === 2 && currentState.activePanel === 'workflow') renderStep2();
         }
 
@@ -1142,12 +1168,12 @@ CRM/线索与订单数据
         function parseIndustryTagsFromConfigCell(cell) {
             const s = String(cell ?? '').trim();
             if (!s || s === '—' || s === '-' || /^全部$/i.test(s) || /^all$/i.test(s)) return [];
-            return s.split(/[,，;；、]/).map(x => x.trim()).filter(x => WORKFLOW_INDUSTRIES.includes(x));
+            return s.split(/[,，;；、]/).map(x => x.trim()).filter(Boolean).map(normalizeWorkflowIndustry).filter(x => WORKFLOW_INDUSTRIES.includes(x));
         }
 
         function templateIndustryBadgeLabel(tpl) {
             if (!tpl || !Array.isArray(tpl.industries) || !tpl.industries.length) return '全部行业';
-            return tpl.industries.join('、');
+            return tpl.industries.map(workflowIndustryLabel).join('、');
         }
 
         /** 保存模板时读取适用行业勾选：全不选表示不限行业 */
@@ -1174,7 +1200,7 @@ CRM/线索与订单数据
                 const checked = hasRestrict && sel.includes(ind);
                 return `<label class="inline-flex items-center gap-2 text-[13px] text-ink cursor-pointer select-none rounded-[8px] border border-transparent px-2 py-1 hover:bg-white/80 hover:border-black/[0.06] transition-colors">
                     <input type="checkbox" id="tpl-industry-${i}" class="rounded border-black/[0.2] text-accent focus:ring-accent/30" ${checked ? 'checked' : ''} />
-                    <span>${ind}</span>
+                    <span>${workflowIndustryLabel(ind)}</span>
                 </label>`;
             }).join('')}</div>
             </div>`;
@@ -1220,12 +1246,28 @@ CRM/线索与订单数据
             return map[stepId] || [];
         }
 
+        function meetingReadyHintHtml(stepId) {
+            if (stepId !== 6 && stepId !== 7) return '';
+            if (isMeetingReady()) {
+                return stepId === 7 ? '<p class="meeting-ready-ok">可上会 · 近半年 P0 已有责任人</p>' : '';
+            }
+            const miss = missingRoadmapGate().filter(function (x) {
+                return /P0|责任人/.test(x);
+            });
+            if (!miss.length && isEngagementReady()) {
+                return '<p class="meeting-ready-no">还不能上会 · 近半年 P0 须写明责任人</p>';
+            }
+            if (!miss.length) return '';
+            return '<p class="meeting-ready-no">还不能上会 · ' + escapeHtmlText(miss[0]) + '</p>';
+        }
+
         function stepPageHeading(stepId, extraClass = '') {
             const s = getStepMeta(stepId);
             if (!s) return '';
             const blockClass = extraClass ? ` ${extraClass}` : '';
             return `<div class="step-page-head min-w-0 shrink-0${blockClass}">
                 <h2 class="text-[17px] sm:text-[18px] lg:text-[17px] font-semibold text-ink tracking-tight leading-tight">${s.title}</h2>
+                ${meetingReadyHintHtml(stepId)}
                 ${aiWriteMarkHtml(stepId)}
             </div>`;
         }
@@ -2111,7 +2153,7 @@ CRM/线索与订单数据
                 const hint = inferWorkflowIndustryFromUserText(msg) || ctx.workflowIndustry || '汽车';
                 const demoWp = buildDemoValueStreamWorkflowPatchForIndustry(hint);
                 lines.push('价值流模板配置（演示）：');
-                lines.push(`· 已按行业倾向「${demoWp.workflowIndustry}」生成典型端到端阶段与价值流名称；写入后可在步骤 2 继续微调时长与五维。`);
+                lines.push(`· 已按行业倾向「${workflowIndustryLabel(demoWp.workflowIndustry)}」生成典型端到端阶段与价值流名称；写入后可在步骤 2 继续微调时长与五维。`);
                 lines.push('· 配置 API 后可结合真实 OTIF、库存周转、质量损失等指标细化组件与节拍。');
                 lines.push('');
                 lines.push('```json');
@@ -2163,13 +2205,20 @@ CRM/线索与订单数据
             return txt || '（模型返回为空）';
         }
 
+        function yowayChallengeBlock() {
+            return '\n\n【参谋职责】先质询再给补丁。必须先核对：证据从哪来、近半年消化量（P0 是否超过 2～3 条）、责任人是否已指定。'
+                + '用户没给经营数字时写「待贵司数据确认」，禁止编造成交量、转化率、金额、人数。'
+                + '行业对照不是贵司成绩，不要把对照品牌的做法写成贵司现状。'
+                + 'P0 没有责任人时，不要建议进入路标或标记可上会。';
+        }
+
         function buildAiWorkflowPatchSystemSuffix(opts) {
             const stepId = (opts && opts.stepId != null) ? opts.stepId : getAiStepId();
             const focus = getStepFocusQuestion(stepId);
             const domains = window.formatWendaoIndustryDomainPrompt
                 ? ('\n\n' + formatWendaoIndustryDomainPrompt(currentState.workflowIndustry))
                 : '';
-            const oneAsk = domains + '\n\n【本步只问一件】只围绕这个问题展开，不要一次抛多个问题：' + focus.ask;
+            const oneAsk = yowayChallengeBlock() + domains + '\n\n【本步只问一件】只围绕这个问题展开，不要一次抛多个问题：' + focus.ask;
             if ((opts && opts.bmcOnly) || stepId === 1) {
                 return oneAsk + `\n\n【本步只改商业画布】解读后必须追加 json 代码块，且只含 bmc：
 \`\`\`json
@@ -2192,7 +2241,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 `· workflowPatch.initiatives：变革举措；非空则整体替换。每项含 title，可选 caps(数组),gaps,window,benefit,cost（难易程度文案）,phase(P0|P1|P2),tech,deps,milestoneBand，streams 为子路标数组（start 为从 0 起的月索引，len 为持续月数）。\n` +
                 `· workflowPatch.roadmap：可选 startYm(YYYY-MM)、months(6-48)。\n` +
                 `· workflowPatch.canvasDiagnosticRules：画布诊断规则数组（替换写入当前规则表）；每项含 field（英文键）、keyword、message、score（0-100 扣分）、compareField（另一格英文键或 none）、compareKeyword（联动关键词；无联动可省略）。\n` +
-                `· workflowPatch.workflowIndustry：可选，仅允许 ${WORKFLOW_INDUSTRIES.join('、')}，用于步骤 2 行业筛选。`;
+                `· workflowPatch.workflowIndustry：可选，仅允许 ${workflowIndustryChoicesLabel()}（亦可写 3C），用于步骤 2 行业筛选。`;
         }
 
         function restrictWorkflowPatchToStep(wp, stepId) {
@@ -2615,7 +2664,9 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
         }
 
         function buildDemoValueStreamWorkflowPatchForIndustry(indHint) {
-            let industry = WORKFLOW_INDUSTRIES.includes(indHint) ? indHint : inferWorkflowIndustryFromUserText(indHint);
+            let industry = WORKFLOW_INDUSTRIES.includes(normalizeWorkflowIndustry(indHint))
+                ? normalizeWorkflowIndustry(indHint)
+                : inferWorkflowIndustryFromUserText(indHint);
             if (!industry) industry = '汽车';
             if (!WORKFLOW_INDUSTRIES.includes(industry)) industry = '汽车';
             const stagesBank = {
@@ -2648,7 +2699,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             return {
                 version: 1,
                 workflowIndustry: industry,
-                valueStreamName: `${industry}：端到端价值流（演示示例）`,
+                valueStreamName: `${workflowIndustryLabel(industry)}：端到端价值流（演示示例）`,
                 stages
             };
         }
@@ -2706,8 +2757,8 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 touched.ini = true;
                 parts.push('变革举措');
             }
-            if (wp.workflowIndustry != null && WORKFLOW_INDUSTRIES.includes(String(wp.workflowIndustry).trim())) {
-                currentState.workflowIndustry = String(wp.workflowIndustry).trim();
+            if (wp.workflowIndustry != null && WORKFLOW_INDUSTRIES.includes(normalizeWorkflowIndustry(wp.workflowIndustry))) {
+                currentState.workflowIndustry = normalizeWorkflowIndustry(wp.workflowIndustry);
                 touched.vs = true;
                 parts.push('工作流行业');
             }
@@ -2783,7 +2834,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
 
             if (actionId === 'bmc_preset') {
                 applyIndustryBmcPreset(currentState.workflowIndustry);
-                setAiOutputText('已按「' + currentState.workflowIndustry + '」写入示范九宫格。请改成贵司情况，或在下面说明客群/渠道/痛点，我帮' + workshopChatName() + '改格子。');
+                setAiOutputText('已按「' + workflowIndustryLabel(currentState.workflowIndustry) + '」写入示范九宫格。请改成贵司情况，或在下面说明客群/渠道/痛点，我帮' + workshopChatName() + '改格子。');
                 syncAiApplyButton();
                 return;
             }
@@ -3038,7 +3089,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 try {
                     const systemText = '你是端到端价值流设计顾问，熟悉制造与消费行业典型链路与可观测 KPI（简体中文）。' + buildAiWorkflowPatchSystemSuffix();
                     const userText = `任务：价值流模板配置。根据用户输入的行业/场景，生成可直接套用的价值流阶段列表。\n\n硬性要求：\n` +
-                        `· workflowPatch 中【仅】输出 valueStreamName、stages、可选 workflowIndustry（必须为 ${WORKFLOW_INDUSTRIES.join('/')} 之一）。\n` +
+                        `· workflowPatch 中【仅】输出 valueStreamName、stages、可选 workflowIndustry（必须为 ${workflowIndustryChoicesLabel('/')} 之一）。\n` +
                         '· stages：6～10 项；每项 name、type(process|wait)、scenarios（一句）、components（逗号分隔名词）、actualTime（小时正整数），可选五维 dEff,dQual,dCost,dRisk,dCx（1-5）。\n' +
                         '· 禁止输出 canvasDiagnosticRules、bmc、capabilities。\n\n上下文：\n' +
                         JSON.stringify(richCtx, null, 2) + '\n用户输入：\n' + (userMsg || '（请结合上下文行业）');
@@ -3202,6 +3253,11 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
         }
 
         function runPageFullPlan() {
+            if (!isBmcPayorReady()) {
+                toast('先写清付费对象：卖给谁，或钱从哪来。写完再一键规划。', 'error');
+                setStep(1);
+                return;
+            }
             if (!aiDrawerVisible) {
                 aiDrawerVisible = true;
                 syncAiDockUi();
@@ -3276,16 +3332,31 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             return !!(currentState.bmc && String(currentState.bmc[key] || '').trim());
         }
 
+        /** 行业示范或空草稿不算贵司填写 */
+        function bmcCellUserOwned(key) {
+            const raw = String((currentState.bmc && currentState.bmc[key]) || '').trim();
+            if (!raw) return false;
+            const preset = (INDUSTRY_BMC[currentState.workflowIndustry] && INDUSTRY_BMC[currentState.workflowIndustry][key]) || '';
+            const norm = function (s) { return String(s || '').replace(/\s+/g, ' ').trim(); };
+            if (preset && norm(raw) === norm(preset)) return false;
+            const stripped = raw.replace(/【(?:AI草案|本地草稿|本次规划输入)】/g, '').trim();
+            return stripped.length >= 4;
+        }
+
+        function isBmcPayorReady() {
+            return bmcCellUserOwned('customerSegments') || bmcCellUserOwned('revenueStreams');
+        }
+
         /** 当前步只问一件经营问题；空态、占位、发送后追问共用这一问 */
         function getStepFocusQuestion(stepId) {
             const sid = stepId != null ? stepId : getAiStepId();
             if (sid === 1) {
-                if (!bmcCellFilled('customerSegments')) {
+                if (!bmcCellUserOwned('customerSegments')) {
                     return {
                         id: 'seg',
-                        ask: '先说清一件事：主要卖给谁？一类客群就够。',
+                        ask: '先说清一件事：主要卖给谁？一类客群就够。示范画布不能当贵司填写。',
                         placeholder: '例如：城市换机用户、县域家庭、行业客户……',
-                        empty: '这一步只问客群。左侧是示范画布，先告诉我主要卖给谁，我帮你改九宫格。本步不生成路标。'
+                        empty: '这一步只问客群。左侧是行业示范，还不是贵司填写。先告诉我主要卖给谁，我帮你改九宫格。本步不生成路标。'
                     };
                 }
                 if (!bmcCellFilled('channels')) {
@@ -3330,9 +3401,9 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 },
                 6: {
                     id: 'own',
-                    ask: '近半年只压一件的话，谁签字、凭什么算做成？',
+                    ask: '近半年只压一件的话，谁签字、凭什么算做成？P0 不宜超过两三条。',
                     placeholder: '举措名称、责任人、怎样算做成。',
-                    empty: '这一步只问近半年那一件：谁签字、凭什么算做成。'
+                    empty: '这一步只问近半年那一件：谁签字、凭什么算做成。没有责任人不能进路标。'
                 },
                 7: {
                     id: 'rd',
@@ -3462,10 +3533,10 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             root.id = 'ai-assistant-root';
             root.className = 'ai-assistant-root print-hidden';
             root.innerHTML = `
-                <aside id="ai-assistant-rail" class="${aiDrawerVisible ? 'hidden' : ''}" aria-label="唤醒 YOWAY">
-                    <button type="button" class="yoway-wake is-rail" onclick="toggleAiDrawer()" title="唤醒 YOWAY" aria-label="唤醒 YOWAY">
+                <aside id="ai-assistant-rail" class="${aiDrawerVisible ? 'hidden' : ''}" aria-label="YOWAY">
+                    <button type="button" class="yoway-wake is-rail" onclick="toggleAiDrawer()" title="YOWAY" aria-label="YOWAY">
                         ${(window.YowayOrb && YowayOrb.markup()) || '<span class="yoway-orb"></span>'}
-                        <span class="yoway-wake-txt"><small>唤醒</small><b>YOWAY</b></span>
+                        <span class="yoway-wake-txt"><b>YOWAY</b></span>
                     </button>
                 </aside>
                 <div id="ai-assistant-drawer" class="ai-assistant-drawer youwei-ai-dock ${aiDrawerVisible ? '' : 'hidden'} print-hidden" role="complementary" aria-label="YOWAY">
@@ -3524,7 +3595,10 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             if (hdr) hdr.classList.toggle('hidden', !admin);
         }
 
-        function initApp() {
+        async function initApp() {
+            if (window.YouweiOps && YouweiOps.ready) {
+                try { await YouweiOps.ready(); } catch (e) { /* seed */ }
+            }
             if (window.YouweiOps) {
                 YouweiOps.ingestWorkshopCatalog({ templates: currentState.templates, rules: currentState.rules });
                 YouweiOps.applyToWorkshop(currentState);
@@ -3576,7 +3650,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             const miss = [];
             if (!String(wm.organizationName || '').trim()) miss.push('企业名称');
             if (!String(wm.projectName || '').trim()) miss.push('评估项目');
-            if (!String(wm.planningHorizon || '').trim()) miss.push('规划周期');
+            if (!String(wm.planningHorizon || '').trim()) miss.push('规划窗口');
             if (!String(wm.sponsor || '').trim()) miss.push('负责人');
             return miss;
         }
@@ -3590,11 +3664,45 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             scheduleDraftSave();
         }
 
+        function missingRoadmapGate() {
+            if (window.YouweiReport && YouweiReport.missingProcessBookGate) {
+                return YouweiReport.missingProcessBookGate(currentState);
+            }
+            const miss = missingEngagementFields();
+            const p0s = (currentState.initiatives || []).filter(function (i) { return i.phase === 'P0'; });
+            const assigned = window.YouweiReport && YouweiReport.isAssignedOwner
+                ? YouweiReport.isAssignedOwner
+                : function (s) {
+                    const t = String(s || '').trim();
+                    return !!(t && !/^待指定/.test(t) && t !== '待定' && t !== '—' && t !== '-');
+                };
+            if (!p0s.length) miss.push('至少一条近半年 P0 举措（步骤 6）');
+            else if (!p0s.some(function (i) { return assigned(i.owner); })) miss.push('至少一条 P0 写明责任人（步骤 6）');
+            return miss;
+        }
+
+        function isMeetingReady() {
+            return missingRoadmapGate().length === 0;
+        }
+
         function guardRoadmapAccess(targetStep) {
             if (targetStep !== 7) return true;
-            if (isEngagementReady()) return true;
-            toast('补齐评估信息后即可进入路标，不必退回第一步。', 'error');
-            openEngageOverlay({ returnStep: currentState.step, continueTo7: true });
+            const miss = missingRoadmapGate();
+            if (!miss.length) return true;
+            const engageMiss = missingEngagementFields();
+            if (engageMiss.length) {
+                toast('补齐评估信息，且近半年 P0 写明责任人后，才能进入可上会路标。', 'error');
+                openEngageOverlay({ returnStep: currentState.step, continueTo7: true });
+                return false;
+            }
+            toast('近半年 P0 还没有责任人。先回到第 6 步写明谁负责，再进路标。', 'error');
+            if (currentState.step !== 6) {
+                currentState.step = 6;
+                currentState.activePanel = 'workflow';
+                renderNav();
+                renderStepProgress();
+                renderStep();
+            }
             return false;
         }
 
@@ -3664,7 +3772,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
         }
         const BLUEPRINT_HISTORY_MAX = blueprintHistoryMax();
         /** 与《架构演进.md》对齐的快照字段：末五项为组织/持续运营/知识/场景热力视图 */
-        const WORKFLOW_SNAPSHOT_KEYS = ['bmc', 'bmcReport', 'rules', 'workflowIndustry', 'valueStreamName', 'vsDimWeights', 'vsSelectedStageId', 'vsStages', 'templates', 'selectedTemplateId', 'capabilityFramework', 'initiatives', 'itFeatures', 'newTplSteps', 'configTab', 'roadmapStartYm', 'roadmapMonths', 'roadmapExpandedIniIds', 'workspaceMeta', 'continuousOps', 'knowledgeRefs', 'heatmapScenarioView', 'architecture4a', 'patchHistory'];
+        const WORKFLOW_SNAPSHOT_KEYS = ['bmc', 'bmcReport', 'rules', 'workflowIndustry', 'valueStreamName', 'vsDimWeights', 'vsSelectedStageId', 'vsStages', 'templates', 'selectedTemplateId', 'capabilityFramework', 'initiatives', 'itFeatures', 'newTplSteps', 'configTab', 'roadmapStartYm', 'roadmapMonths', 'roadmapExpandedIniIds', 'workspaceMeta', 'continuousOps', 'knowledgeRefs', 'heatmapScenarioView', 'architecture4a', 'patchHistory', 'caseContext'];
 
         function loadBlueprintHistoryList() {
             try {
@@ -3798,8 +3906,13 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             currentState.knowledgeRefs = {
                 version: typeof kr.version === 'number' ? kr.version : 1,
                 anonymizedCaseIds: Array.isArray(kr.anonymizedCaseIds) ? kr.anonymizedCaseIds : [],
-                linkedAssetRecordIds: Array.isArray(kr.linkedAssetRecordIds) ? kr.linkedAssetRecordIds : []
+                linkedAssetRecordIds: Array.isArray(kr.linkedAssetRecordIds) ? kr.linkedAssetRecordIds : [],
+                caseId: kr.caseId || '',
+                publicFacts: Array.isArray(kr.publicFacts) ? kr.publicFacts : [],
+                sourceNote: kr.sourceNote || '',
+                fitLines: Array.isArray(kr.fitLines) ? kr.fitLines : []
             };
+            if (currentState.caseContext && typeof currentState.caseContext !== 'object') currentState.caseContext = null;
             if (typeof currentState.heatmapScenarioView !== 'string') currentState.heatmapScenarioView = '';
             if (!currentState.architecture4a || typeof currentState.architecture4a !== 'object') {
                 currentState.architecture4a = { uiTab: 'data', dataObjects: [], systems: [], techConstraints: [], seeded: false };
@@ -3835,7 +3948,8 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             });
             ensureArchitectureEvolutionDefaults();
             migrateCapabilityFrameworkGapScores();
-            if (!currentState.workflowIndustry || !WORKFLOW_INDUSTRIES.includes(currentState.workflowIndustry)) {
+            currentState.workflowIndustry = normalizeWorkflowIndustry(currentState.workflowIndustry);
+            if (!WORKFLOW_INDUSTRIES.includes(currentState.workflowIndustry)) {
                 currentState.workflowIndustry = '3C';
             }
             ensureSelectedTemplateForIndustry();
@@ -4098,7 +4212,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
 
         function jumpAfterBookGate(miss) {
             const needEngage = (miss || []).some(function (x) {
-                return x === '企业名称' || x === '评估项目' || x === '规划周期' || x === '负责人';
+                return x === '企业名称' || x === '评估项目' || x === '规划周期' || x === '规划窗口' || x === '负责人';
             });
             if (needEngage) {
                 openEngageOverlay({ returnStep: currentState.step, continueTo7: currentState.step === 7 });
@@ -4128,7 +4242,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                     <div class="engage-overlay-grid">
                         <label>企业名称<input id="eo-org" type="text" autocomplete="organization"></label>
                         <label>评估项目<input id="eo-project" type="text"></label>
-                        <label>规划周期<input id="eo-horizon" type="text" placeholder="如 2026–2027"></label>
+                        <label>规划窗口<input id="eo-horizon" type="text" placeholder="本年度 SP/BP，如 2026"></label>
                         <label>负责人<input id="eo-sponsor" type="text"></label>
                     </div>
                     <div class="engage-overlay-actions">
@@ -4190,8 +4304,17 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             }
             closeEngageOverlay();
             if (pendingEngage.continueTo7) {
-                setStep(7);
-                toast('评估信息已记下，已进入路标');
+                if (isMeetingReady()) {
+                    setStep(7);
+                    toast('评估信息已记下，已进入路标');
+                    return;
+                }
+                currentState.activePanel = 'workflow';
+                currentState.step = 6;
+                renderNav();
+                renderStepProgress();
+                renderStep();
+                toast('评估信息已记下。近半年 P0 还要写明责任人，才能进路标。');
                 return;
             }
             const back = pendingEngage.returnStep || currentState.step;
@@ -4303,7 +4426,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 const row = next.find(function (r) { return r.id === id; });
                 if (row) row.packId = id;
                 saveBlueprintHistoryList(next);
-                toast('过程册已生成，可下载 HTML 发给客户');
+                toast('过程册已生成。下载 HTML 给对方阅读，另存规划文件可再打开。');
                 if (isAssetsLibraryOpen()) renderAssetsStandaloneContent();
                 await YouweiPack.open(id);
                 if (window.YouweiP2 && YouweiP2.afterSaveVisit) YouweiP2.afterSaveVisit();
@@ -4331,6 +4454,94 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             YouweiPack.download(id).catch(function (e) {
                 toast((e && e.message) || '下载失败', 'error');
             });
+        }
+
+        function pickPlanningFile() {
+            const el = document.getElementById('planning-file-input');
+            if (el) el.click();
+        }
+
+        function exportCurrentPlanningFile() {
+            if (!window.YouweiPack || !YouweiPack.downloadSession) {
+                toast('过程册组件未加载', 'error');
+                return;
+            }
+            const wm = currentState.workspaceMeta || {};
+            const title = wm.projectName || currentState.valueStreamName || '评估规划';
+            YouweiPack.downloadSession({
+                title: title,
+                savedAt: new Date().toISOString(),
+                snapshot: getSerializableWorkflowSnapshot()
+            });
+            if (window.YouweiAudit) YouweiAudit.add('export_plan', title);
+        }
+
+        function exportPlanningFileFromRecord(id) {
+            const rec = loadBlueprintHistoryList().find(function (r) { return r.id === Number(id); });
+            if (!rec || !rec.snapshot) {
+                toast('记录不存在', 'error');
+                return;
+            }
+            if (!window.YouweiPack || !YouweiPack.downloadSession) {
+                toast('过程册组件未加载', 'error');
+                return;
+            }
+            if (rec.packId && YouweiPack.exportSession) {
+                YouweiPack.exportSession(rec.packId).catch(function () {
+                    YouweiPack.downloadSession({ title: rec.title, savedAt: rec.savedAt, snapshot: rec.snapshot });
+                });
+            } else {
+                YouweiPack.downloadSession({ title: rec.title, savedAt: rec.savedAt, snapshot: rec.snapshot });
+            }
+            if (window.YouweiAudit) YouweiAudit.add('export_plan', rec.title);
+        }
+
+        async function onPlanningFilePicked(ev) {
+            const file = ev.target && ev.target.files && ev.target.files[0];
+            if (ev.target) ev.target.value = '';
+            if (!file) return;
+            if (!window.YouweiPack || !YouweiPack.parseFileText) {
+                toast('过程册组件未加载', 'error');
+                return;
+            }
+            try {
+                const text = await file.text();
+                const parsed = YouweiPack.parseFileText(text);
+                if (!parsed || !parsed.snapshot) throw new Error('文件里没有规划快照');
+                const id = Date.now();
+                const title = parsed.title || String(file.name || '').replace(/\.(html|json|youwei\.json)$/i, '') || '导入规划';
+                const record = {
+                    id: id,
+                    savedAt: parsed.savedAt || new Date().toISOString(),
+                    title: title,
+                    snapshot: parsed.snapshot,
+                    packId: null
+                };
+                const list = loadBlueprintHistoryList();
+                list.unshift(record);
+                saveBlueprintHistoryList(list);
+                if (YouweiPack.buildAndStore) {
+                    try {
+                        await YouweiPack.buildAndStore(id, title, parsed.snapshot);
+                        const next = loadBlueprintHistoryList();
+                        const row = next.find(function (r) { return r.id === id; });
+                        if (row) row.packId = id;
+                        saveBlueprintHistoryList(next);
+                    } catch (e) { /* 底稿已写入 */ }
+                }
+                applyWorkflowSnapshot(parsed.snapshot);
+                currentState.activePanel = 'workflow';
+                currentState.step = (typeof isMeetingReady === 'function' && isMeetingReady()) ? STEP_TOTAL : 6;
+                renderNav();
+                renderStepProgress();
+                renderStep();
+                renderSidebarHistoryPanel();
+                if (isAssetsLibraryOpen()) renderAssetsStandaloneContent();
+                if (window.YouweiAudit) YouweiAudit.add('import_plan', title);
+                toast('已打开规划文件「' + title + '」，可继续改或再保存');
+            } catch (e) {
+                toast((e && e.message) || '打不开这份文件', 'error');
+            }
         }
 
         /** 主工作台调用：按 id 载入资产快照 */
@@ -4526,7 +4737,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 <div class="mx-auto px-4 py-6 w-full max-w-[var(--app-max-width)]">
                     <div class="rounded-[14px] border border-dashed border-black/[0.12] bg-white px-6 py-12 text-center shadow-nav">
                         <p class="text-[15px] font-semibold text-ink">暂无已保存资产</p>
-                        <p class="text-[13px] text-ink-secondary mt-2 max-w-md mx-auto leading-relaxed">在主工作台完成<strong class="text-ink">变革路标计划</strong>并点击右下角<strong class="text-ink">保存</strong>后，将生成评估过程册（封面后先是结论页，再按七步还原；下载 HTML 即可发给客户）。企业、项目、负责人和至少一条写明责任人的 P0 未齐时，保存会被拦住。</p>
+                        <p class="text-[13px] text-ink-secondary mt-2 max-w-md mx-auto leading-relaxed">在主工作台完成<strong class="text-ink">变革路标计划</strong>并点击右下角<strong class="text-ink">保存</strong>后，将生成评估过程册（封面写清组织、窗口、牵头人和课题；P0 单独一页）。也可<strong class="text-ink">打开规划文件</strong>继续上一场。企业、项目、窗口、牵头人和至少一条写明责任人的 P0 未齐时，保存会被拦住。</p>
                     </div>
                 </div>`;
             if (!list.length) {
@@ -4536,7 +4747,10 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                             <h1 class="text-[16px] font-semibold text-ink tracking-tight">规划资产库</h1>
                             <p class="text-[11px] text-ink-secondary mt-0.5">只存在本机浏览器 · 换电脑请到管理台导出</p>
                         </div>
-                        <button type="button" onclick="closeAssetsLibrary()" class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">关闭</button>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="pickPlanningFile()" class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">打开规划文件</button>
+                            <button type="button" onclick="closeAssetsLibrary()" class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">关闭</button>
+                        </div>
                     </div>
                     ${empty}`;
                 return;
@@ -4563,6 +4777,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                             ${rec.packId
                                 ? `<button type="button" onclick="downloadAssetPack(${rec.packId})" class="rounded-[8px] bg-ink text-white px-2 py-1 text-[10px] font-semibold hover:bg-black" title="下载过程册 HTML，可发给客户">下载 HTML</button>`
                                 : `<button type="button" onclick="exportAssetHtmlFromStandalone(${rec.id})" class="rounded-[8px] bg-ink text-white px-2 py-1 text-[10px] font-semibold hover:bg-black" title="导出为独立 HTML">导出</button>`}
+                            <button type="button" onclick="exportPlanningFileFromRecord(${rec.id})" class="rounded-[8px] border border-black/[0.10] bg-white px-2 py-1 text-[10px] font-semibold text-ink-secondary hover:bg-canvas" title="另存可再打开的规划文件">另存</button>
                             <button type="button" onclick="deleteHistoryRecord(${rec.id})" class="rounded-[8px] border border-black/[0.08] px-2 py-1 text-[10px] font-semibold text-ink-tertiary hover:text-[#ff6961]" title="删除">删除</button>
                         </div>
                     </td>
@@ -4572,9 +4787,10 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 <div class="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-black/[0.06] bg-canvas/95 backdrop-blur px-4 py-3">
                     <div>
                         <h1 class="text-[16px] font-semibold text-ink tracking-tight">规划资产库</h1>
-                        <p class="text-[11px] text-ink-secondary mt-0.5">共 ${list.length} 条 · 只存在本机浏览器 · 换电脑请到管理台导出</p>
+                        <p class="text-[11px] text-ink-secondary mt-0.5">共 ${list.length} 条 · 只存在本机 · 换电脑请另存规划文件再打开</p>
                     </div>
                     <div class="flex items-center gap-2">
+                        <button type="button" onclick="pickPlanningFile()" class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">打开规划文件</button>
                         <button type="button" onclick="renderAssetsStandaloneContent()" class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">刷新</button>
                         <button type="button" onclick="closeAssetsLibrary()" class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[12px] font-semibold text-ink-secondary hover:bg-canvas">关闭</button>
                     </div>
@@ -4607,6 +4823,12 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                     <i class="fas fa-layer-group text-[11px] shrink-0" aria-hidden="true"></i>
                     <span class="sidebar-expand-only">打开资产库</span>
                     <span class="sidebar-expand-only opacity-85 font-normal tabular-nums text-[11px]">(${n})</span>
+                </button>
+                <button type="button" onclick="pickPlanningFile()" class="sidebar-expand-only w-full mt-1.5 inline-flex items-center justify-center gap-2 rounded-[10px] border border-black/[0.10] bg-white text-[11px] font-semibold py-1.5 px-3 text-ink-secondary hover:bg-canvas">
+                    打开规划文件
+                </button>
+                <button type="button" onclick="exportCurrentPlanningFile()" class="sidebar-expand-only w-full mt-1 inline-flex items-center justify-center gap-2 rounded-[10px] border border-black/[0.10] bg-white text-[11px] font-semibold py-1.5 px-3 text-ink-secondary hover:bg-canvas">
+                    另存当前规划
                 </button>`;
         }
 
@@ -4629,7 +4851,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 next.innerHTML = '保存<i class="fas fa-floppy-disk text-[10px] opacity-90 ml-1" aria-hidden="true"></i>';
                 next.onclick = () => saveBlueprintHistory();
                 next.title = canSave
-                    ? '保存前须齐企业、项目、负责人和至少一条写明责任人的 P0；通过后生成带结论页的过程册'
+                    ? '保存前须齐企业、项目、规划窗口、牵头人和至少一条写明责任人的 P0；通过后生成可传阅的过程册'
                     : '请先完成举措与路标相关数据';
             } else {
                 next.disabled = false;
@@ -4784,7 +5006,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             wsRules['!cols'] = [{ wch: 30 }, { wch: 14 }, { wch: 18 }, { wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 6 }, { wch: 48 }];
             XLSX.utils.book_append_sheet(wb, wsRules, '画布诊断规则');
 
-            const tplHead = ['模板键（合并依据）', '模板显示名称', '阶段序号', '阶段名称', '类型(process或wait)', '默认耗时小时', '场景', '业务组件', '适用行业（逗号分隔，留空=全部；可选：3C,汽车,家电）'];
+            const tplHead = ['模板键（合并依据）', '模板显示名称', '阶段序号', '阶段名称', '类型(process或wait)', '默认耗时小时', '场景', '业务组件', '适用行业（逗号分隔，留空=全部；可选：消费电子,汽车,家电）'];
             const tplRows = [];
             Object.entries(currentState.templates).forEach(([key, t]) => {
                 const indCell = (!t.industries || !t.industries.length) ? '' : t.industries.join(',');
@@ -4816,7 +5038,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                 [''],
                 ['价值流模板'],
                 ['1. 同一「模板键」的多行组成一个模板；「模板显示名称」可与各行保持一致。'],
-                ['2. 「适用行业」列：填 3C / 汽车 / 家电，多个用英文逗号分隔；留空表示全部行业（与步骤 1 顶部行业、步骤 2 下拉筛选一致）。通常写在每个模板的第一行即可。'],
+                ['2. 「适用行业」列：填 消费电子 / 汽车 / 家电，多个用英文逗号分隔；留空表示全部行业（与步骤 1 顶部行业、步骤 2 下拉筛选一致）。通常写在每个模板的第一行即可。亦可写 3C。'],
                 ['3. 模板键与现有内置键一致时会覆盖该条模板；新键将并入模板库（建议 custom_ 前缀）。'],
                 ['4. 类型仅支持 process 或 wait；文件中未出现的模板不会被删除（按模板键合并写入）。'],
                 ['5. 若导入表无「适用行业」列（旧版 Excel），系统会尽量保留该模板键在页面上已有的行业关联。']
@@ -5871,6 +6093,9 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
         function updateInitiativeField(id, field, value) {
             const ini = currentState.initiatives.find(x => x.id === id);
             if (ini) ini[field] = value;
+            if (field === 'owner' || field === 'phase') {
+                if (typeof renderEngagementChrome === 'function') renderEngagementChrome();
+            }
         }
 
         function toggleInitiativeEvidence(id, confirmed) {
@@ -6134,7 +6359,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                     benefit: '缩短端到端周期，降低手工与返工',
                     cost: cat === 'red' ? '难' : '中',
                     evidenceStatus: 'assumption',
-                    evidenceSource: '热力规则起草'
+                    evidenceSource: '规则展开，待规划确认'
                 });
             });
             if (!currentState.initiatives.length) {
@@ -6473,11 +6698,76 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
             if (currentState.step === 1 && currentState.activePanel === 'workflow') renderStep1();
         }
 
+        const CASE_TOPIC_HIDE_LS = 'youwei_case_topic_hide_v1';
+        const CASE_TOPIC_OPEN_LS = 'youwei_case_topic_open_v1';
+
+        function isCaseTopicHidden() {
+            try { return sessionStorage.getItem(CASE_TOPIC_HIDE_LS) === '1'; } catch (e) { return false; }
+        }
+
+        function isCaseTopicOpen() {
+            try { return sessionStorage.getItem(CASE_TOPIC_OPEN_LS) === '1'; } catch (e) { return false; }
+        }
+
+        function refreshCaseTopicBar() {
+            if (currentState.activePanel !== 'workflow') return;
+            if (currentState.step === 1) renderStep1();
+            else if (currentState.step === 2) renderStep2();
+        }
+
+        function toggleCaseTopicBar() {
+            try { sessionStorage.setItem(CASE_TOPIC_OPEN_LS, isCaseTopicOpen() ? '0' : '1'); } catch (e) { /* ignore */ }
+            refreshCaseTopicBar();
+        }
+
+        function dismissCaseTopicBar() {
+            try { sessionStorage.setItem(CASE_TOPIC_HIDE_LS, '1'); } catch (e) { /* ignore */ }
+            refreshCaseTopicBar();
+        }
+
+        function caseTopicBannerHtml() {
+            const ctx = currentState.caseContext;
+            if (!ctx || !ctx.id || isCaseTopicHidden()) return '';
+            const open = isCaseTopicOpen();
+            const line = [ctx.kicker || ctx.title, workflowIndustryLabel(ctx.industry)].filter(Boolean).join(' · ');
+            let body = '';
+            if (open) {
+                const pains = ctx.pains || {};
+                const painBits = [
+                    pains.ops ? ('运营：' + pains.ops) : '',
+                    pains.org ? ('组织：' + pains.org) : '',
+                    pains.data ? ('数据：' + pains.data) : ''
+                ].filter(Boolean);
+                const fit = (ctx.fitLines || []).slice(0, 4);
+                const facts = (ctx.publicFacts || []).slice(0, 3);
+                const sit = String(ctx.situation || ctx.challenge || ctx.brief || '').trim();
+                body = `<div class="case-topic-bar-body">
+                    <p class="case-topic-bar-note">选题备忘，不是贵司现状。对照供校准，请改成贵司填写。</p>
+                    ${ctx.title ? `<p class="case-topic-bar-title">${escapeHtmlText(ctx.title)}</p>` : ''}
+                    ${ctx.tagline ? `<p class="case-topic-bar-lead">${escapeHtmlText(ctx.tagline)}</p>` : ''}
+                    ${sit ? `<p class="case-topic-bar-sit">${escapeHtmlText(sit)}</p>` : ''}
+                    ${ctx.audience ? `<p class="case-topic-bar-aud">${escapeHtmlText(ctx.audience)}</p>` : ''}
+                    ${painBits.length ? `<ul class="case-topic-bar-pains">${painBits.map((x) => `<li>${escapeHtmlText(x)}</li>`).join('')}</ul>` : ''}
+                    ${fit.length ? `<p class="case-topic-bar-fit">适用勾选：${fit.map((x) => escapeHtmlText(x)).join('；')}</p>` : ''}
+                    ${facts.length ? `<ul class="case-topic-bar-facts">${facts.map((x) => `<li>${escapeHtmlText(x)}</li>`).join('')}</ul>` : ''}
+                    ${ctx.sourceNote ? `<p class="case-topic-bar-src">${escapeHtmlText(ctx.sourceNote)}</p>` : ''}
+                </div>`;
+            }
+            return `<section class="case-topic-bar shrink-0${open ? ' is-open' : ''}">
+                <button type="button" class="case-topic-bar-main" onclick="toggleCaseTopicBar()" aria-expanded="${open ? 'true' : 'false'}">
+                    <span class="case-topic-bar-k">本次课题</span>
+                    <span class="case-topic-bar-t">${escapeHtmlText(line)}</span>
+                </button>
+                <button type="button" class="case-topic-bar-x" onclick="dismissCaseTopicBar()" aria-label="收起选题">×</button>
+                ${body}
+            </section>`;
+        }
+
         function engagementCardHtml() {
             const wm = currentState.workspaceMeta || {};
             const ready = isEngagementReady();
             const miss = missingEngagementFields();
-            const collapsed = isEngageCollapsed();
+            const collapsed = ready && isEngageCollapsed();
             const summary = ready
                 ? [wm.organizationName, wm.projectName, wm.planningHorizon, wm.sponsor].filter(Boolean).join(' · ')
                 : ('待填：' + miss.join('、'));
@@ -6488,8 +6778,8 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                         <input class="rounded-[10px] border border-black/[0.10] bg-canvas/50 px-2.5 py-1.5 text-[13px] text-ink" value="${escapeHtmlText(wm.businessUnit || '')}" oninput="updateEngagementField('businessUnit', this.value)" placeholder="如中国区营销服"></label>
                     <label class="grid gap-1 text-[11px] text-ink-tertiary">评估项目 *
                         <input class="rounded-[10px] border border-black/[0.10] bg-canvas/50 px-2.5 py-1.5 text-[13px] text-ink" value="${escapeHtmlText(wm.projectName || '')}" oninput="updateEngagementField('projectName', this.value)" placeholder="例如营销服数字化评估"></label>
-                    <label class="grid gap-1 text-[11px] text-ink-tertiary">规划周期 *
-                        <input class="rounded-[10px] border border-black/[0.10] bg-canvas/50 px-2.5 py-1.5 text-[13px] text-ink" value="${escapeHtmlText(wm.planningHorizon || '')}" oninput="updateEngagementField('planningHorizon', this.value)" placeholder="如 2026–2027"></label>
+                    <label class="grid gap-1 text-[11px] text-ink-tertiary">规划窗口 *
+                        <input class="rounded-[10px] border border-black/[0.10] bg-canvas/50 px-2.5 py-1.5 text-[13px] text-ink" value="${escapeHtmlText(wm.planningHorizon || '')}" oninput="updateEngagementField('planningHorizon', this.value)" placeholder="本年度 SP/BP，如 2026"></label>
                     <label class="grid gap-1 text-[11px] text-ink-tertiary">负责人 *
                         <input class="rounded-[10px] border border-black/[0.10] bg-canvas/50 px-2.5 py-1.5 text-[13px] text-ink" value="${escapeHtmlText(wm.sponsor || '')}" oninput="updateEngagementField('sponsor', this.value)" placeholder="业务或转型负责人"></label>
                     <label class="grid gap-1 text-[11px] text-ink-tertiary">保密级
@@ -6575,8 +6865,8 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                     <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3 flex-1 min-w-0">
                         ${stepPageHeading(1, 'flex-1')}
                         <div class="flex flex-wrap items-center gap-2 shrink-0">
-                            <select id="bmc-industry-select" aria-label="行业（切换示范画布，并筛选步骤 2 价值流模板）" class="inline-flex shrink-0 items-center rounded-[10px] border border-black/[0.12] bg-white px-3 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas hover:text-ink transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 min-w-[6.75rem]" onchange="setWorkflowIndustry(this.value)" title="切换 3C / 汽车 / 家电，会换上该行业的示范九宫格，并决定步骤 2 可见的价值流模板">
-                                    ${WORKFLOW_INDUSTRIES.map(ind => `<option value="${ind}" ${currentState.workflowIndustry === ind ? 'selected' : ''}>${ind}</option>`).join('')}
+                            <select id="bmc-industry-select" aria-label="行业（切换示范画布，并筛选步骤 2 价值流模板）" class="inline-flex shrink-0 items-center rounded-[10px] border border-black/[0.12] bg-white px-3 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas hover:text-ink transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 min-w-[6.75rem]" onchange="setWorkflowIndustry(this.value)" title="切换 消费电子 / 汽车 / 家电，会换上该行业的示范九宫格，并决定步骤 2 可见的价值流模板">
+                                    ${WORKFLOW_INDUSTRIES.map(ind => `<option value="${ind}" ${currentState.workflowIndustry === ind ? 'selected' : ''}>${workflowIndustryLabel(ind)}</option>`).join('')}
                                 </select>
                             <button type="button" onclick="exportBmcExcel()" class="inline-flex items-center justify-center gap-1.5 rounded-[10px] border border-black/[0.12] bg-white px-3 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-ink-secondary shadow-nav hover:bg-canvas hover:text-ink transition-colors" title="下载含说明与当前内容的模板，Excel 改完后可导入">
                                 <i class="fas fa-file-export text-[11px]" aria-hidden="true"></i>
@@ -6595,6 +6885,7 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                     </div>
                 </div>
                 <div class="flex flex-col flex-1 min-h-0 min-w-0 gap-2">
+                    ${caseTopicBannerHtml()}
                     ${engagementCardHtml()}
                     ${gridHtml}
                     ${reportHtml}
@@ -6784,13 +7075,14 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
                     ${workspaceSidebarToggleHtml()}
                     <div class="flex flex-col gap-3 lg:gap-2 flex-1 min-w-0">
                         ${stepPageHeading(2)}
+                        ${caseTopicBannerHtml()}
                         <div class="flex flex-col lg:flex-row lg:flex-wrap lg:items-end gap-2 lg:gap-3 rounded-[14px] border border-black/[0.06] bg-canvas/80 p-3 lg:p-3">
                         <div class="flex flex-col gap-1 flex-1 min-w-[180px]">
                             <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">价值流名称（选填）</label>
                             <input class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" value="${escapeHtmlText(currentState.valueStreamName)}" onchange="currentState.valueStreamName=this.value">
                         </div>
                         <div class="flex flex-col gap-1 flex-1 min-w-[200px]">
-                            <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">领域价值流模板（${escapeHtmlText(currentState.workflowIndustry)}）</label>
+                            <label class="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">领域价值流模板（${escapeHtmlText(workflowIndustryLabel(currentState.workflowIndustry))}）</label>
                             <select class="rounded-[10px] border border-black/[0.10] bg-white px-3 py-2 text-[13px] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" onchange="currentState.selectedTemplateId=this.value">${options}</select>
                         </div>
                         <button type="button" onclick="runVSGen()" class="inline-flex items-center justify-center gap-2 rounded-[10px] bg-accent px-4 py-2 lg:py-1.5 text-[12px] lg:text-[13px] font-semibold text-white shadow-nav hover:bg-accent-hover transition-colors lg:shrink-0" title="生成下方流程与各阶段，可随时再改">
@@ -7584,9 +7876,16 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
         }
         window.currentState = currentState;
         window.WORKFLOW_INDUSTRIES = WORKFLOW_INDUSTRIES;
+        window.normalizeWorkflowIndustry = normalizeWorkflowIndustry;
+        window.workflowIndustryLabel = workflowIndustryLabel;
         window.VS_DIM_KEYS = typeof VS_DIM_KEYS !== 'undefined' ? VS_DIM_KEYS : window.VS_DIM_KEYS;
+        window.setStep = setStep;
         window.isEngagementReady = isEngagementReady;
         window.missingEngagementFields = missingEngagementFields;
+        window.missingRoadmapGate = missingRoadmapGate;
+        window.isMeetingReady = isMeetingReady;
+        window.isBmcPayorReady = isBmcPayorReady;
+        window.bmcCellUserOwned = bmcCellUserOwned;
         window.updateEngagementField = updateEngagementField;
         window.heatDisplayCategory = heatDisplayCategory;
         window.getPriorityRedIdSet = getPriorityRedIdSet;
@@ -7600,6 +7899,10 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
         window.saveBlueprintHistory = saveBlueprintHistory;
         window.openAssetPack = openAssetPack;
         window.downloadAssetPack = downloadAssetPack;
+        window.pickPlanningFile = pickPlanningFile;
+        window.exportCurrentPlanningFile = exportCurrentPlanningFile;
+        window.exportPlanningFileFromRecord = exportPlanningFileFromRecord;
+        window.onPlanningFilePicked = onPlanningFilePicked;
         window.saveBriefingHtmlRecord = saveBriefingHtmlRecord;
         window.openAssetBriefing = openAssetBriefing;
         window.buildCurrentBriefingHtml = buildCurrentBriefingHtml;
@@ -7611,6 +7914,8 @@ bmc 键仅限英文 ${FIELD_ORDER.join(', ')}，值为字符串。禁止输出 s
         window.toast = toast;
         window.toggleInitiativeEvidence = toggleInitiativeEvidence;
         window.toggleEngageCard = toggleEngageCard;
+        window.toggleCaseTopicBar = toggleCaseTopicBar;
+        window.dismissCaseTopicBar = dismissCaseTopicBar;
         window.getStepAiActions = getStepAiActions;
         window.getStepFocusQuestion = getStepFocusQuestion;
         window.getStepAiEmptyHint = getStepAiEmptyHint;

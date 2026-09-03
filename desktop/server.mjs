@@ -5,6 +5,16 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const contentStoreCandidates = [
+    path.join(here, '..', 'scripts', 'content-store.mjs'),
+    path.join(here, 'content-store.mjs'),
+    path.join(process.resourcesPath || '', 'site', 'scripts', 'content-store.mjs')
+];
+const contentStoreFile = contentStoreCandidates.find(function (p) { return fs.existsSync(p); }) || contentStoreCandidates[0];
+const { handleContentApi } = await import(pathToFileURL(contentStoreFile).href);
 
 const UPSTREAM = String(process.env.AI_UPSTREAM || 'https://api.deepseek.com').replace(/\/+$/, '');
 
@@ -198,6 +208,9 @@ function createServer(root) {
         }
         if (p.replace(/\/$/, '') === '/api/leads') {
             return handleLeads(root, req, res);
+        }
+        if (await handleContentApi(root, req, res, p)) {
+            return;
         }
         if (req.method !== 'GET' && req.method !== 'HEAD') {
             return send(res, 405, { 'Content-Type': 'text/plain' }, 'Method Not Allowed');

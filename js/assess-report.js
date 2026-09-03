@@ -123,7 +123,7 @@
         const wm = (st && st.workspaceMeta) || {};
         if (!String(wm.organizationName || '').trim()) miss.push('企业名称');
         if (!String(wm.projectName || '').trim()) miss.push('评估项目');
-        if (!String(wm.planningHorizon || '').trim()) miss.push('规划周期');
+        if (!String(wm.planningHorizon || '').trim()) miss.push('规划窗口');
         if (!String(wm.sponsor || '').trim()) miss.push('负责人');
         const p0s = ((st && st.initiatives) || []).filter(function (i) { return i.phase === 'P0'; });
         if (!p0s.length) miss.push('至少一条近半年 P0 举措（步骤 6）');
@@ -221,8 +221,8 @@
         const p0s = exportableP0s(st);
         const titles = p0s.map(function (i) { return i.title || '未命名'; }).slice(0, 2).join('、');
         const horizon = String(wm.planningHorizon || '').trim();
-        let s = horizon ? ('按「' + horizon + '」规划，') : '';
-        s += (start ? start + ' 起、' : '') + months + ' 个月跨度';
+        let s = horizon ? ('按本年度窗口「' + horizon + '」规划，') : '';
+        s += (start ? start + ' 起、' : '') + '路标跨度 ' + months + ' 个月';
         if (titles) s += '，先落地「' + titles + '」' + (p0s.length > 2 ? '等 P0' : '');
         s += '。';
         return s;
@@ -234,24 +234,59 @@
         const findList = finds.map(function (f, i) {
             return '<li><b>发现 ' + (i + 1) + '　' + esc(f.k) + '</b><p>' + esc(f.t) + '</p></li>';
         }).join('');
-        const p0Cards = p0s.map(function (i) {
-            const bits = [
-                i.owner ? '责任人：' + i.owner : '',
-                i.gate ? '关口：' + i.gate : '',
-                i.kpi ? '验收：' + snippet(i.kpi, 60) : ''
-            ].filter(Boolean);
-            return '<article><span class="ph">P0</span><h3>' + text(i.title, '未命名举措') + '</h3>' +
-                '<p class="muted">' + bits.map(esc).join('　') + '</p></article>';
-        }).join('');
+        const p0Names = p0s.map(function (i) { return i.title || '未命名'; }).filter(Boolean);
         return '<section class="yr-brief" id="brief">' +
             '<p class="yr-kicker">出门结论</p>' +
             '<h2>这一次先讲什么</h2>' +
-            '<p class="yr-lead">' + esc(meta.org) + ' · ' + esc(meta.project) +
-            (meta.owner ? ' · 负责人 ' + esc(meta.owner) : '') +
-            '。下面三条发现和近半年 P0，是给决策人的一页纸。</p>' +
+            '<p class="yr-lead">' + esc(meta.org) +
+            (meta.topic ? ' · ' + esc(meta.topic) : '') +
+            (meta.horizon ? ' · 窗口 ' + esc(meta.horizon) : '') +
+            (meta.owner ? ' · 牵头人 ' + esc(meta.owner) : '') +
+            '。下面三条发现先讲清楚；近半年 P0 单独一页。</p>' +
             '<ol class="yr-find">' + findList + '</ol>' +
-            (p0Cards ? '<div class="yr-p0">' + p0Cards + '</div>' : '') +
-            '<p class="yr-line">' + esc(roadmapOneLiner(st)) + '</p>' +
+            (p0Names.length
+                ? '<p class="yr-line"><a href="#p0">近半年先压：' + esc(p0Names.join('、')) + '。下一页讲主人、窗口和证据。</a></p>'
+                : '<p class="yr-line">' + esc(roadmapOneLiner(st)) + '</p>') +
+            '</section>';
+    }
+
+    function evidenceLabel(i) {
+        return (i && i.evidenceStatus === 'confirmed') ? '已确认' : '待确认';
+    }
+
+    function ownedP0s(st) {
+        return sortInis((st && st.initiatives) || []).filter(function (i) {
+            return i.phase === 'P0' && isAssignedOwner(i.owner);
+        });
+    }
+
+    function p0PageHtml(st, meta) {
+        const list = ownedP0s(st);
+        const rows = list.map(function (i) {
+            const ev = evidenceLabel(i);
+            const evCls = i.evidenceStatus === 'confirmed' ? 'is-ok' : 'is-wait';
+            return '<tr>' +
+                '<td><b>' + text(i.title, '未命名举措') + '</b></td>' +
+                '<td>' + text(i.owner, '—') + '</td>' +
+                '<td>' + text(i.window, '近半年') + '</td>' +
+                '<td><span class="ev ' + evCls + '">' + esc(ev) + '</span>' +
+                    (i.evidenceSource ? '<i>' + esc(i.evidenceSource) + '</i>' : '') + '</td>' +
+                '<td>' + text(i.kpi || i.gate, '—') + '</td>' +
+                '</tr>';
+        }).join('');
+        const body = list.length
+            ? ('<table class="yr-p0tbl"><thead><tr><th>事项</th><th>主人</th><th>窗口</th><th>证据</th><th>怎样算做成</th></tr></thead><tbody>' +
+                rows + '</tbody></table>')
+            : '<p class="empty">还没有写明责任人的近半年 P0。这一页要能单独讲给赞助人听。</p>';
+        return '<section class="yr-p0page" id="p0">' +
+            '<p class="yr-kicker">近半年 P0</p>' +
+            '<h2>这一页单独讲</h2>' +
+            '<p class="yr-lead">' + esc(meta.org || '评估对象') +
+            (meta.horizon ? ' · 窗口 ' + esc(meta.horizon) : '') +
+            (meta.owner ? ' · 牵头人 ' + esc(meta.owner) : '') +
+            '。事项、主人、窗口、证据，开会只带这一页也够。</p>' +
+            body +
+            '<p class="yr-note">' + esc(roadmapOneLiner(st)) + '</p>' +
             '</section>';
     }
 
@@ -300,6 +335,23 @@
             '.yr-p0 h3{margin:0 0 6px;font-size:16px}',
             '.yr-p0 .muted{margin:0;color:var(--muted);font-size:13px}',
             '.yr-line{margin:18px 0 0;padding:14px 16px;background:var(--sand);font-size:16px;line-height:1.5}',
+            '.yr-line a{text-decoration:none;border-bottom:1px solid var(--line)}',
+            '.yr-p0page{padding:36px 0 8px;border-top:1px solid var(--line);margin-top:28px}',
+            '.yr-p0page h2{margin:0 0 6px;font-size:26px;font-weight:600;letter-spacing:-.02em}',
+            '.yr-p0tbl{margin-top:8px}',
+            '.yr-p0tbl td i{display:block;margin-top:4px;font-style:normal;font-size:11px;color:var(--dim)}',
+            '.ev{display:inline-block;font-size:11px;font-weight:650;letter-spacing:.04em;padding:2px 7px}',
+            '.ev.is-ok{background:var(--soft);color:var(--sage)}',
+            '.ev.is-wait{background:#f3e0d6;color:#8d4a3a}',
+            '.yr-contrast{padding:36px 0 8px;border-top:1px solid var(--line);margin-top:28px}',
+            '.yr-contrast h2{margin:0 0 6px;font-size:26px;font-weight:600;letter-spacing:-.02em}',
+            '.yr-split{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}',
+            '.yr-split article{background:#fff;border:1px solid var(--line);padding:14px 16px}',
+            '.yr-split h3{margin:0 0 8px;font-size:14px;font-weight:650}',
+            '.yr-split p,.yr-split li{margin:0;font-size:13px;line-height:1.55;color:var(--muted);white-space:pre-wrap}',
+            '.yr-split ul{margin:0;padding-left:1.1em}',
+            '.yr-split .yr-note{margin-top:10px}',
+            '@media(max-width:860px){.yr-split{grid-template-columns:1fr}}',
             '.yr-sec{padding:36px 0 8px;border-top:1px solid var(--line);margin-top:28px}',
             '.yr-sec h2{margin:0 0 6px;font-size:26px;font-weight:600;letter-spacing:-.02em}',
             '.yr-lead{margin:0 0 18px;color:var(--muted);font-size:15px}',
@@ -360,7 +412,7 @@
             '.yr-4a table{margin-top:0}',
             '.yr-foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--dim)}',
             '@media(max-width:860px){.yr-nav{display:none}.yr-main{padding:20px 16px 48px}.bmc{display:block}.bmc article{min-height:0;margin-bottom:1px}.grow{grid-template-columns:1fr}.axis{margin-left:0}}',
-            '@media print{body{background:#fff}.yr-nav{display:none}.yr-main{max-width:none;padding:0}.yr-cover,.yr-brief,.yr-sec{break-inside:avoid;page-break-after:always}.yr-sec:last-of-type,.yr-foot{page-break-after:auto}a{text-decoration:none}table{font-size:11px}th,td{padding:6px 7px}.tile{break-inside:avoid}}',
+            '@media print{body{background:#fff}.yr-nav{display:none}.yr-main{max-width:none;padding:0}.yr-cover,.yr-brief,.yr-p0page,.yr-contrast,.yr-sec{break-inside:avoid;page-break-after:always}.yr-sec:last-of-type,.yr-foot{page-break-after:auto}a{text-decoration:none}table{font-size:11px}th,td{padding:6px 7px}.tile{break-inside:avoid}}',
             '@page{size:A4;margin:14mm}'
         ].join('');
     }
@@ -407,17 +459,22 @@
         return '<section class="yr-cover" id="cover">' +
             '<p class="yr-kicker">' + kicker + '</p>' +
             '<h1>' + esc(meta.org) + '</h1>' +
-            '<p class="yr-sub">' + esc(meta.project) + '。按七步还原当时的评估结论，可放大阅读，下载 HTML 即可发给客户。</p>' +
+            '<p class="yr-sub">' + esc(meta.topic || meta.project) +
+            '。这一场规划给赞助人和业务负责人传阅，不是步骤截图。</p>' +
             '<div class="yr-meta">' +
+                pair('组织', meta.org) +
+                pair('课题', meta.topic || meta.project) +
+                pair('规划窗口', meta.horizon) +
+                pair('牵头人', meta.owner) +
                 pair('行业', meta.industry) +
-                pair('规划周期', meta.horizon) +
-                pair('负责人', meta.owner) +
                 pair('保存时间', meta.saved) +
                 (lic.bound ? pair('授权客户', lic.mark) : '') +
                 (lic.bound && lic.expires ? pair('授权至', lic.expires) : '') +
             '</div>' +
             '<ol class="yr-toc">' +
-                '<li><a href="#brief"><span>结论</span><i>先讲发现与 P0</i></a></li>' +
+                '<li><a href="#brief"><span>结论</span><i>先讲发现</i></a></li>' +
+                '<li><a href="#p0"><span>近半年 P0</span><i>' + esc(counts.p0 || '事项与主人') + '</i></a></li>' +
+                (counts.contrast ? '<li><a href="#contrast"><span>对照</span><i>行业对照，不是贵司成绩</i></a></li>' : '') +
                 toc +
             '</ol>' +
             '<p class="yr-note">本册由工作台快照生成，不是界面截图，所以字不会糊。数字是评估当时的判断，对外使用前请用贵司经营数据确认。</p>' +
@@ -434,6 +491,42 @@
             '<h2>' + esc(title) + '</h2>' +
             '<p class="yr-lead">' + esc(lead) + '</p>' + body +
             '</section>';
+    }
+
+    function contrastHtml(st) {
+        const kr = (st && st.knowledgeRefs) || {};
+        const ctx = (st && st.caseContext) || {};
+        const facts = (kr.publicFacts && kr.publicFacts.length) ? kr.publicFacts : (ctx.publicFacts || []);
+        const note = kr.sourceNote || ctx.sourceNote || '';
+        const title = ctx.title || '';
+        const fit = kr.fitLines || ctx.fitLines || [];
+        const bmc = (st && st.bmc) || {};
+        const filled = [
+            ['客群', bmc.customerSegments],
+            ['收入', bmc.revenueStreams],
+            ['价值主张', bmc.valuePropositions]
+        ].filter(function (row) { return String(row[1] || '').trim(); });
+        if (!facts.length && !note && !fit.length) return '';
+        const factList = facts.length
+            ? '<ul>' + facts.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>'
+            : '<p>本次未挂入公开对照条目。</p>';
+        const ownList = filled.length
+            ? filled.map(function (row) {
+                return '<p><b>' + esc(row[0]) + '</b><br>' + nl(row[1]) + '</p>';
+            }).join('')
+            : '<p>贵司客群、收入尚未改成自己的话。示范画布不能当成绩。</p>';
+        return '<section class="yr-contrast" id="contrast">' +
+            '<p class="yr-kicker">行业对照</p>' +
+            '<h2>对照，不是贵司成绩</h2>' +
+            '<p class="yr-lead">下列公开做法用于校准课题' + (title ? '「' + esc(title) + '」' : '') +
+            '，不是友为客户案例，也不是贵司已验证经营数字。</p>' +
+            '<div class="yr-split">' +
+                '<article><h3>行业对照</h3>' + factList +
+                    (note ? '<p class="yr-note">' + esc(note) + '</p>' : '') +
+                    (fit.length ? '<p class="yr-note">适用勾选：' + esc(fit.join('；')) + '</p>' : '') +
+                '</article>' +
+                '<article><h3>贵司填写</h3>' + ownList + '</article>' +
+            '</div></section>';
     }
 
     function step1(st) {
@@ -648,6 +741,9 @@
         const step3count = fw.length
             ? (fw.length + ' 项能力' + (a4n ? ' · 4A 已填' : ' · 4A 未填'))
             : (a4n ? '4A 已填' : '待生成');
+        const kr = st.knowledgeRefs || {};
+        const ctx = st.caseContext || {};
+        const facts = (kr.publicFacts && kr.publicFacts.length) ? kr.publicFacts : (ctx.publicFacts || []);
         return {
             1: Object.keys(st.bmc || {}).some(function (k) { return String((st.bmc || {})[k] || '').trim(); }) ? '已填九宫格' : '待填',
             2: (st.vsStages || []).length ? ((st.vsStages || []).length + ' 阶段') : '待生成',
@@ -655,7 +751,12 @@
             4: fw.length ? '四维已填' : '待打分',
             5: fw.length ? ('红 ' + red) : '待着色',
             6: inis.length ? (inis.length + ' 条举措') : '待生成',
-            7: inis.length ? ((st.roadmapMonths || 24) + ' 个月') : '待排期'
+            7: inis.length ? ((st.roadmapMonths || 24) + ' 个月') : '待排期',
+            contrast: facts.length || kr.sourceNote || ctx.sourceNote ? '行业对照' : '',
+            p0: (function () {
+                const n = ownedP0s(st).length;
+                return n ? (n + ' 条可上会') : '待写主人';
+            }())
         };
     }
 
@@ -663,27 +764,40 @@
         const st = state || {};
         const o = opts || {};
         const wm = st.workspaceMeta || {};
+        const ctx = st.caseContext || {};
         const meta = {
             org: wm.organizationName || o.org || '评估对象',
             project: o.title || wm.projectName || st.valueStreamName || '数字化转型评估',
-            industry: st.workflowIndustry || '',
-            horizon: wm.planningHorizon || ((st.roadmapMonths || 24) + ' 个月'),
+            topic: ctx.title || wm.projectName || '',
+            industry: (function () {
+                const raw = st.workflowIndustry || ctx.industry || '';
+                if (raw === '3C' || raw === '3c') return '消费电子';
+                return raw;
+            }()),
+            horizon: String(wm.planningHorizon || '').trim(),
             owner: wm.sponsor || '',
             saved: o.savedAt ? formatWhen(o.savedAt) : ''
         };
         const lic = licenseMeta();
-        const body = coverHtml(meta, countsOf(st)) +
+        const counts = countsOf(st);
+        const contrast = contrastHtml(st);
+        const p0page = p0PageHtml(st, meta);
+        const body = coverHtml(meta, counts) +
             briefHtml(st, meta) +
+            p0page +
+            contrast +
             step1(st) + step2(st) + step3(st) + step4(st) + step5(st) + step6(st) + step7(st) +
             '<p class="yr-foot">' + esc(lic.brand) + ' ' + esc(lic.brandEn) + ' · 评估过程册　' + esc(meta.project) +
             '　授权：' + esc(lic.mark) +
-            '　本文件可直接发给客户。</p>';
+            '　本文件可直接发给客户。公开报道仅供对照，经营数字请以贵司数据为准。</p>';
         const siteHome = publicHome();
         const workHref = siteHome ? (siteHome + 'workshop.html?mode=pro') : 'workshop.html?mode=pro';
         const homeHref = siteHome || 'index.html';
         const nav = '<nav class="yr-nav"><a class="brand" href="' + esc(homeHref) + '"><b>' + esc(lic.brand) + '</b><i>' + esc(lic.brandEn) + '</i></a>' +
             '<a href="#cover">封面</a>' +
             '<a href="#brief"><em>·</em>结论</a>' +
+            '<a href="#p0"><em>·</em>P0</a>' +
+            (contrast ? '<a href="#contrast"><em>·</em>对照</a>' : '') +
             STEPS.map(function (s) {
                 return '<a href="#s' + s.id + '"><em>' + s.id + '</em>' + esc(s.short) + '</a>';
             }).join('') +
@@ -696,12 +810,31 @@
             '<meta name="viewport" content="width=device-width,initial-scale=1">' +
             '<title>' + esc(meta.project) + ' · 评估过程册</title>' +
             '<style>' + css() + '</style></head><body><div class="yr">' + nav +
-            '<main class="yr-main">' + body + '</main></div></body></html>';
+            '<main class="yr-main">' + body + '</main></div>' +
+            packScript(st, meta, o) +
+            '</body></html>';
+    }
+
+    function packPayload(st, meta, opts) {
+        const o = opts || {};
+        return {
+            kind: 'youwei-pack',
+            version: 1,
+            title: o.title || (meta && meta.project) || '',
+            savedAt: o.savedAt || '',
+            snapshot: st || {}
+        };
+    }
+
+    function packScript(st, meta, opts) {
+        const json = JSON.stringify(packPayload(st, meta, opts)).replace(/</g, '\\u003c');
+        return '<script type="application/json" id="youwei-pack">' + json + '</script>';
     }
 
     global.YouweiReport = {
         buildHtml: buildHtml,
         missingProcessBookGate: missingProcessBookGate,
-        isAssignedOwner: isAssignedOwner
+        isAssignedOwner: isAssignedOwner,
+        packPayload: packPayload
     };
 })(window);

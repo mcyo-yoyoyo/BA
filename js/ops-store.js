@@ -1,10 +1,16 @@
 /**
- * B 端运营配置（本机浏览器）。C 端首页 / 工作台只读这里的覆盖层。
- * 内置文案与案例仍以 js/cases-data.js、工作台默认模型为底稿。
+ * 运营配置：读本机后台库 data/content.json（/api/ops）。
+ * 不写入 localStorage。无后台时回落到种子，只读。
  */
 (function (global) {
-    const OPS_KEY = 'youwei_ops_v1';
-    const CATALOG_KEY = 'youwei_ops_catalog_v1';
+    const LEGACY_OPS_KEY = 'youwei_ops_v1';
+    const LEGACY_CATALOG_KEY = 'youwei_ops_catalog_v1';
+    let mem = null;
+    let catalogMem = { templates: null, rules: null, at: '' };
+    let backend = false;
+    let source = 'seed';
+    let hydratePromise = null;
+    let saveChain = Promise.resolve();
 
     function clone(v) {
         try { return JSON.parse(JSON.stringify(v)); } catch (e) { return v; }
@@ -68,28 +74,27 @@
         };
     }
 
+    function normalizeOps(o) {
+        const base = emptyOps();
+        if (!o || typeof o !== 'object') return base;
+        return {
+            version: 1,
+            updatedAt: o.updatedAt || '',
+            home: Object.assign(base.home, o.home || {}),
+            method: o.method || null,
+            industries: o.industries && typeof o.industries === 'object' ? o.industries : {},
+            cases: o.cases && typeof o.cases === 'object' ? o.cases : {},
+            deliverables: o.deliverables || null,
+            models: Object.assign(base.models, o.models || {}),
+            assessment: Object.assign(base.assessment, o.assessment || {}),
+            assets: Object.assign(base.assets, o.assets || {}),
+            ai: Object.assign(base.ai, o.ai || {})
+        };
+    }
+
     function load() {
-        try {
-            const raw = localStorage.getItem(OPS_KEY);
-            if (!raw) return emptyOps();
-            const o = JSON.parse(raw);
-            const base = emptyOps();
-            return {
-                version: 1,
-                updatedAt: o.updatedAt || '',
-                home: Object.assign(base.home, o.home || {}),
-                method: o.method || null,
-                industries: o.industries && typeof o.industries === 'object' ? o.industries : {},
-                cases: o.cases && typeof o.cases === 'object' ? o.cases : {},
-                deliverables: o.deliverables || null,
-                models: Object.assign(base.models, o.models || {}),
-                assessment: Object.assign(base.assessment, o.assessment || {}),
-                assets: Object.assign(base.assets, o.assets || {}),
-                ai: Object.assign(base.ai, o.ai || {})
-            };
-        } catch (e) {
-            return emptyOps();
-        }
+        if (!mem) mem = emptyOps();
+        return mem;
     }
 
     function stripAiKey(ops) {
@@ -98,13 +103,90 @@
         return ops;
     }
 
+    function clearLegacyCache() {
+        try {
+            localStorage.removeItem(LEGACY_OPS_KEY);
+            localStorage.removeItem(LEGACY_CATALOG_KEY);
+        } catch (e) { /* ignore */ }
+    }
+
+    function readLegacyCache() {
+        try {
+            const raw = localStorage.getItem(LEGACY_OPS_KEY);
+            if (!raw) return null;
+            const o = JSON.parse(raw);
+            if (!o || typeof o !== 'object') return null;
+            let catalog = null;
+            try { catalog = JSON.parse(localStorage.getItem(LEGACY_CATALOG_KEY) || 'null'); } catch (e) { catalog = null; }
+            return { ops: o, catalog: catalog };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function opsLooksEmpty(ops) {
+        if (!ops) return true;
+        const noCases = !ops.cases || !Object.keys(ops.cases).length;
+        const noInd = !ops.industries || !Object.keys(ops.industries).length;
+        return noCases && noInd && !ops.updatedAt;
+    }
+
+    async function pullRemote() {
+        const tryUrls = ['/api/ops', 'data/content.json'];
+        let i = 0;
+        for (; i < tryUrls.length; i += 1) {
+            try {
+                const r = await fetch(tryUrls[i], { cache: 'no-store' });
+                if (!r.ok) continue;
+                const o = await r.json();
+                const ops = normalizeOps(o.ops || (o.version && o.home ? o : null));
+                const catalog = (o.catalog && typeof o.catalog === 'object')
+                    ? { templates: o.catalog.templates || null, rules: o.catalog.rules || null, at: o.catalog.at || '' }
+                    : { templates: null, rules: null, at: '' };
+                mem = ops;
+                catalogMem = catalog;
+                backend = tryUrls[i] === '/api/ops';
+                source = backend ? 'api' : 'file';
+                return { ops: mem, catalog: catalogMem };
+            } catch (e) { /* next */ }
+        }
+        mem = emptyOps();
+        catalogMem = { templates: null, rules: null, at: '' };
+        backend = false;
+        source = 'seed';
+        return { ops: mem, catalog: catalogMem };
+    }
+
+    async function persistRemote() {
+        if (!backend) {
+            const err = new Error('本机后台未启动，配置不能写入。请用 npm run dev 或桌面版打开。');
+            return Promise.reject(err);
+        }
+        const body = JSON.stringify({
+            ops: stripAiKey(clone(load())),
+            catalog: catalogMem
+        });
+        const r = await fetch('/api/ops', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: body
+        });
+        if (!r.ok) throw new Error('后台库写入失败');
+        const o = await r.json();
+        if (mem) mem.updatedAt = o.updatedAt || mem.updatedAt;
+        return mem;
+    }
+
+    function queuePersist() {
+        saveChain = saveChain.then(persistRemote, persistRemote);
+        return saveChain;
+    }
+
     function save(next) {
-        const cur = Object.assign(emptyOps(), load(), next || {});
-        stripAiKey(cur);
-        cur.version = 1;
-        cur.updatedAt = new Date().toISOString();
-        localStorage.setItem(OPS_KEY, JSON.stringify(cur));
-        return cur;
+        mem = stripAiKey(Object.assign(emptyOps(), load(), next || {}));
+        mem.version = 1;
+        mem.updatedAt = new Date().toISOString();
+        return queuePersist();
     }
 
     function patch(partial) {
@@ -117,43 +199,62 @@
                 cur[k] = partial[k];
             }
         });
-        return save(cur);
+        mem = cur;
+        return queuePersist();
     }
 
     function resetAll() {
-        localStorage.removeItem(OPS_KEY);
-        return load();
+        mem = emptyOps();
+        catalogMem = { templates: null, rules: null, at: '' };
+        return queuePersist();
     }
 
     function loadCatalog() {
-        try {
-            const raw = localStorage.getItem(CATALOG_KEY);
-            if (!raw) return { templates: null, rules: null, at: '' };
-            const o = JSON.parse(raw);
-            return { templates: o.templates || null, rules: o.rules || null, at: o.at || '' };
-        } catch (e) {
-            return { templates: null, rules: null, at: '' };
-        }
+        return catalogMem || { templates: null, rules: null, at: '' };
     }
 
     function saveCatalog(cat) {
-        localStorage.setItem(CATALOG_KEY, JSON.stringify({
+        catalogMem = {
             templates: cat.templates || null,
             rules: cat.rules || null,
             at: cat.at || new Date().toISOString()
-        }));
+        };
+        return queuePersist();
+    }
+
+    async function ready() {
+        if (hydratePromise) return hydratePromise;
+        hydratePromise = pullRemote().then(function (remote) {
+            if (backend && opsLooksEmpty(remote.ops)) {
+                const legacy = readLegacyCache();
+                if (legacy && legacy.ops) {
+                    mem = normalizeOps(legacy.ops);
+                    if (legacy.catalog) catalogMem = {
+                        templates: legacy.catalog.templates || null,
+                        rules: legacy.catalog.rules || null,
+                        at: legacy.catalog.at || ''
+                    };
+                    return persistRemote().then(function () {
+                        clearLegacyCache();
+                        return mem;
+                    }).catch(function () { return mem; });
+                }
+            }
+            if (backend || source === 'file') clearLegacyCache();
+            return mem;
+        });
+        return hydratePromise;
     }
 
     function ingestWorkshopCatalog(payload) {
         const cur = loadCatalog();
-        if (cur.templates && Object.keys(cur.templates).length) return cur;
-        if (!payload || !payload.templates) return cur;
-        saveCatalog({
+        if (cur.templates && Object.keys(cur.templates).length) return Promise.resolve(cur);
+        if (!payload || !payload.templates) return Promise.resolve(cur);
+        return saveCatalog({
             templates: clone(payload.templates),
             rules: payload.rules ? clone(payload.rules) : null,
             at: new Date().toISOString()
-        });
-        return loadCatalog();
+        }).then(loadCatalog).catch(function () { return loadCatalog(); });
     }
 
     function getHome() {
@@ -199,15 +300,17 @@
     }
 
     function mergeIndustry(seed, ov) {
-        const out = Object.assign({}, seed, ov || {});
-        if (ov && ov.published === false) out.published = false;
-        else out.published = true;
-        out.order = seed.order != null ? seed.order : out.order;
-        out.name = seed.name;
-        out.caseIds = seed.caseIds;
-        out.casesLead = seed.casesLead;
-        if (!ov || !ov.blurb || /下沉分货|车型上市、投放|同一套六/.test(ov.blurb)) out.blurb = seed.blurb;
-        if (!ov || !ov.kicker || /送装与换新|线索到交车/.test(ov.kicker)) out.kicker = seed.kicker;
+        const out = Object.assign({}, seed);
+        if (!ov) {
+            out.published = true;
+            return out;
+        }
+        out.published = ov.published !== false;
+        if (ov.order != null && ov.order !== '') out.order = Number(ov.order);
+        ['name', 'kicker', 'blurb', 'casesLead'].forEach(function (k) {
+            if (ov[k] != null && String(ov[k]).trim()) out[k] = ov[k];
+        });
+        if (Array.isArray(ov.caseIds) && ov.caseIds.length) out.caseIds = ov.caseIds;
         return out;
     }
 
@@ -252,12 +355,26 @@
             out.published = true;
             return out;
         }
-        ['title', 'kicker', 'subtitle', 'tagline', 'situation', 'blurb'].forEach(function (k) {
+        ['title', 'kicker', 'subtitle', 'tagline', 'situation', 'blurb', 'audience', 'sourceNote', 'image'].forEach(function (k) {
             if (ov[k] != null && String(ov[k]).trim()) out[k] = ov[k];
         });
-        if (STALE_CASE_KICKERS[out.kicker]) out.kicker = seed.kicker || STALE_CASE_KICKERS[out.kicker];
+        if (Array.isArray(ov.publicFacts)) {
+            out.publicFacts = ov.publicFacts.map(function (x) { return String(x || '').trim(); }).filter(Boolean).slice(0, 8);
+        }
+        if (Array.isArray(ov.references)) {
+            out.references = ov.references.map(function (r) {
+                if (!r) return null;
+                const url = String(r.url || '').trim();
+                const label = String(r.label || url).trim();
+                return url ? { label: label || url, url: url } : null;
+            }).filter(Boolean).slice(0, 8);
+        }
+        if (Array.isArray(ov.sourceUrls)) {
+            out.sourceUrls = ov.sourceUrls.map(function (u) { return String(u || '').trim(); }).filter(Boolean).slice(0, 8);
+        }
+        if (!ov.kicker && STALE_CASE_KICKERS[out.kicker]) out.kicker = seed.kicker || STALE_CASE_KICKERS[out.kicker];
         out.published = ov.published !== false;
-        if (ov.order != null) out.order = ov.order;
+        if (ov.order != null && ov.order !== '') out.order = Number(ov.order);
         return out;
     }
 
@@ -389,18 +506,40 @@
     function importPack(raw) {
         const o = typeof raw === 'string' ? JSON.parse(raw) : raw;
         if (!o || !o.ops) throw new Error('不是有效的运营包');
-        save(stripAiKey(o.ops));
-        if (o.catalog) saveCatalog(o.catalog);
-        return load();
+        mem = normalizeOps(stripAiKey(o.ops));
+        if (o.catalog) {
+            catalogMem = {
+                templates: o.catalog.templates || null,
+                rules: o.catalog.rules || null,
+                at: o.catalog.at || new Date().toISOString()
+            };
+        }
+        return queuePersist().then(function () { return load(); });
+    }
+
+    async function fetchSource(url) {
+        const r = await fetch('/api/content/fetch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: url })
+        });
+        const o = await r.json();
+        if (!o || !o.ok) throw new Error((o && o.message) || '抓取失败');
+        return o;
     }
 
     wrapCaseLookup();
+    ready();
 
     global.YouweiOps = {
+        ready: ready,
+        backendOk: function () { return backend; },
+        source: function () { return source; },
         load: load,
         save: save,
         patch: patch,
         resetAll: resetAll,
+        fetchSource: fetchSource,
         getHome: getHome,
         getMethod: getMethod,
         getIndustries: getIndustries,

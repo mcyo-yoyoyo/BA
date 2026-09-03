@@ -111,7 +111,71 @@
         const html = await reportHtml(pack, pack.title);
         if (!html) throw new Error('过程册不存在，请重新保存');
         downloadBlob(new Blob([html], { type: 'text/html;charset=utf-8' }), fileBase(pack.title) + '.html');
-        if (typeof global.toast === 'function') global.toast('已下载 HTML，可直接发给客户');
+        if (typeof global.toast === 'function') global.toast('已下载过程册。对方用浏览器打开即可读；牵头人可在工作台「打开规划文件」再打开同一份。');
+    }
+
+    function parseFileText(text) {
+        const raw = String(text || '').replace(/^\uFEFF/, '').trim();
+        if (!raw) return null;
+        if (raw.charAt(0) === '{' || raw.charAt(0) === '[') {
+            const o = JSON.parse(raw);
+            if (Array.isArray(o)) {
+                const hit = o.find(function (r) { return r && r.snapshot; });
+                if (!hit) throw new Error('这份列表里没有可打开的规划快照');
+                return {
+                    kind: 'youwei-pack',
+                    version: 1,
+                    title: hit.title || '',
+                    savedAt: hit.savedAt || '',
+                    snapshot: hit.snapshot
+                };
+            }
+            if (o && o.snapshot && typeof o.snapshot === 'object') {
+                return {
+                    kind: 'youwei-pack',
+                    version: 1,
+                    title: o.title || '',
+                    savedAt: o.savedAt || '',
+                    snapshot: o.snapshot
+                };
+            }
+            throw new Error('不是友为规划文件');
+        }
+        const m = raw.match(/<script[^>]*id=["']youwei-pack["'][^>]*>([\s\S]*?)<\/script>/i);
+        if (!m) throw new Error('这份过程册没有规划快照，请用工作台重新保存后再另存');
+        const o = JSON.parse(m[1]);
+        if (!o || !o.snapshot) throw new Error('过程册里的规划快照不完整');
+        return {
+            kind: 'youwei-pack',
+            version: 1,
+            title: o.title || '',
+            savedAt: o.savedAt || '',
+            snapshot: o.snapshot
+        };
+    }
+
+    function sessionBlob(payload) {
+        const p = payload || {};
+        const body = {
+            kind: 'youwei-pack',
+            version: 1,
+            title: p.title || '',
+            savedAt: p.savedAt || new Date().toISOString(),
+            snapshot: p.snapshot || {}
+        };
+        return new Blob([JSON.stringify(body, null, 2)], { type: 'application/json;charset=utf-8' });
+    }
+
+    function downloadSession(payload) {
+        const title = (payload && payload.title) || '评估规划';
+        downloadBlob(sessionBlob(payload), fileBase(title) + '.youwei.json');
+        if (typeof global.toast === 'function') global.toast('已另存规划文件，可换电脑或发给牵头人，在工作台打开');
+    }
+
+    async function exportSession(id) {
+        const pack = await loadPack(id);
+        if (!pack || !pack.snapshot) throw new Error('评估包不存在');
+        downloadSession({ title: pack.title, savedAt: pack.savedAt, snapshot: pack.snapshot });
     }
 
     function revokeUrls(host) {
@@ -142,6 +206,7 @@
                     '<div class="yp-bar">' +
                         '<p class="yp-title">' + esc(title || '评估过程册') + '<i>' + extra + '</i></p>' +
                         '<div class="yp-actions">' +
+                            '<button type="button" class="yp-dl" data-file="1">另存规划文件</button>' +
                             '<button type="button" class="yp-dl" data-html="1">下载 HTML</button>' +
                             '<button type="button" class="yp-x" data-close="1">关闭</button>' +
                         '</div>' +
@@ -167,6 +232,14 @@
                 htmlBtn.onclick = function () {
                     downloadHtml(id).catch(function (e) {
                         if (typeof global.toast === 'function') global.toast(e.message || '下载失败', 'error');
+                    });
+                };
+            }
+            const fileBtn = host.querySelector('[data-file]');
+            if (fileBtn) {
+                fileBtn.onclick = function () {
+                    exportSession(id).catch(function (e) {
+                        if (typeof global.toast === 'function') global.toast(e.message || '另存失败', 'error');
                     });
                 };
             }
@@ -205,6 +278,9 @@
         remove: removePack,
         open: open,
         download: downloadHtml,
-        downloadHtml: downloadHtml
+        downloadHtml: downloadHtml,
+        parseFileText: parseFileText,
+        downloadSession: downloadSession,
+        exportSession: exportSession
     };
 })(window);

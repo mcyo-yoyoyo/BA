@@ -123,8 +123,13 @@
     function applyIndustryFromQuery() {
         const q = studioQuery();
         const industry = q.get('industry');
-        if (industry && root.WORKFLOW_INDUSTRIES && root.WORKFLOW_INDUSTRIES.indexOf(industry) !== -1) {
-            root.currentState.workflowIndustry = industry;
+        if (industry) {
+            const key = root.normalizeWorkflowIndustry
+                ? root.normalizeWorkflowIndustry(industry)
+                : industry;
+            if (root.WORKFLOW_INDUSTRIES && root.WORKFLOW_INDUSTRIES.indexOf(key) !== -1) {
+                root.currentState.workflowIndustry = key;
+            }
         }
     }
 
@@ -135,13 +140,23 @@
         const item = root.getWendaoCaseById && caseId ? root.getWendaoCaseById(caseId) : null;
         if (item) {
             seedEngagement({
-                organizationName: '示例企业（消费电子）',
-                businessUnit: '中国区营销与服务',
-                projectName: item.title,
-                planningHorizon: '2026–2027',
-                sponsor: '业务负责人'
+                projectName: item.title
             });
-            if (mode === 'demo') applyEngagement({ confidentiality: '体验预览' });
+            if (mode !== 'demo') {
+                const wm = root.currentState.workspaceMeta || {};
+                if (wm.organizationName === '示例企业（消费电子）') wm.organizationName = '';
+                if (wm.businessUnit === '中国区营销与服务') wm.businessUnit = '';
+                if (wm.sponsor === '业务负责人') wm.sponsor = '';
+            }
+            if (mode === 'demo') {
+                seedEngagement({
+                    organizationName: '示例企业（消费电子）',
+                    businessUnit: '中国区营销与服务',
+                    planningHorizon: '2026–2027',
+                    sponsor: '业务负责人',
+                    confidentiality: '体验预览'
+                });
+            }
         } else if (mode === 'demo') {
             seedEngagement({
                 organizationName: '示例企业（消费电子）',
@@ -155,6 +170,32 @@
     }
 
         function renderEngagementChrome() {
+        const hint = $('p0-lock-hint');
+        const ready = typeof root.isEngagementReady === 'function' && root.isEngagementReady();
+        const miss = typeof root.missingEngagementFields === 'function' ? root.missingEngagementFields() : [];
+        const meet = typeof root.isMeetingReady === 'function' && root.isMeetingReady();
+        if (hint) {
+            if (ready && meet) {
+                hint.hidden = true;
+                hint.innerHTML = '';
+            } else if (ready && !meet) {
+                const step = (root.currentState && root.currentState.step) || 1;
+                const hasIni = ((root.currentState && root.currentState.initiatives) || []).length;
+                if (step >= 6 || hasIni) {
+                    hint.hidden = false;
+                    hint.innerHTML = '<button type="button" class="p0-lock-hint-btn" onclick="setStep(6)">' +
+                        '还不能上会 · 近半年 P0 须写明责任人</button>';
+                } else {
+                    hint.hidden = true;
+                    hint.innerHTML = '';
+                }
+            } else {
+                hint.hidden = false;
+                const list = miss.length ? miss.join('、') : '企业名称、规划窗口、负责人';
+                hint.innerHTML = '<button type="button" class="p0-lock-hint-btn" onclick="openEngageOverlay({ returnStep: (window.currentState && currentState.step) || 1 })">' +
+                    '评估信息未锁 · 还缺 ' + list + '</button>';
+            }
+        }
         const bar = $('p0-engage-bar');
         if (bar) {
             bar.style.display = 'none';

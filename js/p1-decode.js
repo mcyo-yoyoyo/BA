@@ -109,15 +109,13 @@
 
     function seedInitiativeDecode(ini) {
         if (!ini) return ini;
-        const wm = (root.currentState && root.currentState.workspaceMeta) || {};
-        const sponsor = String(wm.sponsor || '').trim();
         if (!String(ini.kpi || '').trim()) {
             ini.kpi = ini.benefit
                 ? '验收：' + String(ini.benefit).replace(/\s+/g, ' ').slice(0, 42)
                 : '验收：相关优先短板降为观察，且可用经营数据核验';
         }
         if (!String(ini.owner || '').trim()) {
-            ini.owner = sponsor || '待指定负责人';
+            ini.owner = '待指定负责人';
         }
         if (!String(ini.budget || '').trim()) {
             ini.budget = ini.phase === 'P0' ? '近半年重点投入' : ini.phase === 'P1' ? '中期排期' : '观察，不单列预算';
@@ -255,7 +253,7 @@
             <label class="grid gap-1.5 text-[11px] font-semibold text-ink-tertiary">验收指标
                 <textarea class="w-full min-h-[48px] rounded-[10px] border border-black/[0.10] bg-canvas/50 px-3 py-2 text-[13px] text-ink" rows="2" onchange="updateInitiativeField(${id},'kpi',this.value)">${esc(ini.kpi)}</textarea></label>
             <label class="grid gap-1.5 text-[11px] font-semibold text-ink-tertiary">责任人
-                <input class="w-full rounded-[10px] border border-black/[0.10] bg-canvas/50 px-3 py-2 text-[13px] text-ink" value="${esc(ini.owner)}" onchange="updateInitiativeField(${id},'owner',this.value)"></label>
+                <input class="w-full rounded-[10px] border border-black/[0.10] bg-canvas/50 px-3 py-2 text-[13px] text-ink" value="${esc(ini.owner)}" placeholder="须写姓名或岗位，不能留待指定" onchange="updateInitiativeField(${id},'owner',this.value)"></label>
             <label class="grid gap-1.5 text-[11px] font-semibold text-ink-tertiary">预算带
                 <input class="w-full rounded-[10px] border border-black/[0.10] bg-canvas/50 px-3 py-2 text-[13px] text-ink" value="${esc(ini.budget)}" onchange="updateInitiativeField(${id},'budget',this.value)"></label>
             <label class="grid gap-1.5 text-[11px] font-semibold text-ink-tertiary">关口

@@ -241,6 +241,9 @@
             const app = document.getElementById('app');
             const esc = (s) => String(s == null ? '' : s)
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            const wakeCta = (href) => (window.YowayOrb && YowayOrb.link)
+                ? YowayOrb.link(href || 'workshop.html?mode=pro', { verb: t('wakeVerb'), label: t('cta') })
+                : `<a class="yoway-wake" href="${esc(href || 'workshop.html?mode=pro')}">${esc(t('cta'))}</a>`;
 
             function figureHtml(kind) {
                 if (kind === 'canvas' || kind === 'briefing') {
@@ -339,7 +342,7 @@
                                     <h1>${esc(loc.title || item.title)}</h1>
                                     <p class="one">${esc(loc.blurb || item.blurb)}</p>
                                     <div class="actions">
-                                        <a class="btn-sage" href="workshop.html?mode=pro">${esc(t('cta'))}</a>
+                                        ${wakeCta()}
                                         <a class="back" href="index.html#deliverables">${esc(t('backOutputs'))}</a>
                                     </div>
                                 </header>
@@ -369,7 +372,7 @@
                                     <h2>${esc(t('delStartH2'))}</h2>
                                     <p>${esc(t('delStartLead'))}</p>
                                     <div class="actions">
-                                        <a class="btn-sage" href="workshop.html?mode=pro">${esc(t('cta'))}</a>
+                                        ${wakeCta()}
                                         <a class="back" href="index.html#deliverables">${esc(t('delMore'))}</a>
                                     </div>
                                 </section>

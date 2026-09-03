@@ -62,6 +62,8 @@
             import_history: '导入底稿',
             export_pack: '导出运营包',
             import_pack: '导入运营包',
+            export_plan: '另存规划文件',
+            import_plan: '打开规划文件',
             export_audit: '导出操作日志',
             admin_save: '保存配置',
             clear_leads: '清空线索'

@@ -38,6 +38,8 @@
           "css/**/*",
           "img/**/*",
           "vendor/**/*",
+          "scripts/content-store.mjs",
+          "data/.gitkeep",
           "license.json",
           "license.example.json",
           "!js/accounts.local.js"

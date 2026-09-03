@@ -249,10 +249,11 @@
             <div class="youwei-login-backdrop" data-login-close="1"></div>
             <div class="youwei-login-card" role="dialog" aria-modal="true" aria-labelledby="youwei-login-title">
                 <button type="button" class="youwei-login-x" data-login-close="1" aria-label="Close">×</button>
-                <div class="youwei-login-mark yoway-wake is-login" data-yoway-orb="lg"></div>
-                <p class="youwei-login-brand"><span>友为</span><i>YOWAY</i></p>
                 <p class="youwei-login-kicker" id="youwei-login-kicker">从战略到执行</p>
-                <h2 id="youwei-login-title">唤醒 YOWAY</h2>
+                <div class="youwei-login-head">
+                    <div class="youwei-login-mark yoway-wake is-login" data-yoway-orb="lg" aria-hidden="true"></div>
+                    <h2 id="youwei-login-title">唤醒 YOWAY</h2>
+                </div>
                 <p class="youwei-login-lead" id="youwei-login-lead">登录后进入评估。先写清怎么赚钱，再看慢在哪、差在哪，最后排进月份。</p>
                 <p class="youwei-login-path" id="youwei-login-path">定方向 · 建架构 · 抓落地</p>
                 <form id="youwei-login-form" autocomplete="on">
@@ -351,10 +352,11 @@
         return String(href || '').indexOf('admin.html') !== -1;
     }
 
-    function openModal(nextHref) {
+    function openModal(nextHref, opts) {
         ensureModal();
         const wrap = document.getElementById('youwei-login-modal');
         wrap.dataset.next = nextHref || 'workshop.html?mode=pro';
+        wrap.classList.toggle('is-wake-in', !!(opts && opts.fromWake));
         wrap.classList.remove('hidden');
         document.body.classList.add('youwei-modal-on');
         const err = document.getElementById('youwei-login-error');
@@ -464,7 +466,12 @@
             if (!workshopHref(href)) return;
             if (isAuthed()) return;
             e.preventDefault();
-            openModal(href);
+            const wake = a.classList.contains('yoway-wake') ? a : a.closest('.yoway-wake');
+            if (wake && global.YowayOrb && typeof YowayOrb.playWake === 'function') {
+                YowayOrb.playWake(wake, function () { openModal(href, { fromWake: true }); });
+            } else {
+                openModal(href);
+            }
         });
     }
 
@@ -525,15 +532,18 @@ body.youwei-modal-on{overflow:hidden}
 .youwei-login-modal{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:24px}
 .youwei-login-modal.hidden{display:none}
 .youwei-login-backdrop{position:absolute;inset:0;background:rgba(22,21,19,.58);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
-.youwei-login-card{position:relative;width:min(420px,100%);max-height:min(92vh,760px);overflow:auto;background:#f7f5f0;border:1px solid rgba(61,83,75,.16);padding:32px 28px 24px;border-radius:16px;box-shadow:0 24px 64px rgba(22,21,19,.2),0 0 0 1px rgba(142,240,220,.12),0 0 40px rgba(47,111,102,.12)}
+.youwei-login-modal.is-wake-in .youwei-login-backdrop{animation:yoway-login-veil .42s ease}
+.youwei-login-modal.is-wake-in .youwei-login-card{animation:yoway-login-in .62s cubic-bezier(.16,.84,.24,1)}
+@keyframes yoway-login-veil{from{opacity:0}to{opacity:1}}
+@keyframes yoway-login-in{from{opacity:0;transform:translateY(22px) scale(.84);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+.youwei-login-card{position:relative;width:min(420px,100%);max-height:min(92vh,760px);overflow:auto;background:#f7f5f0;border:1px solid rgba(61,83,75,.16);padding:28px 28px 22px;border-radius:16px;box-shadow:0 24px 64px rgba(22,21,19,.2),0 0 0 1px rgba(142,240,220,.12),0 0 40px rgba(47,111,102,.12)}
 .youwei-login-x{appearance:none;position:absolute;top:14px;right:16px;border:0;background:none;padding:0;font-size:20px;line-height:1;color:#6e695f;opacity:.4;cursor:pointer}
 .youwei-login-x:hover{opacity:.85;color:#161513}
-.youwei-login-mark{display:flex;align-items:center;margin:0 0 12px}
-.youwei-login-brand{display:flex;align-items:baseline;margin:0 0 14px;color:#161513}
-.youwei-login-brand span{font-size:16px;font-weight:600;letter-spacing:.04em}
-.youwei-login-brand i{font-style:normal;margin-left:10px;padding-left:10px;border-left:1px solid rgba(22,21,19,.12);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#4f4b45}
 .youwei-login-kicker{margin:0 0 8px;font-size:13px;font-weight:650;color:#3d534b}
-.youwei-login-card h2{margin:0;font-size:26px;font-weight:600;letter-spacing:-.03em;color:#161513;line-height:1.2}
+.youwei-login-head{display:flex;align-items:center;gap:12px;margin:0;padding-right:28px}
+.youwei-login-mark{display:flex;align-items:center;margin:0;flex:none}
+.youwei-login-mark.yoway-wake.is-login{padding:0;cursor:default;pointer-events:none}
+.youwei-login-card h2{margin:0;font-size:26px;font-weight:600;letter-spacing:-.03em;color:#161513;line-height:1.15}
 .youwei-login-lead{margin:10px 0 0;font-size:15px;line-height:1.6;color:#4f4b45}
 .youwei-login-path{margin:12px 0 0;font-size:12px;font-weight:550;color:#6e695f;letter-spacing:.04em}
 .youwei-login-card #youwei-login-form{margin-top:22px}

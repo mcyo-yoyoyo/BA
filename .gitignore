@@ -8,4 +8,6 @@ desktop/dist-p1/
 desktop/dist-p2/
 desktop/dist-p3/
 data/leads.json
+data/content.json
+data/content.json.tmp
 js/license.local.js
