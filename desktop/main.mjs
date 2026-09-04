@@ -30,6 +30,7 @@ function createWindow(baseUrl) {
         minWidth: 1024,
         minHeight: 680,
         title: '友为 · 从战略到路标',
+        icon: path.join(__dirname, 'build', 'icon.ico'),
         backgroundColor: '#f7f5f0',
         show: false,
         autoHideMenuBar: true,

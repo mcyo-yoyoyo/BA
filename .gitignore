@@ -3,6 +3,9 @@ node_modules/
 .env
 .env.*
 desktop/node_modules/
+desktop/build/node_modules/
+desktop/build/package.json
+desktop/build/package-lock.json
 desktop/dist/
 desktop/dist-p1/
 desktop/dist-p2/

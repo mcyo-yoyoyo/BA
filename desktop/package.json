@@ -26,7 +26,8 @@
     },
     "files": [
       "main.mjs",
-      "server.mjs"
+      "server.mjs",
+      "build/icon.ico"
     ],
     "extraResources": [
       {
@@ -47,6 +48,7 @@
       }
     ],
     "win": {
+      "icon": "build/icon.ico",
       "signExecutable": false,
       "artifactName": "Youwei-${version}-Setup.${ext}"
     },
@@ -56,7 +58,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "友为",
-      "uninstallDisplayName": "友为"
+      "uninstallDisplayName": "友为",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
     },
     "portable": {
       "artifactName": "Youwei-${version}-portable.exe"

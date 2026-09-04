@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7ee8d4" stop-opacity=".42"/>
+      <stop offset="58%" stop-color="#2f6f66" stop-opacity=".10"/>
+      <stop offset="78%" stop-color="#2f6f66" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="body" cx="32%" cy="26%" r="78%">
+      <stop offset="0%" stop-color="#b8fff0"/>
+      <stop offset="38%" stop-color="#4ea897"/>
+      <stop offset="78%" stop-color="#163832"/>
+      <stop offset="100%" stop-color="#0a1c1a"/>
+    </radialGradient>
+    <linearGradient id="ear" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6ec4b4"/>
+      <stop offset="100%" stop-color="#1d4a44"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity=".55"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <circle cx="256" cy="256" r="236" fill="url(#glow)"/>
+  <ellipse cx="86" cy="256" rx="36" ry="56" fill="url(#ear)"/>
+  <ellipse cx="426" cy="256" rx="36" ry="56" fill="url(#ear)"/>
+  <circle cx="256" cy="256" r="188" fill="none" stroke="#8ef0dc" stroke-opacity=".28" stroke-width="10"/>
+  <path d="M92 200 A176 176 0 0 1 420 168" fill="none" stroke="#8ef0dc" stroke-opacity=".85" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="164" fill="url(#body)"/>
+  <ellipse cx="196" cy="196" rx="62" ry="36" fill="url(#shine)" transform="rotate(-18 196 196)"/>
+  <rect x="148" y="236" width="216" height="86" rx="43" fill="#071412"/>
+  <rect x="148" y="236" width="216" height="86" rx="43" fill="none" stroke="#8ef0dc" stroke-opacity=".16" stroke-width="3"/>
+  <rect x="186" y="258" width="36" height="42" rx="18" fill="#e9fff8"/>
+  <rect x="290" y="258" width="36" height="42" rx="18" fill="#e9fff8"/>
+</svg>
